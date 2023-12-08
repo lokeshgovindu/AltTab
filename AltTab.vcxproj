@@ -225,7 +225,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
+    <None Include=".gitignore" />
     <None Include="AltTabSettings.ini" />
+    <None Include="README.md" />
+    <None Include="Tasks.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
