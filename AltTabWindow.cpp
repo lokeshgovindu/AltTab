@@ -21,6 +21,7 @@
 #include <winnt.h>
 #include "Resource.h"
 #include "AltTabSettings.h"
+#include "Utils.h"
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -34,19 +35,17 @@
             "language='*' "                                                                                            \
             "\"")
 
-HWND g_hListView = nullptr;
-HFONT g_hFont = nullptr;
+HWND    g_hListView = nullptr;
+HFONT   g_hFont     = nullptr;
 
-const int COL_ICON_WIDTH = 36;
+const int COL_ICON_WIDTH     = 36;
 const int COL_PROCNAME_WIDTH = 180;
 
 // Forward declarations of functions included in this code module:
-INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK AltTabDialogProc(HWND, UINT, WPARAM, LPARAM);
-bool IsAltTabWindow(HWND hWnd);
-static HWND CreateAltTabWindow();
-
+bool             IsAltTabWindow(HWND hWnd);
+static HWND      CreateAltTabWindow();
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 
@@ -105,7 +104,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                         insert = true;
                     }
                     else if (g_IsAltBacktick) {
-                        insert = (vItems->at(0).ProcessName == item.ProcessName);
+                        insert = IsSimilarProcess(vItems->at(0).ProcessName, item.ProcessName);
                     }
 
                     if (insert) { vItems->push_back(std::move(item)); }
@@ -173,21 +172,11 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     }
 
     // Move to next / previous item based on the direction
-    int selectedRow = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
     int N           = (int)g_AltTabWindows.size();
-    int nextRow     = (selectedRow + N + direction) % N;
+    int nextInd     = (selectedInd + N + direction) % N;
 
-    // Next the next similar process if AltBacktick is pressed
-    if (g_IsAltBacktick) {
-        for (int i = 1; i < N; ++i) {
-            nextRow = (selectedRow + N + i * direction) % N;
-            if (g_AltTabWindows[selectedRow].ProcessName == g_AltTabWindows[nextRow].ProcessName) {
-                break;
-            }
-        }
-    }
-
-    ATWListViewSelectItem(nextRow);
+    ATWListViewSelectItem(nextInd);
 
     return hAltTabWnd;
 }
@@ -473,7 +462,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         // Set window transparency
         SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-        SetLayeredWindowAttributes(hWnd, RGB(255, 255, 255), g_Settings.WindowTransparency, LWA_ALPHA);
+        SetLayeredWindowAttributes(hWnd, RGB(255, 255, 255), g_Settings.Transparency, LWA_ALPHA);
 
         //std::vector<AltTabWindowData> altTabWindows;
         EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));

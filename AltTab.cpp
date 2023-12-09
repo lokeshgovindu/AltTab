@@ -13,6 +13,10 @@
 #include <format>
 #include "AltTabSettings.h"
 #include <unordered_set>
+#include <shellapi.h>
+#include "Resource.h"
+#include "version.h"
+#include <WinUser.h>
 
 #define MAX_LOADSTRING 100
 
@@ -22,11 +26,75 @@ WCHAR          szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR          szWindowClass[MAX_LOADSTRING];            // The main window class name
 HHOOK          kbdhook;                                  // Keyboard Hook
 HWND           g_hAltTabWnd      = nullptr;              // AltTab window handle
+HWND           g_hWndTrayIcon    = nullptr;              // AltTab tray icon
 bool           g_IsAltTab        = false;                // Is Alt+Tab pressed
 bool           g_IsAltBacktick   = false;                // Is Alt+Backtick pressed
 
-// Forward declarations of functions included in this code module:
-INT_PTR CALLBACK    About           (HWND, UINT, WPARAM, LPARAM);
+
+UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
+
+// Function to handle tray icon events
+LRESULT CALLBACK 
+AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_COMMAND: {
+        int const wmId = LOWORD(wParam);
+        // Parse the menu selections:
+        switch (wmId) {
+            case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
+                AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
+                DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
+                break;
+
+            case ID_TRAYCONTEXTMENU_EXIT:
+                AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
+                PostQuitMessage(0);
+                break;
+        }
+
+    } break;
+
+    case WM_USER_ALTTAB_TRAYICON:
+        switch (LOWORD(lParam)) {
+            case WM_RBUTTONDOWN: {
+                POINT pt;
+                GetCursorPos(&pt);
+                ShowContextMenu(hWnd, pt);
+            }
+            break;
+        }
+        break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+// Function to create a hidden window for tray icon handling
+HWND CreateTrayIconWindow(HINSTANCE hInstance) {
+    WNDCLASS wc      = { 0 };
+    wc.lpfnWndProc   = AltTabTrayIconProc;
+    wc.hInstance     = hInstance;
+    wc.lpszClassName = L"AltTabTrayIconWindowClass";
+    RegisterClass(&wc);
+
+    return CreateWindow(wc.lpszClassName, L"AltTabTrayIconWindow", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+}
+
+BOOL AddNotificationIcon(HWND hWndTrayIcon) {
+    // Set up the NOTIFYICONDATA structure
+    NOTIFYICONDATA nid   = { 0 };
+    nid.cbSize           = sizeof(NOTIFYICONDATA);
+    nid.hWnd             = hWndTrayIcon;
+    nid.uID              = 1;
+    nid.uFlags           = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    nid.uCallbackMessage = WM_USER_ALTTAB_TRAYICON;
+    nid.hIcon            = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+    std::wstring productName = std::format(L"{} v{}", TEXT(AT_PRODUCT_NAME), TEXT(AT_VERSION_TEXT));
+    wcscpy_s(nid.szTip, productName.c_str());
+
+    return Shell_NotifyIcon(NIM_ADD, &nid);
+}
 
 void ATLoadSettings() {
     AT_LOG_TRACE;
@@ -34,6 +102,8 @@ void ATLoadSettings() {
     auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
     for (auto& item : vs) {
         auto processes = Split(item, L"/");
+        for (auto& processName : processes)
+                processName = ToLower(processName);
         g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
     }
 }
@@ -55,11 +125,20 @@ int APIENTRY wWinMain(
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle,       MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_ALTTAB,    szWindowClass, MAX_LOADSTRING);
-    //MyRegisterClass(hInstance);
-
-    ATLoadSettings();
 
     g_hInstance = hInstance; // Store instance handle in our global variable
+
+    // Load settings from AltTabSettings.ini file
+    ATLoadSettings();
+
+    // System tray
+    // Create a hidden window for tray icon handling
+    g_hWndTrayIcon = CreateTrayIconWindow(hInstance);
+
+    // Add the tray icon
+    if (!AddNotificationIcon(g_hWndTrayIcon)) {
+        AT_LOG_ERROR("Failed to add AltTab tray icon.");
+    }
 
     kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, hInstance, NULL);
 
@@ -75,17 +154,33 @@ int APIENTRY wWinMain(
         }
     }
 
+    UnhookWindowsHookEx(kbdhook);
+
     return (int) msg.wParam;
 }
 
 // Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+    case WM_INITDIALOG: {
+        // Center the dialog on the screen
+        int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+        RECT dlgRect;
+        GetWindowRect(hDlg, &dlgRect);
+
+        int dlgWidth  = dlgRect.right - dlgRect.left;
+        int dlgHeight = dlgRect.bottom - dlgRect.top;
+
+        int posX = (screenWidth  - dlgWidth ) / 2;
+        int posY = (screenHeight - dlgHeight) / 2;
+
+        SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
+    }
+    return (INT_PTR)TRUE;
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
@@ -133,6 +228,9 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         bool isAltPressed = GetAsyncKeyState(VK_MENU) & 0x8000;
         //AT_LOG_INFO(std::format("isAltPressed: {}", isAltPressed).c_str());
 
+        // ----------------------------------------------------------------------------
+        // Alt key is pressed
+        // ----------------------------------------------------------------------------
         if (isAltPressed) {
             // Check if Shift key is pressed
             bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
@@ -140,6 +238,9 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
             if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
                 if (g_hAltTabWnd == nullptr) {
+                    // ----------------------------------------------------------------------------
+                    // Alt + Tab
+                    // ----------------------------------------------------------------------------
                     if (pKeyboard->vkCode == VK_TAB) {
                         g_IsAltTab = true;
                         g_IsAltBacktick = false;
@@ -153,7 +254,11 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                             ShowAltTabWindow(g_hAltTabWnd, 1);
                         }
                         return TRUE;
-                    } else if (pKeyboard->vkCode == 0xC0) {
+                    }
+                    // ----------------------------------------------------------------------------
+                    // Alt + Backtick
+                    // ----------------------------------------------------------------------------
+                    else if (pKeyboard->vkCode == VK_OEM_3) { // 0xC0
                         g_IsAltTab = false;
                         g_IsAltBacktick = true;
                         if (isShiftPressed) {
@@ -169,6 +274,9 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     }
                 }
                 else {
+                    // ----------------------------------------------------------------------------
+                    // AltTab window is displayed.
+                    // ----------------------------------------------------------------------------
                     if (pKeyboard->vkCode == VK_TAB) {
                         AT_LOG_INFO("Tab Pressed!");
                         ShowAltTabWindow(g_hAltTabWnd, direction);
@@ -214,23 +322,38 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         ATWListViewDeleteItem(ind);
                         return TRUE;
                     }
-                    else if (pKeyboard->vkCode == 0xC0) {   // '`~' for US
+                    else if (pKeyboard->vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
                         AT_LOG_INFO("Backtick Pressed!");
 
                         // Move to next / previous same item based on the direction
-                        int selectedInd = ATWListViewGetSelectedItem();
-                        int N           = (int)g_AltTabWindows.size();
-                        int nextInd     = -1;
+                        const int   selectedInd = ATWListViewGetSelectedItem();
+                        const int   N           = (int)g_AltTabWindows.size();
+                        const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
+                        const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
+                        int         nextInd     = -1;                                       // Next index to select
 
                         for (int i = 1; i < N; ++i) {
                             nextInd = (selectedInd + N + i * direction) % N;
-                            if (g_AltTabWindows[selectedInd].ProcessName == g_AltTabWindows[nextInd].ProcessName) {
+                            if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
+                                break;
+                            }
+                            else if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
                                 break;
                             }
                             nextInd = -1;
                         }
 
                         if (nextInd != -1) ATWListViewSelectItem(nextInd);
+                        return TRUE;
+                    }
+                    else if (isShiftPressed && pKeyboard->vkCode == VK_F1) {
+                        DestoryAltTabWindow();
+                        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hWndTrayIcon, ATAboutDlgProc);
+                        return TRUE;
+                    }
+                    else if (pKeyboard->vkCode == VK_F2) {
+                        DestoryAltTabWindow();
+                        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
                         return TRUE;
                     }
                     else {
@@ -263,4 +386,27 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
     // Call the next hook in the chain
     return CallNextHookEx(kbdhook, nCode, wParam, lParam);
+}
+
+void ShowContextMenu(HWND hWnd, POINT pt) {
+    HMENU hMenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDC_TRAY_CONTEXTMENU));
+    if (hMenu) {
+        HMENU hSubMenu = GetSubMenu(hMenu, 0);
+        if (hSubMenu) {
+            // our window must be foreground before calling TrackPopupMenu or
+            // the menu will not disappear when the user clicks away
+            SetForegroundWindow(hWnd);
+
+            // respect menu drop alignment
+            UINT uFlags = TPM_RIGHTBUTTON;
+            if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
+                uFlags |= TPM_RIGHTALIGN;
+            } else {
+                uFlags |= TPM_LEFTALIGN;
+            }
+
+            TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
+        }
+        DestroyMenu(hMenu);
+    }
 }

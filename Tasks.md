@@ -9,7 +9,7 @@
 	- [x] Delete: To terminate process
 	- [x] Backtick, Shift+Backtick: To switch to similar process
 - [ ] System tray.
-	- [ ] Add application to system tray.
+	- [x] Add application to system tray.
 	- [ ] Group 1: About
 	- [ ] Group 2: ReadMe
 	- [ ] Group 2: Help

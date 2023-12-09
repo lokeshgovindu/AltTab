@@ -23,9 +23,28 @@ struct AltTabSettings {
     int                 WindowHeight;           // Window height, will be calculated at runtime
     COLORREF            FontColor;              // Font color
     COLORREF            BackgroundColor;        // Background color
-    int                 WindowTransparency;     // Window transparency
+    int                 Transparency;           // Window transparency
     std::wstring        SimilarProcessGroups;   // Similar process groups
     ProcessGroupsList   ProcessGroupsList;      // Process groups, will be constructed at runtime from SimilarProcessGroups
+    std::wstring        CheckForUpdates;        // Check for updates
+    bool                PromptTerminateAll;     // Ask before terminating all processes
+
 };
 
 extern AltTabSettings g_Settings;
+
+INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+
+int GetProcessGroupIndex(const std::wstring& processName);
+
+/*!
+ * Check if the processName is similar process of ProcessGroup[i]
+ * 
+ * \param[in]   index           Source process index
+ * \param[in]   processName     Process name to check if it is available in ProcessGroup[i]
+ * 
+ * \returns true if the processName is of ProcessGroup[i] otherwise false.
+ */
+bool IsSimilarProcess(int index, const std::wstring& processName);
+
+bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& processNameB);

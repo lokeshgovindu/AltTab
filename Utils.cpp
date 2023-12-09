@@ -4,6 +4,8 @@
 #include <io.h>
 #include <fcntl.h>
 #include "Logger.h"
+#include <string>
+#include <algorithm>
 
 bool EnableConsoleWindow() {
     if (!AllocConsole())
@@ -23,4 +25,28 @@ std::vector<std::wstring> Split(const std::wstring& s, const std::wstring& seps)
         ret.push_back(s.substr(p, q - p));
     }
     return ret;
+}
+
+bool EqualsIgnoreCase(const std::string& str1, const std::string& t) {
+    return str1.size() == t.size() && std::equal(str1.begin(), str1.end(), t.begin(), [](auto a, auto b) {
+        return std::tolower(a) == std::tolower(b);
+    });
+}
+
+bool EqualsIgnoreCase(const std::wstring& str1, const std::wstring& t) {
+    return str1.size() == t.size() && std::equal(str1.begin(), str1.end(), t.begin(), [](auto a, auto b) {
+        return std::tolower(a) == std::tolower(b);
+    });
+}
+
+std::wstring ToLower(const std::wstring& s) {
+    std::wstring result = s;
+    std::transform(result.begin(), result.end(), result.begin(), towlower);
+    return result;
+}
+
+std::wstring ToUpper(const std::wstring& s) {
+    std::wstring result = s;
+    std::transform(result.begin(), result.end(), result.begin(), towupper);
+    return result;
 }
