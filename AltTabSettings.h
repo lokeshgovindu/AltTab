@@ -6,6 +6,8 @@
 
 using ProcessGroupsList = std::vector<std::unordered_set<std::wstring>>;
 
+#define SETTINGS_INI_FILENAME   L"AltTabSettings.ini"
+
 /*!
  * AltTab application settings
  * 
@@ -31,7 +33,11 @@ struct AltTabSettings {
 
 };
 
+// ----------------------------------------------------------------------------
+// Global declarations
+// ----------------------------------------------------------------------------
 extern AltTabSettings g_Settings;
+
 
 INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -48,3 +54,14 @@ int GetProcessGroupIndex(const std::wstring& processName);
 bool IsSimilarProcess(int index, const std::wstring& processName);
 
 bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& processNameB);
+
+std::wstring ATSettingsDirPath();
+
+std::wstring ATSettingsFilePath();
+
+void ATSettingsCreateDefault(const std::wstring& settingsFilePath);
+
+void ATLoadSettings();
+
+void ATSaveSettings();
+

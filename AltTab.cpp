@@ -96,18 +96,6 @@ BOOL AddNotificationIcon(HWND hWndTrayIcon) {
     return Shell_NotifyIcon(NIM_ADD, &nid);
 }
 
-void ATLoadSettings() {
-    AT_LOG_TRACE;
-    std::wstring settingsFilePath = L"AltTabSettings.ini";
-    auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
-    for (auto& item : vs) {
-        auto processes = Split(item, L"/");
-        for (auto& processName : processes)
-                processName = ToLower(processName);
-        g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
-    }
-}
-
 int APIENTRY wWinMain(
     _In_        HINSTANCE   hInstance,
     _In_opt_    HINSTANCE   hPrevInstance,
