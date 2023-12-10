@@ -33,7 +33,16 @@ bool           g_IsAltBacktick   = false;                // Is Alt+Backtick pres
 
 UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 
-// Function to handle tray icon events
+/**
+ * AltTab system tray icon procedure
+ * 
+ * \param hWnd      hWnd
+ * \param message   message
+ * \param wParam    wParam
+ * \param lParam    lParam
+ * 
+ * \return 
+ */
 LRESULT CALLBACK 
 AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
@@ -41,15 +50,44 @@ AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
         int const wmId = LOWORD(wParam);
         // Parse the menu selections:
         switch (wmId) {
-            case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
-                AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
-                DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
-                break;
+        case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
+            DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
+            break;
 
-            case ID_TRAYCONTEXTMENU_EXIT:
-                AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
-                PostQuitMessage(0);
-                break;
+        case ID_TRAYCONTEXTMENU_README:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
+            break;
+
+        case ID_TRAYCONTEXTMENU_HELP:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
+            break;
+
+        case ID_TRAYCONTEXTMENU_RELEASENOTES:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
+            break;
+
+        case ID_TRAYCONTEXTMENU_SETTINGS:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
+            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
+            break;
+
+        case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
+            break;
+
+        case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
+            break;
+
+        case ID_TRAYCONTEXTMENU_RUNATSTARTUP:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
+            break;
+
+        case ID_TRAYCONTEXTMENU_EXIT:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
+            PostQuitMessage(0);
+            break;
         }
 
     } break;
@@ -64,6 +102,7 @@ AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
             break;
         }
         break;
+    
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -78,7 +117,7 @@ HWND CreateTrayIconWindow(HINSTANCE hInstance) {
     wc.lpszClassName = L"AltTabTrayIconWindowClass";
     RegisterClass(&wc);
 
-    return CreateWindow(wc.lpszClassName, L"AltTabTrayIconWindow", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+    return CreateWindow(wc.lpszClassName, L"AltTabTrayIconWindow", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, hInstance, nullptr);
 }
 
 BOOL AddNotificationIcon(HWND hWndTrayIcon) {
@@ -94,18 +133,6 @@ BOOL AddNotificationIcon(HWND hWndTrayIcon) {
     wcscpy_s(nid.szTip, productName.c_str());
 
     return Shell_NotifyIcon(NIM_ADD, &nid);
-}
-
-void ATLoadSettings() {
-    AT_LOG_TRACE;
-    std::wstring settingsFilePath = L"AltTabSettings.ini";
-    auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
-    for (auto& item : vs) {
-        auto processes = Split(item, L"/");
-        for (auto& processName : processes)
-                processName = ToLower(processName);
-        g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
-    }
 }
 
 int APIENTRY wWinMain(
@@ -130,6 +157,9 @@ int APIENTRY wWinMain(
 
     // Load settings from AltTabSettings.ini file
     ATLoadSettings();
+
+    // Run At Startup
+    //RunAtStartup(true);
 
     // System tray
     // Create a hidden window for tray icon handling
@@ -159,9 +189,10 @@ int APIENTRY wWinMain(
     return (int) msg.wParam;
 }
 
+// ----------------------------------------------------------------------------
 // Message handler for about box.
-INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
+// ----------------------------------------------------------------------------
+INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
@@ -193,6 +224,9 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
     return (INT_PTR)FALSE;
 }
 
+// ----------------------------------------------------------------------------
+// Activate window of the given window handle
+// ----------------------------------------------------------------------------
 void ActivateWindow(HWND hWnd) {
     // Bring the window to the foreground
     if (!BringWindowToTop(hWnd)) {
@@ -204,6 +238,9 @@ void ActivateWindow(HWND hWnd) {
     }
 }
 
+// ----------------------------------------------------------------------------
+// Destroy AltTab Window and do necessary cleanup here
+// ----------------------------------------------------------------------------
 void DestoryAltTabWindow() {
     AT_LOG_TRACE;
 
@@ -216,6 +253,9 @@ void DestoryAltTabWindow() {
     g_AltTabWindows.clear();
 }
 
+// ----------------------------------------------------------------------------
+// Low level keyboard procedure
+// ----------------------------------------------------------------------------
 LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     //AT_LOG_TRACE;
     //AT_LOG_INFO(std::format("hAltTabWnd is nullptr: {}", hAltTabWnd == nullptr).c_str());
@@ -388,6 +428,57 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(kbdhook, nCode, wParam, lParam);
 }
 
+void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
+    switch (menuItemId) {
+    case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
+        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
+        break;
+
+    case ID_TRAYCONTEXTMENU_README:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
+        break;
+
+    case ID_TRAYCONTEXTMENU_HELP:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
+        break;
+
+    case ID_TRAYCONTEXTMENU_RELEASENOTES:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
+        break;
+
+    case ID_TRAYCONTEXTMENU_SETTINGS:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
+        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
+        break;
+
+    case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
+        break;
+
+    case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
+        break;
+
+    case ID_TRAYCONTEXTMENU_RUNATSTARTUP: {
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
+        UINT checkState = GetCheckState(hSubMenu, menuItemId);
+        bool checked = (checkState == MF_CHECKED);
+        RunAtStartup(!checked);
+        ToggleCheckState(hSubMenu, menuItemId);
+    }
+    break;
+
+    case ID_TRAYCONTEXTMENU_EXIT:
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
+        PostQuitMessage(0);
+        break;
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Show AltTab system tray context menu
+// ----------------------------------------------------------------------------
 void ShowContextMenu(HWND hWnd, POINT pt) {
     HMENU hMenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDC_TRAY_CONTEXTMENU));
     if (hMenu) {
@@ -397,6 +488,18 @@ void ShowContextMenu(HWND hWnd, POINT pt) {
             // the menu will not disappear when the user clicks away
             SetForegroundWindow(hWnd);
 
+            if (IsRunAtStartup()) {
+                SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNATSTARTUP, MF_CHECKED);
+            }
+
+            if (g_Settings.DisableAltTab) {
+                MENUITEMINFO mi = { 0 };
+                mi.cbSize       = sizeof(MENUITEMINFO);
+                mi.fMask        = MIIM_STATE;
+                mi.fState       = MF_CHECKED;
+                SetMenuItemInfo(hSubMenu, ID_TRAYCONTEXTMENU_DISABLEALTTAB, FALSE, &mi);
+            }
+
             // respect menu drop alignment
             UINT uFlags = TPM_RIGHTBUTTON;
             if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
@@ -405,8 +508,112 @@ void ShowContextMenu(HWND hWnd, POINT pt) {
                 uFlags |= TPM_LEFTALIGN;
             }
 
-            TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
+            //TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
+
+            // Use TPM_RETURNCMD flag let TrackPopupMenuEx function return the 
+            // menu item identifier of the user's selection in the return value.
+            uFlags |= TPM_RETURNCMD;
+            UINT menuItemId = TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
+
+            TrayContextMenuItemHandler(hWnd, hSubMenu, menuItemId);
+
+            //ToggleCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNATSTARTUP);
         }
         DestroyMenu(hMenu);
     }
+}
+
+void ToggleCheckState(HMENU hMenu, UINT menuItemID) {
+    MENUITEMINFO menuItemInfo = { sizeof(MENUITEMINFO) };
+    menuItemInfo.cbSize       = sizeof(MENUITEMINFO);
+    menuItemInfo.fMask        = MIIM_STATE;
+
+    // Get the current state of the menu item
+    GetMenuItemInfo(hMenu, menuItemID, FALSE, &menuItemInfo);
+
+    // Toggle the check mark state
+    menuItemInfo.fState ^= MF_CHECKED;
+
+    // Set the updated state
+    SetMenuItemInfo(hMenu, menuItemID, FALSE, &menuItemInfo);
+}
+
+UINT GetCheckState(HMENU hMenu, UINT menuItemID) {
+    MENUITEMINFO menuItemInfo = { sizeof(MENUITEMINFO) };
+    menuItemInfo.cbSize       = sizeof(MENUITEMINFO);
+    menuItemInfo.fMask        = MIIM_STATE;
+
+    // Get the current state of the menu item
+    GetMenuItemInfo(hMenu, menuItemID, FALSE, &menuItemInfo);
+
+    // Toggle the check mark state
+    return menuItemInfo.fState & MF_CHECKED;
+}
+
+void SetCheckState(HMENU hMenu, UINT menuItemID, UINT fState) {
+    MENUITEMINFO menuItemInfo = { sizeof(MENUITEMINFO) };
+    menuItemInfo.cbSize       = sizeof(MENUITEMINFO);
+    menuItemInfo.fMask        = MIIM_STATE;
+    menuItemInfo.fState       = fState;
+
+    // Set the updated state
+    SetMenuItemInfo(hMenu, menuItemID, FALSE, &menuItemInfo);
+}
+
+bool RunAtStartup(bool flag) {
+    wchar_t applicationPath[MAX_PATH];
+    DWORD length = GetModuleFileName(nullptr, applicationPath, MAX_PATH);
+
+    if (length == 0) {
+        AT_LOG_ERROR(L"Failed to retrieve the path of the currently running process.");
+        return false;
+    }
+
+    HKEY hKey;
+    LONG result = RegOpenKeyEx(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        KEY_SET_VALUE,
+        &hKey);
+
+    if (result == ERROR_SUCCESS) {
+        if (flag) {
+            result = RegSetValueExW(
+                hKey,
+                AT_PRODUCT_NAMEW,
+                0,
+                REG_SZ,
+                (const BYTE*)applicationPath,
+                (DWORD)(wcslen(applicationPath) + 1) * sizeof(wchar_t));
+            RegCloseKey(hKey);
+            return (result == ERROR_SUCCESS);
+        } else {
+            result = RegDeleteValue(hKey, AT_PRODUCT_NAMEW);
+            RegCloseKey(hKey);
+            return (result == ERROR_SUCCESS);
+        }
+    }
+
+    return false;
+}
+
+bool IsRunAtStartup() {
+    HKEY hKey;
+    LONG result = RegOpenKeyEx(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        KEY_READ,
+        &hKey);
+
+    if (result == ERROR_SUCCESS) {
+        // Check if the registry entry exists
+        DWORD dataSize = 0;
+        result = RegQueryValueExW(hKey, AT_PRODUCT_NAMEW, nullptr, nullptr, nullptr, &dataSize);
+        RegCloseKey(hKey);
+
+        return (result == ERROR_SUCCESS);
+    }
+    return false;
 }

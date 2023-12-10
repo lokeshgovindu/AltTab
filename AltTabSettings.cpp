@@ -3,9 +3,18 @@
 #include <windowsx.h>
 #include <CommCtrl.h>
 #include "Utils.h"
+#include "Logger.h"
+#include <ShlObj_core.h>
+#include "version.h"
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 
 #define WM_SETTEXTCOLOR (WM_USER + 1)
 
+// ----------------------------------------------------------------------------
+// Default settings
+// ----------------------------------------------------------------------------
 AltTabSettings g_Settings = { 
     L"Lucida Handwriting",    // FontName
     45,                       // WidthPercentage
@@ -15,10 +24,11 @@ AltTabSettings g_Settings = {
     RGB(0xFF, 0xFF, 0xFF),    // FontColor
     RGB(0x00, 0x00, 0x00),    // BackgroundColor
     222,                      // WindowTransparency
-    L"Code.exe/notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe",
+    L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe",
     {},                       // ProcessGroupsList
     L"Startup",               // CheckForUpdates
-    true                      // PromptTerminateAll
+    true,                     // PromptTerminateAll
+    false,                    // DisableAltTab
 };
 
 INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -27,6 +37,7 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     switch (message)
     {
     case WM_INITDIALOG: {
+        SetDlgItemText    (hDlg, IDC_EDIT_SETTINGS_FILEPATH       , ATSettingsFilePath().c_str());
         SetDlgItemText    (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS  , g_Settings.SimilarProcessGroups.c_str());
 
         HFONT hFont = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
@@ -123,6 +134,12 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
             g_Settings.WidthPercentage      = GetDlgItemInt(hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
             g_Settings.HeightPercentage     = GetDlgItemInt(hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
 
+            // Save settings
+            ATSaveSettings();
+
+            // Load settings to reconstruct the ProcessGroupsList
+            ATLoadSettings();
+
             delete[] buffer;
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
@@ -166,8 +183,109 @@ bool IsSimilarProcess(int index, const std::wstring& processName) {
 }
 
 bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& processNameB) {
+    if (EqualsIgnoreCase(processNameA, processNameB))
+        return true;
+
     int index = GetProcessGroupIndex(processNameA);
     if (index == -1)
         return false;
+
     return g_Settings.ProcessGroupsList[index].contains(ToLower(processNameB));
+}
+
+std::wstring ATSettingsDirPath() {
+    // Get the path to the Roaming AppData folder
+    wchar_t szPath[MAX_PATH] = { 0 };
+    SHGetFolderPath(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, szPath);
+    std::filesystem::path settingsDirPath = szPath;
+    settingsDirPath.append(AT_PRODUCT_NAMEW);
+    if (!std::filesystem::exists(settingsDirPath)) {
+        if (!std::filesystem::create_directory(settingsDirPath)) {
+            throw std::exception("Failed to create AltTab directory in APPDATA");
+        }
+    }
+    return settingsDirPath.wstring();
+}
+
+std::wstring ATSettingsFilePath() {
+    std::filesystem::path settingsFilePath = ATSettingsDirPath();
+    settingsFilePath.append(SETTINGS_INI_FILENAME);
+    if (!std::filesystem::exists(settingsFilePath)) {
+        std::ofstream fs(settingsFilePath);
+        if (!fs.is_open()) {
+            throw std::exception("Failed to create AltTab.ini file in APPDATA/AltTab");
+        }
+        fs << "; -----------------------------------------------------------------------------" << std::endl;
+        fs << "; Configuration/settings file for AltTab." << std::endl;
+        fs << "; Notes:" << std::endl;
+        fs << ";   1. Do NOT edit manually if you are not familiar with settings." << std::endl;
+        fs << ";   2. Color Format is RGB(0xAA, 0xBB, 0xCC) => 0xAABBCC, in hex format." << std::endl;
+        fs << ";      0xAA : Red component" << std::endl;
+        fs << ";      0xBB : Green component" << std::endl;
+        fs << ";      0xCC : Blue component" << std::endl;
+        fs << "; -----------------------------------------------------------------------------" << std::endl;
+        fs.close();
+        ATSettingsCreateDefault(settingsFilePath.wstring());
+    }
+    return settingsFilePath.wstring();
+}
+
+template<typename T>
+void WriteSetting(LPCTSTR iniFile, LPCTSTR section, LPCTSTR keyName, const T& value) {
+    WritePrivateProfileStringW(section, keyName, std::to_wstring(value).c_str(), iniFile);
+}
+
+template<>
+void WriteSetting(LPCTSTR iniFile, LPCTSTR section, LPCTSTR keyName, const std::wstring& value) {
+    WritePrivateProfileStringW(section, keyName, value.c_str(), iniFile);
+}
+
+void ATSettingsCreateDefault(const std::wstring& settingsFilePath) {
+    WriteSetting(settingsFilePath.c_str(), L"Backtick", L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowTransparency"    , g_Settings.Transparency);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
+}
+
+void ATLoadSettings() {
+    AT_LOG_TRACE;
+    std::wstring iniFile = ATSettingsFilePath();
+
+    const int bufferSize = 4096;    // Initial buffer size
+    wchar_t buffer[bufferSize];     // Buffer to store the retrieved string
+
+    GetPrivateProfileStringW(L"Backtick", L"SimilarProcessGroups", g_Settings.SimilarProcessGroups.c_str(), buffer, bufferSize, iniFile.c_str());
+    g_Settings.SimilarProcessGroups = buffer;
+
+    g_Settings.PromptTerminateAll = GetPrivateProfileInt(L"General", L"PromptTerminateAll"    ,   1, iniFile.c_str());
+    g_Settings.Transparency       = GetPrivateProfileInt(L"General", L"WindowTransparency"    , 222, iniFile.c_str());
+    g_Settings.WidthPercentage    = GetPrivateProfileInt(L"General", L"WindowWidthPercentage" ,  45, iniFile.c_str());
+    g_Settings.HeightPercentage   = GetPrivateProfileInt(L"General", L"WindowHeightPercentage",  45, iniFile.c_str());
+
+    GetPrivateProfileStringW(L"General", L"CheckForUpdates", L"Startup", buffer, bufferSize, iniFile.c_str());
+    g_Settings.CheckForUpdates = buffer;
+
+    // Clear the previous ProcessGroupsList
+    g_Settings.ProcessGroupsList.clear();
+
+    auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
+    for (auto& item : vs) {
+        auto processes = Split(item, L"/");
+        for (auto& processName : processes)
+            processName = ToLower(processName);
+        g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
+    }
+}
+
+void ATSaveSettings() {
+    AT_LOG_TRACE;
+    std::wstring settingsFilePath = ATSettingsFilePath();
+    WriteSetting(settingsFilePath.c_str(), L"Backtick", L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowTransparency"    , g_Settings.Transparency);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
 }
