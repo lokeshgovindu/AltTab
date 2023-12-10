@@ -30,6 +30,7 @@ struct AltTabSettings {
     ProcessGroupsList   ProcessGroupsList;      // Process groups, will be constructed at runtime from SimilarProcessGroups
     std::wstring        CheckForUpdates;        // Check for updates
     bool                PromptTerminateAll;     // Ask before terminating all processes
+    bool                DisableAltTab;          // Disable AltTab hotkeys
 
 };
 

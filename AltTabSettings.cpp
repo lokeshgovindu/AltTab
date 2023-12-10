@@ -27,7 +27,8 @@ AltTabSettings g_Settings = {
     L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe",
     {},                       // ProcessGroupsList
     L"Startup",               // CheckForUpdates
-    true                      // PromptTerminateAll
+    true,                     // PromptTerminateAll
+    false,                    // DisableAltTab
 };
 
 INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)

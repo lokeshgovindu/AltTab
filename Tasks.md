@@ -14,12 +14,12 @@
 	- [ ] Group 2: ReadMe
 	- [ ] Group 2: Help
 	- [ ] Group 2: Release Notes
-	- [ ] Group 3: Settings
+	- [x] Group 3: Settings
 	- [ ] Group 3: Disable AltTab
 	- [ ] Group 3: Check for updates
-	- [ ] Group 3: Run At Startup
+	- [x] Group 3: Run At Startup
 	- [ ] Group 3: Restart
-	- [ ] Group 4: Exit
+	- [x] Group 4: Exit
 - [ ] Add search string functionality
 - [ ] Settings & Settings UI
 	- [ ] Load & Save settings from & to AltTabSettings.ini file
