@@ -452,9 +452,19 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
         break;
 
-    case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
+    case ID_TRAYCONTEXTMENU_DISABLEALTTAB: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
-        break;
+        UINT checkState          = GetCheckState(hSubMenu, menuItemId);
+        bool disableAltTab       = !(checkState == MF_CHECKED);
+        g_Settings.DisableAltTab = disableAltTab;
+
+        if (disableAltTab) {
+            UnhookWindowsHookEx(kbdhook);
+        } else {
+            kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, g_hInstance, NULL);
+        }
+    }
+    break;
 
     case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
@@ -463,7 +473,7 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
     case ID_TRAYCONTEXTMENU_RUNATSTARTUP: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
         UINT checkState = GetCheckState(hSubMenu, menuItemId);
-        bool checked = (checkState == MF_CHECKED);
+        bool checked    = (checkState == MF_CHECKED);
         RunAtStartup(!checked);
         ToggleCheckState(hSubMenu, menuItemId);
     }
@@ -493,11 +503,7 @@ void ShowContextMenu(HWND hWnd, POINT pt) {
             }
 
             if (g_Settings.DisableAltTab) {
-                MENUITEMINFO mi = { 0 };
-                mi.cbSize       = sizeof(MENUITEMINFO);
-                mi.fMask        = MIIM_STATE;
-                mi.fState       = MF_CHECKED;
-                SetMenuItemInfo(hSubMenu, ID_TRAYCONTEXTMENU_DISABLEALTTAB, FALSE, &mi);
+                SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_DISABLEALTTAB, MF_CHECKED);
             }
 
             // respect menu drop alignment

@@ -6,8 +6,10 @@
 	- [x] Backtick, Shift+Backtick
 	- [x] Escape
 - [ ] Add support for custom key bindings.
-	- [x] Delete: To terminate process
-	- [x] Backtick, Shift+Backtick: To switch to similar process
+	- [x] Delete        : Terminate window/process
+	- [x] Backtick      : To switch to similar process
+	- [x] Shift+Backtick: To switch to similar process
+	- [ ] Shift+Delete  : Kill Window
 - [ ] System tray.
 	- [x] Add application to system tray.
 	- [ ] Group 1: About
@@ -15,7 +17,7 @@
 	- [ ] Group 2: Help
 	- [ ] Group 2: Release Notes
 	- [x] Group 3: Settings
-	- [ ] Group 3: Disable AltTab
+	- [x] Group 3: Disable AltTab
 	- [ ] Group 3: Check for updates
 	- [x] Group 3: Run At Startup
 	- [ ] Group 3: Restart

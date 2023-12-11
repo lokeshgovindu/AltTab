@@ -17,7 +17,7 @@ void CreateLogger() {
     // Create a pattern layout
     // %d{%Y-%m-%d %H:%M:%S,%l}
     log4cpp::PatternLayout* layout = new log4cpp::PatternLayout();
-    layout->setConversionPattern("%d [%-5p] %c: %m%n");
+    layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] %m%n");
 
     appender->setLayout(layout);
 

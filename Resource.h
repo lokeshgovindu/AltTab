@@ -21,6 +21,7 @@
 #define IDC_EDIT_STRING_MATCH_PERCENT   1010
 #define IDC_SPIN_STRING_MATCH_PERCENT   1011
 #define IDC_CHECK_FOR_UPDATES           1012
+#define IDC_BUTTON_APPLY                1013
 #define IDC_EDIT_WINDOW_TRANSPARENCY    1016
 #define IDC_SPIN_WINDOW_TRANSPARENCY    1017
 #define IDC_EDIT_WINDOW_WIDTH_PERCENTAGE 1018
@@ -46,7 +47,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32780
-#define _APS_NEXT_CONTROL_VALUE         1013
+#define _APS_NEXT_CONTROL_VALUE         1014
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

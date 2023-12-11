@@ -31,8 +31,10 @@ AltTabSettings g_Settings = {
     false,                    // DisableAltTab
 };
 
-INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
+// ----------------------------------------------------------------------------
+// Settings dialog procedure
+// ----------------------------------------------------------------------------
+INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
@@ -122,31 +124,27 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     //} break;
 
     case WM_COMMAND:
+        {
+            bool settingsModified = AreSettingsModified(hDlg);
+            EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), settingsModified);
+        }
+
+        if (LOWORD(wParam) == IDC_BUTTON_APPLY) {
+            AT_LOG_INFO("IDC_BUTTON_APPLY: Apply Settings");
+            ATApplySettings(hDlg);
+            return (INT_PTR)TRUE;
+        }
+
         if (LOWORD(wParam) == IDOK)
         {
-            int textLength                  = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
-            wchar_t* buffer                 = new wchar_t[textLength + 1];
-            GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
-
-            g_Settings.SimilarProcessGroups = buffer;
-            g_Settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
-            g_Settings.Transparency         = GetDlgItemInt(hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
-            g_Settings.WidthPercentage      = GetDlgItemInt(hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
-            g_Settings.HeightPercentage     = GetDlgItemInt(hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
-
-            // Save settings
-            ATSaveSettings();
-
-            // Load settings to reconstruct the ProcessGroupsList
-            ATLoadSettings();
-
-            delete[] buffer;
+            ATApplySettings(hDlg);
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
         }
 
         if (LOWORD(wParam) == IDCANCEL)
         {
+            AT_LOG_INFO("IDCANEL: Cancel Pressed!");
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
         }
@@ -154,8 +152,8 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         break;
 
     case WM_DESTROY: {
-        HWND hEditBox = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
-        HFONT hFont = (HFONT)SendMessage(hEditBox, WM_GETFONT, 0, 0);
+        HWND  hEditBox = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
+        HFONT hFont    = (HFONT)SendMessage(hEditBox, WM_GETFONT, 0, 0);
         if (hFont) {
             DeleteObject(hFont);
         }
@@ -207,6 +205,9 @@ std::wstring ATSettingsDirPath() {
     return settingsDirPath.wstring();
 }
 
+// ----------------------------------------------------------------------------
+// AtS
+// ----------------------------------------------------------------------------
 std::wstring ATSettingsFilePath() {
     std::filesystem::path settingsFilePath = ATSettingsDirPath();
     settingsFilePath.append(SETTINGS_INI_FILENAME);
@@ -288,4 +289,55 @@ void ATSaveSettings() {
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
+}
+
+void ATApplySettings(HWND hDlg) {
+    AT_LOG_TRACE;
+
+    int textLength                  = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
+    wchar_t* buffer                 = new wchar_t[textLength + 1];
+    GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
+
+    g_Settings.SimilarProcessGroups = buffer;
+    g_Settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
+    g_Settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
+    g_Settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
+    g_Settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
+
+    delete[] buffer;
+
+    // Save settings
+    ATSaveSettings();
+
+    // Load settings to reconstruct the ProcessGroupsList
+    ATLoadSettings();
+
+    // Disable Apply button after saving settings
+    EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), false);
+}
+
+bool AreSettingsModified(HWND hDlg) {
+    AT_LOG_TRACE;
+
+    int textLength                  = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
+    wchar_t* buffer                 = new wchar_t[textLength + 1];
+    GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
+
+    AltTabSettings settings;
+    settings.SimilarProcessGroups = buffer;
+    settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
+    settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
+    settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
+    settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
+
+    delete[] buffer;
+
+    bool modified =
+        settings.Transparency         != g_Settings.Transparency         ||
+        settings.WidthPercentage      != g_Settings.WidthPercentage      ||
+        settings.HeightPercentage     != g_Settings.HeightPercentage     ||
+        settings.SimilarProcessGroups != g_Settings.SimilarProcessGroups ||
+        settings.PromptTerminateAll   != g_Settings.PromptTerminateAll;
+
+    return modified;
 }

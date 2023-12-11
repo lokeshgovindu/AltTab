@@ -62,7 +62,25 @@ std::wstring ATSettingsFilePath();
 
 void ATSettingsCreateDefault(const std::wstring& settingsFilePath);
 
+/*!
+ * Load settings from AltTabSettings.ini file to application
+ */
 void ATLoadSettings();
 
+/*!
+ * Save application settings to AltTabSettings.ini file
+ */
 void ATSaveSettings();
+
+/*!
+ * Save modified settings to AltTabSettings.ini file
+ */
+void ATApplySettings(HWND hDlg);
+
+/*!
+ * Check if settings are modified
+ * 
+ * \returns true if settings are modified otherwise false.
+ */
+bool AreSettingsModified(HWND hDlg);
 
