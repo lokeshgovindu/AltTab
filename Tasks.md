@@ -9,10 +9,10 @@
 	- [x] Delete        : Terminate window/process
 	- [x] Backtick      : To switch to similar process
 	- [x] Shift+Backtick: To switch to similar process
-	- [ ] Shift+Delete  : Kill Window
+	- [x] Shift+Delete  : Kill Window
 - [ ] System tray.
 	- [x] Add application to system tray.
-	- [ ] Group 1: About
+	- [x] Group 1: About
 	- [ ] Group 2: ReadMe
 	- [ ] Group 2: Help
 	- [ ] Group 2: Release Notes
@@ -20,11 +20,11 @@
 	- [x] Group 3: Disable AltTab
 	- [ ] Group 3: Check for updates
 	- [x] Group 3: Run At Startup
-	- [ ] Group 3: Restart
+	- [x] Group 3: Restart
 	- [x] Group 4: Exit
 - [ ] Add search string functionality
-- [ ] Settings & Settings UI
-	- [ ] Load & Save settings from & to AltTabSettings.ini file
+- [x] Settings & Settings UI
+	- [x] Load & Save settings from & to AltTabSettings.ini file
 - [ ] Custom icon
 - [ ] Add Context Menu
 	- [ ] Group 1: Terminate Window  : Delete

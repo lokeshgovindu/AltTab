@@ -17,6 +17,7 @@
 #include "Resource.h"
 #include "version.h"
 #include <WinUser.h>
+#include <process.h>
 
 #define MAX_LOADSTRING 100
 
@@ -353,13 +354,29 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         return TRUE;
                     }
                     else if (pKeyboard->vkCode == VK_DELETE) {
-                        AT_LOG_INFO("Delete Pressed!");
-                        // Send the SC_CLOSE command to the window
-                        int  ind  = ATWListViewGetSelectedItem();
-                        HWND hWnd = g_AltTabWindows[ind].hWnd;
-                        g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
-                        SendMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
-                        ATWListViewDeleteItem(ind);
+                        if (isShiftPressed) {
+                            AT_LOG_INFO("Shift+Delete Pressed!");
+                            // Send the SC_CLOSE command to the window
+                            int ind = ATWListViewGetSelectedItem();
+                            DWORD pid = g_AltTabWindows[ind].PID;
+                            g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
+                            std::string killCmd = std::format("TASKKILL /PID {} /T /F", pid);
+                            AT_LOG_INFO(killCmd.c_str());
+                            int result = system(killCmd.c_str());
+                            if (result == 0) {
+                                ATWListViewDeleteItem(ind);
+                            } else {
+                                AT_LOG_ERROR("Failed to kill");
+                            }
+                        } else {
+                            AT_LOG_INFO("Delete Pressed!");
+                            // Send the SC_CLOSE command to the window
+                            int ind = ATWListViewGetSelectedItem();
+                            HWND hWnd = g_AltTabWindows[ind].hWnd;
+                            g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
+                            SendMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+                            ATWListViewDeleteItem(ind);
+                        }
                         return TRUE;
                     }
                     else if (pKeyboard->vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
@@ -476,6 +493,25 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         bool checked    = (checkState == MF_CHECKED);
         RunAtStartup(!checked);
         ToggleCheckState(hSubMenu, menuItemId);
+    }
+    break;
+
+    case ID_TRAYCONTEXTMENU_RESTART: {
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_RESTART");
+
+        // Close the console window of the old process
+        //bool result = FreeConsole();
+        // Attach to an existing console (if any)
+        //if (AttachConsole(ATTACH_PARENT_PROCESS) || AttachConsole(GetCurrentProcessId())) {
+        //    // Close the console window
+        //    FreeConsole();
+        //}
+
+        wchar_t applicationPath[MAX_PATH];
+        DWORD length = GetModuleFileName(nullptr, applicationPath, MAX_PATH);
+
+        // Replace the existing process with a new instance of the same program
+        _wexecl(applicationPath, applicationPath, nullptr);
     }
     break;
 

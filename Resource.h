@@ -22,6 +22,8 @@
 #define IDC_SPIN_STRING_MATCH_PERCENT   1011
 #define IDC_CHECK_FOR_UPDATES           1012
 #define IDC_BUTTON_APPLY                1013
+#define IDC_STATIC_ABOUT_PRODUCTNAME    1014
+#define IDC_STATIC_ABOUT_COPYRIGHT      1015
 #define IDC_EDIT_WINDOW_TRANSPARENCY    1016
 #define IDC_SPIN_WINDOW_TRANSPARENCY    1017
 #define IDC_EDIT_WINDOW_WIDTH_PERCENTAGE 1018
@@ -38,6 +40,8 @@
 #define ID_TRAYCONTEXTMENU_CHECKFORUPDATES 32777
 #define ID_TRAYCONTEXTMENU_RUNATSTARTUP 32778
 #define ID_TRAYCONTEXTMENU_EXIT         32779
+#define ID__RESTART                     32780
+#define ID_TRAYCONTEXTMENU_RESTART      32781
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -46,8 +50,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        131
-#define _APS_NEXT_COMMAND_VALUE         32780
-#define _APS_NEXT_CONTROL_VALUE         1014
+#define _APS_NEXT_COMMAND_VALUE         32782
+#define _APS_NEXT_CONTROL_VALUE         1016
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

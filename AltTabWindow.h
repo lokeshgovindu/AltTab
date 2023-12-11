@@ -12,6 +12,7 @@ struct AltTabWindowData {
     HICON         hIcon;
     std::wstring  Title;
     std::wstring  ProcessName;
+    DWORD         PID;
 };
 
 extern HINSTANCE                       g_hInstance;

@@ -96,7 +96,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     if (length == 0)
                         return TRUE;
 
-                    AltTabWindowData item = { hWnd, GetWindowIcon(hWnd), windowTitle, filePath.filename().wstring() };
+                    AltTabWindowData item = { hWnd, GetWindowIcon(hWnd), windowTitle, filePath.filename().wstring(), processId };
                     auto vItems = (std::vector<AltTabWindowData>*)lParam;
                     bool insert = false;
 

@@ -8,10 +8,18 @@
 #include <algorithm>
 
 bool EnableConsoleWindow() {
-    if (!AllocConsole())
-        return false; // Could throw here
-    FILE* stream = nullptr;
-    freopen_s(&stream, "CONOUT$", "w", stdout);
+    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+        if (!AllocConsole())
+            return false; // Could throw here
+    }
+    
+    FILE* stdinNew = nullptr;
+    freopen_s(&stdinNew,  "CONIN$",  "r+", stdin);
+    FILE* stdoutNew = nullptr;
+    freopen_s(&stdoutNew, "CONOUT$", "w+", stdout);
+    FILE* stderrNew = nullptr;
+    freopen_s(&stderrNew, "CONOUT$", "w+", stderr);
+
     return true;
 }
 
