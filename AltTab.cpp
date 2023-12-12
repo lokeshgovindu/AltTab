@@ -231,11 +231,15 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 // ----------------------------------------------------------------------------
 void ActivateWindow(HWND hWnd) {
     // Bring the window to the foreground
-    if (!BringWindowToTop(hWnd)) {
+    // Determines whether the specified window is minimized (iconic).
+    if (IsIconic(hWnd)) {
+        ShowWindow(hWnd, SW_RESTORE);
+    }
+    else if (!BringWindowToTop(hWnd)) {
         // Failed to bring an elevated window to the top from a non-elevated process.
         AT_LOG_INFO("BringWindowToTop(hWnd) failed!");
 
-        ShowWindow(hWnd, SW_RESTORE);
+        ShowWindow(hWnd, SW_SHOW);
         SetForegroundWindow(hWnd);
     }
 }
