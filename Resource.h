@@ -13,6 +13,7 @@
 #define IDR_MAINFRAME                   128
 #define IDC_TRAY_CONTEXTMENU            129
 #define IDD_SETTINGS                    130
+#define IDR_CONTEXTMENU                 131
 #define IDC_LISTVIEW                    1001
 #define IDC_SYSLINK1                    1002
 #define IDC_EDIT_SETTINGS_FILEPATH      1005
@@ -30,7 +31,7 @@
 #define IDC_SPIN_WINDOW_WIDTH_PERCENTAGE 1019
 #define IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE 1020
 #define IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE 1021
-#define IDC_EDIT8                       1022
+#define IDC_BUTTON_RESET                1022
 #define ID_TRAYCONTEXTMENU_ABOUTALTTAB  32771
 #define ID_TRAYCONTEXTMENU_README       32772
 #define ID_TRAYCONTEXTMENU_HELP         32773
@@ -42,6 +43,16 @@
 #define ID_TRAYCONTEXTMENU_EXIT         32779
 #define ID__RESTART                     32780
 #define ID_TRAYCONTEXTMENU_RESTART      32781
+#define ID_CONTEXTMENU_TERMINATE        32782
+#define ID_CONTEXTMENU_KILL             32783
+#define ID_CONTEXTMENU_CLOSEALLWINDOWS  32784
+#define ID_CONTEXTMENU_KILLALLPROCESSES 32785
+#define ID_CONTEXTMENU_EXIT             32786
+#define ID_CONTEXTMENU_ABOUALTTAB       32787
+#define ID_CONTEXTMENU_SETTINGS         32788
+#define ID_CONTEXTMENU_KILL_PROCESS     32789
+#define ID_CONTEXTMENU_CLOSE_WINDOW     32790
+#define ID_CONTEXTMENU_ABOUTALTTAB      32791
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -49,9 +60,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        131
-#define _APS_NEXT_COMMAND_VALUE         32782
-#define _APS_NEXT_CONTROL_VALUE         1016
+#define _APS_NEXT_RESOURCE_VALUE        132
+#define _APS_NEXT_COMMAND_VALUE         32792
+#define _APS_NEXT_CONTROL_VALUE         1023
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

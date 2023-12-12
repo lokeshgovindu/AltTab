@@ -25,6 +25,12 @@
 - [ ] Add search string functionality
 - [x] Settings & Settings UI
 	- [x] Load & Save settings from & to AltTabSettings.ini file
+	- [ ] Prompt terminate all
+	- [ ] Fuzzy string match
+	- [x] Transparency
+	- [x] Window width & height
+	- [ ] Check for updates
+	- [ ] Exclude processes
 - [ ] Custom icon
 - [ ] Add Context Menu
 	- [ ] Group 1: Terminate Window  : Delete

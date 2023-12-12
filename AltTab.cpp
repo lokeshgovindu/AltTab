@@ -4,15 +4,11 @@
 #include "framework.h"
 #include "AltTab.h"
 #include "Logger.h"
-#include <stdio.h>
-#include <io.h>
-#include <fcntl.h>
 #include "Utils.h"
 #include "AltTabWindow.h"
 #include <string>
 #include <format>
 #include "AltTabSettings.h"
-#include <unordered_set>
 #include <shellapi.h>
 #include "Resource.h"
 #include "version.h"
@@ -31,7 +27,6 @@ HWND           g_hWndTrayIcon    = nullptr;              // AltTab tray icon
 bool           g_IsAltTab        = false;                // Is Alt+Tab pressed
 bool           g_IsAltBacktick   = false;                // Is Alt+Backtick pressed
 
-
 UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 
 /**
@@ -44,8 +39,7 @@ UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
  * 
  * \return 
  */
-LRESULT CALLBACK 
-AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_COMMAND: {
         int const wmId = LOWORD(wParam);
@@ -87,7 +81,14 @@ AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
         case ID_TRAYCONTEXTMENU_EXIT:
             AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
-            PostQuitMessage(0);
+            int result = MessageBoxW(
+                hWnd,
+                L"Are you sure you want to exit?",
+                AT_PRODUCT_NAMEW,
+                MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
+            if (result == IDOK) {
+                PostQuitMessage(0);
+            }
             break;
         }
 
@@ -147,7 +148,7 @@ int APIENTRY wWinMain(
 
 #ifdef _AT_LOGGER
     CreateLogger();
-    gLogger->info("createLogger done.");
+    gLogger->info("CreateLogger done.");
 #endif // _AT_LOGGER
 
     // Initialize global strings
@@ -517,7 +518,14 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 
     case ID_TRAYCONTEXTMENU_EXIT:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
-        PostQuitMessage(0);
+        int result = MessageBoxW(
+            hWnd,
+            L"Are you sure you want to exit?",
+            AT_PRODUCT_NAMEW,
+            MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
+        if (result == IDOK) {
+            PostQuitMessage(0);
+        }
         break;
     }
 }

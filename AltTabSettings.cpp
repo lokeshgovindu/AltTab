@@ -149,6 +149,12 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
             return (INT_PTR)TRUE;
         }
 
+        if (LOWORD(wParam) == IDC_BUTTON_RESET)
+        {
+            AT_LOG_INFO("IDC_BUTTON_RESET Pressed!");
+            return (INT_PTR)TRUE;
+        }
+
         break;
 
     case WM_DESTROY: {
@@ -206,7 +212,7 @@ std::wstring ATSettingsDirPath() {
 }
 
 // ----------------------------------------------------------------------------
-// AtS
+// AltTab settings file path
 // ----------------------------------------------------------------------------
 std::wstring ATSettingsFilePath() {
     std::filesystem::path settingsFilePath = ATSettingsDirPath();
