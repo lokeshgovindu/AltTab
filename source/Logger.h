@@ -5,8 +5,7 @@
 #include <log4cpp/OstreamAppender.hh>
 #include <log4cpp/PatternLayout.hh>
 #include <memory>
-
-extern std::shared_ptr<log4cpp::Category> gLogger;
+#include "GlobalData.h"
 
 //#if defined(_AT_LOGGER)
 

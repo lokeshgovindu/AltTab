@@ -217,6 +217,7 @@
     <ClInclude Include="source\AltTabSettings.h" />
     <ClInclude Include="source\AltTabWindow.h" />
     <ClInclude Include="source\framework.h" />
+    <ClInclude Include="source\GlobalData.h" />
     <ClInclude Include="source\Logger.h" />
     <ClInclude Include="source\resource.h" />
     <ClInclude Include="source\targetver.h" />

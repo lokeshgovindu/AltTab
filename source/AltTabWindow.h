@@ -13,13 +13,6 @@ struct AltTabWindowData {
     DWORD         PID;
 };
 
-extern HINSTANCE                       g_hInstance;
-
-extern std::vector<AltTabWindowData>   g_AltTabWindows;
-
-extern bool                            g_IsAltTab;
-extern bool                            g_IsAltBacktick;
-
 HWND  CreateAltTabWindow();
 
 HWND  ShowAltTabWindow(HWND& hAltTabWnd, int direction);

@@ -3,6 +3,7 @@
 #include "Utils.h"
 #include <filesystem>
 #include "AltTabSettings.h"
+#include "GlobalData.h"
 
 std::shared_ptr<log4cpp::Category> gLogger;
 

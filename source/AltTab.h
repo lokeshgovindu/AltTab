@@ -2,8 +2,6 @@
 
 #include "resource.h"
 
-extern HWND           g_hWndTrayIcon;              // AltTab tray icon
-
 LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wp, LPARAM lp);
 
 LRESULT CALLBACK AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

@@ -34,12 +34,6 @@ struct AltTabSettings {
 
 };
 
-// ----------------------------------------------------------------------------
-// Global declarations
-// ----------------------------------------------------------------------------
-extern AltTabSettings g_Settings;
-
-
 INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 int GetProcessGroupIndex(const std::wstring& processName);

@@ -66,6 +66,9 @@
     <ClInclude Include="source\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\GlobalData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="source\AltTab.ico">

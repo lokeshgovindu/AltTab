@@ -23,6 +23,7 @@
 #include "AltTabSettings.h"
 #include "Utils.h"
 #include "AltTab.h"
+#include "GlobalData.h"
 
 #pragma comment(lib, "comctl32.lib")
 

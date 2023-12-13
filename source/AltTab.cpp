@@ -15,6 +15,7 @@
 #include <WinUser.h>
 #include <process.h>
 #include <CommCtrl.h>
+#include "GlobalData.h"
 
 #define MAX_LOADSTRING 100
 
