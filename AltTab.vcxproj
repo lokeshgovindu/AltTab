@@ -199,36 +199,37 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AltTab.h" />
-    <ClInclude Include="AltTabSettings.h" />
-    <ClInclude Include="AltTabWindow.h" />
-    <ClInclude Include="framework.h" />
-    <ClInclude Include="Logger.h" />
-    <ClInclude Include="Resource.h" />
-    <ClInclude Include="targetver.h" />
-    <ClInclude Include="Utils.h" />
-    <ClInclude Include="version.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="AltTab.cpp" />
-    <ClCompile Include="AltTabSettings.cpp" />
-    <ClCompile Include="AltTabWindow.cpp" />
-    <ClCompile Include="Logger.cpp" />
-    <ClCompile Include="Utils.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="AltTab.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="AltTab.ico" />
-    <Image Include="small.ico" />
+    <ClCompile Include="source\AltTab.cpp" />
+    <ClCompile Include="source\AltTabSettings.cpp" />
+    <ClCompile Include="source\AltTabWindow.cpp" />
+    <ClCompile Include="source\Logger.cpp" />
+    <ClCompile Include="source\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include=".gitignore" />
     <None Include="AltTabSettings.ini" />
     <None Include="README.md" />
+    <None Include="source\Tasks.md" />
     <None Include="Tasks.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="source\AltTab.h" />
+    <ClInclude Include="source\AltTabSettings.h" />
+    <ClInclude Include="source\AltTabWindow.h" />
+    <ClInclude Include="source\framework.h" />
+    <ClInclude Include="source\Logger.h" />
+    <ClInclude Include="source\resource.h" />
+    <ClInclude Include="source\targetver.h" />
+    <ClInclude Include="source\Utils.h" />
+    <ClInclude Include="source\version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="source\AltTab.ico" />
+    <Image Include="source\small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="source\AltTab.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
