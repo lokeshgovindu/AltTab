@@ -210,7 +210,6 @@
     <None Include=".gitignore" />
     <None Include="AltTabSettings.ini" />
     <None Include="README.md" />
-    <None Include="source\Tasks.md" />
     <None Include="Tasks.md" />
   </ItemGroup>
   <ItemGroup>
