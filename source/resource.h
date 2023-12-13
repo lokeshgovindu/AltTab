@@ -8,7 +8,6 @@
 #define IDM_ABOUT                       104
 #define IDM_EXIT                        105
 #define IDI_ALTTAB                      107
-#define IDI_SMALL                       108
 #define IDC_ALTTAB                      109
 #define IDR_MAINFRAME                   128
 #define IDC_TRAY_CONTEXTMENU            129

@@ -226,7 +226,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="source\AltTab.ico" />
-    <Image Include="source\small.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="source\AltTab.rc" />

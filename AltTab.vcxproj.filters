@@ -72,9 +72,6 @@
     <Image Include="source\AltTab.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="source\small.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="source\AltTab.rc">
