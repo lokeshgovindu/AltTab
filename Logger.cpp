@@ -1,16 +1,21 @@
 #include "Logger.h"
 #include "log4cpp/Appender.hh"
 #include "Utils.h"
+#include <filesystem>
+#include "AltTabSettings.h"
 
 std::shared_ptr<log4cpp::Category> gLogger;
 
 void CreateLogger() {
     // Create an appender and a layout
-#if 1
+#ifdef _AT_LOGGER
     EnableConsoleWindow();
     log4cpp::Appender* appender = new log4cpp::OstreamAppender("console", &std::cout);
 #else
-    log4cpp::Appender* appender = new log4cpp::FileAppender("FileAppender", "AltTab.log");
+    std::filesystem::path logFilePath = ATSettingsDirPath();
+    logFilePath.append("AltTab.log");
+
+    log4cpp::Appender* appender = new log4cpp::FileAppender("FileAppender", logFilePath.string());
 #endif // 0
 
     //appender->setLayout(new log4cpp::BasicLayout());

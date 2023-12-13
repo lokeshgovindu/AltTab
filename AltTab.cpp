@@ -14,6 +14,7 @@
 #include "version.h"
 #include <WinUser.h>
 #include <process.h>
+#include <CommCtrl.h>
 
 #define MAX_LOADSTRING 100
 
@@ -119,7 +120,18 @@ HWND CreateTrayIconWindow(HINSTANCE hInstance) {
     wc.lpszClassName = L"AltTabTrayIconWindowClass";
     RegisterClass(&wc);
 
-    return CreateWindow(wc.lpszClassName, L"AltTabTrayIconWindow", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, hInstance, nullptr);
+    return CreateWindowW(
+        wc.lpszClassName,
+        L"AltTabTrayIconWindow",
+        0,
+        0,
+        0,
+        1,
+        1,
+        HWND_MESSAGE,
+        nullptr,
+        hInstance,
+        nullptr);
 }
 
 BOOL AddNotificationIcon(HWND hWndTrayIcon) {
@@ -131,8 +143,7 @@ BOOL AddNotificationIcon(HWND hWndTrayIcon) {
     nid.uFlags           = NIF_ICON | NIF_TIP | NIF_MESSAGE;
     nid.uCallbackMessage = WM_USER_ALTTAB_TRAYICON;
     nid.hIcon            = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
-    std::wstring productName = std::format(L"{} v{}", TEXT(AT_PRODUCT_NAME), TEXT(AT_VERSION_TEXT));
-    wcscpy_s(nid.szTip, productName.c_str());
+    wcscpy_s(nid.szTip, AT_PRODUCT_NAMEW);
 
     return Shell_NotifyIcon(NIM_ADD, &nid);
 }
@@ -146,10 +157,11 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-#ifdef _AT_LOGGER
+//#ifdef _AT_LOGGER
     CreateLogger();
+    gLogger->info("-------------------------------------------------------------------------------");
     gLogger->info("CreateLogger done.");
-#endif // _AT_LOGGER
+//#endif // _AT_LOGGER
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle,       MAX_LOADSTRING);
@@ -166,6 +178,11 @@ int APIENTRY wWinMain(
     // System tray
     // Create a hidden window for tray icon handling
     g_hWndTrayIcon = CreateTrayIconWindow(hInstance);
+
+    // TODO: This is a temporary solution to fix for application focus issue.
+    // https://stackoverflow.com/questions/22422708/popup-window-unable-to-receive-focus-when-top-level-window-is-minimized
+    g_hAltTabWnd = CreateAltTabWindow();
+    DestoryAltTabWindow();
 
     // Add the tray icon
     if (!AddNotificationIcon(g_hWndTrayIcon)) {
@@ -212,6 +229,12 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         int posY = (screenHeight - dlgHeight) / 2;
 
         SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
+        // Initialize the SysLink control
+        HWND hSysLink = GetDlgItem(hDlg, IDC_SYSLINK1);
+
+        // Set the link text and URL
+        SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://www.openai.com/\">Visit OpenAI's website</a>");
+   
     }
     return (INT_PTR)TRUE;
 
@@ -222,6 +245,16 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
             return (INT_PTR)TRUE;
         }
         break;
+
+    case WM_NOTIFY:
+        if (wParam == IDC_SYSLINK1) {
+            // Handle SysLink notifications
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->code == NM_CLICK) {
+ShellExecute(NULL, L"open", L"https://www.openai.com/", NULL, NULL, SW_SHOWNORMAL);
+                            }
+        }
+        break;
     }
     return (INT_PTR)FALSE;
 }
@@ -230,6 +263,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 // Activate window of the given window handle
 // ----------------------------------------------------------------------------
 void ActivateWindow(HWND hWnd) {
+    AT_LOG_TRACE;
     // Bring the window to the foreground
     // Determines whether the specified window is minimized (iconic).
     if (IsIconic(hWnd)) {
@@ -271,13 +305,14 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         //AT_LOG_INFO(std::format("wParam: {}, vkCode: {}", wParam, pKeyboard->vkCode).c_str());
 
         // Check if Alt key is pressed
-        bool isAltPressed = GetAsyncKeyState(VK_MENU) & 0x8000;
+        bool isAltPressed  = GetAsyncKeyState(VK_MENU   ) & 0x8000;
+        bool isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
         //AT_LOG_INFO(std::format("isAltPressed: {}", isAltPressed).c_str());
 
         // ----------------------------------------------------------------------------
         // Alt key is pressed
         // ----------------------------------------------------------------------------
-        if (isAltPressed) {
+        if (isAltPressed && !isCtrlPressed) {
             // Check if Shift key is pressed
             bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
             int  direction      = isShiftPressed ? -1 : 1;
@@ -292,11 +327,11 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         g_IsAltBacktick = false;
                         if (isShiftPressed) {
                             // Alt+Shift+Tab is pressed
-                            AT_LOG_INFO("Alt+Shift+Tab Pressed!");
+                            AT_LOG_INFO("--------- Alt+Shift+Tab Pressed! ---------");
                             ShowAltTabWindow(g_hAltTabWnd, -1);
                         } else {
                             // Alt+Tab is pressed
-                            AT_LOG_INFO("Alt+Tab Pressed!");
+                            AT_LOG_INFO("--------- Alt+Tab Pressed! ---------");
                             ShowAltTabWindow(g_hAltTabWnd, 1);
                         }
                         return TRUE;
@@ -309,11 +344,11 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         g_IsAltBacktick = true;
                         if (isShiftPressed) {
                             // Alt+Shift+Backtick is pressed
-                            AT_LOG_INFO("Alt+Shift+Backtick Pressed!");
+                            AT_LOG_INFO("--------- Alt+Shift+Backtick Pressed! ---------");
                             ShowAltTabWindow(g_hAltTabWnd, -1);
                         } else {
                             // Alt+Backtick is pressed
-                            AT_LOG_INFO("Alt+Backtick Pressed!");
+                            AT_LOG_INFO("--------- Alt+Backtick Pressed! ---------");
                             ShowAltTabWindow(g_hAltTabWnd, 1);
                         }
                         return TRUE;
@@ -399,7 +434,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                             if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
                                 break;
                             }
-                            else if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
+                            if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
                                 break;
                             }
                             nextInd = -1;
@@ -432,7 +467,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
             (pKeyboard->vkCode == VK_MENU || pKeyboard->vkCode == VK_LMENU || pKeyboard->vkCode == VK_RMENU)) {
             if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
                 // Alt key released, destroy your window
-                AT_LOG_INFO("Alt key released!");
+                AT_LOG_INFO("--------- Alt key released! ---------");
                 if (g_hAltTabWnd) {
                     int selectedInd = ATWListViewGetSelectedItem();
                     if (selectedInd != -1) {

@@ -200,7 +200,7 @@ bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& proc
 std::wstring ATSettingsDirPath() {
     // Get the path to the Roaming AppData folder
     wchar_t szPath[MAX_PATH] = { 0 };
-    SHGetFolderPath(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, szPath);
+    SHGetFolderPath(nullptr, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, szPath);
     std::filesystem::path settingsDirPath = szPath;
     settingsDirPath.append(AT_PRODUCT_NAMEW);
     if (!std::filesystem::exists(settingsDirPath)) {

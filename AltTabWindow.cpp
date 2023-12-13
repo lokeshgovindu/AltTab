@@ -22,6 +22,7 @@
 #include "Resource.h"
 #include "AltTabSettings.h"
 #include "Utils.h"
+#include "AltTab.h"
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -45,7 +46,6 @@ const int COL_PROCNAME_WIDTH = 180;
 INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
 bool             IsAltTabWindow(HWND hWnd);
-static HWND      CreateAltTabWindow();
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 
@@ -246,18 +246,18 @@ HWND CreateAltTabWindow() {
 
     // Create the window
     HWND hWnd = CreateWindowExW(
-        exStyle,     // Optional window styles
-        CLASS_NAME,  // Window class
-        CLASS_NAME,  // Window title
-        style,       // Styles
-        100,         // X
-        100,         // Y
-        900,         // Width
-        700,         // Height
-        nullptr,     // Parent window
-        nullptr,     // Menu
-        g_hInstance, // Instance handle
-        nullptr      // Additional application data
+        exStyle,            // Optional window styles
+        CLASS_NAME,         // Window class
+        CLASS_NAME,         // Window title
+        style,              // Styles
+        100,                // X
+        100,                // Y
+        900,                // Width
+        700,                // Height
+        g_hWndTrayIcon,     // Parent window
+        nullptr,            // Menu
+        g_hInstance,        // Instance handle
+        nullptr             // Additional application data
     );
 
     if (hWnd == nullptr) {
@@ -268,7 +268,8 @@ HWND CreateAltTabWindow() {
     // Show the window
     ShowWindow(hWnd, SW_SHOW);
     UpdateWindow(hWnd);
-    SetForegroundWindow(hWnd);
+    //SetForegroundWindow(hWnd);
+    //BringWindowToTop(hWnd);
 
     return hWnd;
 }
@@ -521,6 +522,11 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
     }
 
+    //case WM_PAINT:
+    //    AT_LOG_INFO("WM_PAINT");
+    //    SetForegroundWindow(hWnd);
+    //    break;
+
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
             PostQuitMessage(0);
@@ -529,6 +535,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
 
     case WM_CLOSE:
+        AT_LOG_INFO("WM_CLOSE");
         // Release the font
         if (g_hFont != nullptr) {
             DeleteObject(g_hFont);
