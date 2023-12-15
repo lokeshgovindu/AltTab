@@ -30,3 +30,7 @@ bool RunAtStartup(bool flag);
 
 bool IsRunAtStartup();
 
+BOOL CALLBACK EnumWindowsProcNAT(HWND hwnd, LPARAM lParam);
+
+bool IsNativeATWDisplayed();
+

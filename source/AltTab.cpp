@@ -21,9 +21,7 @@
 
 // Global Variables:
 HINSTANCE      g_hInstance;                              // Current instance
-WCHAR          szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR          szWindowClass[MAX_LOADSTRING];            // The main window class name
-HHOOK          kbdhook;                                  // Keyboard Hook
+HHOOK          g_KeyboardHook;                           // Keyboard Hook
 HWND           g_hAltTabWnd      = nullptr;              // AltTab window handle
 HWND           g_hWndTrayIcon    = nullptr;              // AltTab tray icon
 bool           g_IsAltTab        = false;                // Is Alt+Tab pressed
@@ -164,10 +162,6 @@ int APIENTRY wWinMain(
     gLogger->info("CreateLogger done.");
 //#endif // _AT_LOGGER
 
-    // Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle,       MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_ALTTAB,    szWindowClass, MAX_LOADSTRING);
-
     g_hInstance = hInstance; // Store instance handle in our global variable
 
     // Load settings from AltTabSettings.ini file
@@ -190,7 +184,7 @@ int APIENTRY wWinMain(
         AT_LOG_ERROR("Failed to add AltTab tray icon.");
     }
 
-    kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, hInstance, NULL);
+    g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, hInstance, NULL);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_ALTTAB));
 
@@ -204,7 +198,7 @@ int APIENTRY wWinMain(
         }
     }
 
-    UnhookWindowsHookEx(kbdhook);
+    UnhookWindowsHookEx(g_KeyboardHook);
 
     return (int) msg.wParam;
 }
@@ -283,7 +277,9 @@ void ActivateWindow(HWND hWnd) {
 // Destroy AltTab Window and do necessary cleanup here
 // ----------------------------------------------------------------------------
 void DestoryAltTabWindow() {
-    AT_LOG_TRACE;
+    //AT_LOG_TRACE;
+    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
+
 
     DestroyWindow(g_hAltTabWnd);
 
@@ -296,194 +292,223 @@ void DestoryAltTabWindow() {
 
 // ----------------------------------------------------------------------------
 // Low level keyboard procedure
+// 
+// If nCode is less than zero:
+//   the hook procedure must return the value returned by CallNextHookEx.
+// 
+// If nCode is greater than or equal to zero:
+//   and the hook procedure did not process the message, it is highly
+//   recommended that you call CallNextHookEx and return the value it returns;
+//   otherwise, other applications that have installed WH_KEYBOARD_LL hooks 
+//   will not receive hook notifications and may behave incorrectly as a result.
+// 
+// If the hook procedure processed the message:
+//   it may return a nonzero value to prevent the system from passing the
+//   message to the rest of the hook chain or the target window procedure.
 // ----------------------------------------------------------------------------
 LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     //AT_LOG_TRACE;
-    //AT_LOG_INFO(std::format("hAltTabWnd is nullptr: {}", hAltTabWnd == nullptr).c_str());
-    if (nCode == HC_ACTION) {
-        KBDLLHOOKSTRUCT* pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-        
-        //AT_LOG_INFO(std::format("wParam: {}, vkCode: {}", wParam, pKeyboard->vkCode).c_str());
-
-        // Check if Alt key is pressed
-        bool isAltPressed  = GetAsyncKeyState(VK_MENU   ) & 0x8000;
-        bool isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
-        //AT_LOG_INFO(std::format("isAltPressed: {}", isAltPressed).c_str());
-
-        // ----------------------------------------------------------------------------
-        // Alt key is pressed
-        // ----------------------------------------------------------------------------
-        if (isAltPressed && !isCtrlPressed) {
-            // Check if Shift key is pressed
-            bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
-            int  direction      = isShiftPressed ? -1 : 1;
-
-            if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-                if (g_hAltTabWnd == nullptr) {
-                    // ----------------------------------------------------------------------------
-                    // Alt + Tab
-                    // ----------------------------------------------------------------------------
-                    if (pKeyboard->vkCode == VK_TAB) {
-                        g_IsAltTab = true;
-                        g_IsAltBacktick = false;
-                        if (isShiftPressed) {
-                            // Alt+Shift+Tab is pressed
-                            AT_LOG_INFO("--------- Alt+Shift+Tab Pressed! ---------");
-                            ShowAltTabWindow(g_hAltTabWnd, -1);
-                        } else {
-                            // Alt+Tab is pressed
-                            AT_LOG_INFO("--------- Alt+Tab Pressed! ---------");
-                            ShowAltTabWindow(g_hAltTabWnd, 1);
-                        }
-                        return TRUE;
-                    }
-                    // ----------------------------------------------------------------------------
-                    // Alt + Backtick
-                    // ----------------------------------------------------------------------------
-                    else if (pKeyboard->vkCode == VK_OEM_3) { // 0xC0
-                        g_IsAltTab = false;
-                        g_IsAltBacktick = true;
-                        if (isShiftPressed) {
-                            // Alt+Shift+Backtick is pressed
-                            AT_LOG_INFO("--------- Alt+Shift+Backtick Pressed! ---------");
-                            ShowAltTabWindow(g_hAltTabWnd, -1);
-                        } else {
-                            // Alt+Backtick is pressed
-                            AT_LOG_INFO("--------- Alt+Backtick Pressed! ---------");
-                            ShowAltTabWindow(g_hAltTabWnd, 1);
-                        }
-                        return TRUE;
-                    }
-                }
-                else {
-                    // ----------------------------------------------------------------------------
-                    // AltTab window is displayed.
-                    // ----------------------------------------------------------------------------
-                    if (pKeyboard->vkCode == VK_TAB) {
-                        AT_LOG_INFO("Tab Pressed!");
-                        ShowAltTabWindow(g_hAltTabWnd, direction);
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_DOWN) {
-                        AT_LOG_INFO("Down Pressed!");
-                        ShowAltTabWindow(g_hAltTabWnd, 1);
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_UP) {
-                        AT_LOG_INFO("Up Pressed!");
-                        ShowAltTabWindow(g_hAltTabWnd, -1);
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_ESCAPE) {
-                        AT_LOG_INFO("Escape Pressed!");
-                        DestoryAltTabWindow();
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_HOME || pKeyboard->vkCode == VK_PRIOR) {
-                        AT_LOG_INFO("Home/PageUp Pressed!");
-                        if (!g_AltTabWindows.empty()) {
-                            ATWListViewSelectItem(0);
-                        }
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_END || pKeyboard->vkCode == VK_NEXT) {
-                        AT_LOG_INFO("End/PageDown Pressed!");
-                        //ATWListViewPageDown();
-                        if (!g_AltTabWindows.empty()) {
-                            ATWListViewSelectItem((int)g_AltTabWindows.size() - 1);
-                        }
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_DELETE) {
-                        if (isShiftPressed) {
-                            AT_LOG_INFO("Shift+Delete Pressed!");
-                            // Send the SC_CLOSE command to the window
-                            int ind = ATWListViewGetSelectedItem();
-                            DWORD pid = g_AltTabWindows[ind].PID;
-                            g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
-                            std::string killCmd = std::format("TASKKILL /PID {} /T /F", pid);
-                            AT_LOG_INFO(killCmd.c_str());
-                            int result = system(killCmd.c_str());
-                            if (result == 0) {
-                                ATWListViewDeleteItem(ind);
-                            } else {
-                                AT_LOG_ERROR("Failed to kill");
-                            }
-                        } else {
-                            AT_LOG_INFO("Delete Pressed!");
-                            // Send the SC_CLOSE command to the window
-                            int ind = ATWListViewGetSelectedItem();
-                            HWND hWnd = g_AltTabWindows[ind].hWnd;
-                            g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
-                            SendMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
-                            ATWListViewDeleteItem(ind);
-                        }
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
-                        AT_LOG_INFO("Backtick Pressed!");
-
-                        // Move to next / previous same item based on the direction
-                        const int   selectedInd = ATWListViewGetSelectedItem();
-                        const int   N           = (int)g_AltTabWindows.size();
-                        const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
-                        const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
-                        int         nextInd     = -1;                                       // Next index to select
-
-                        for (int i = 1; i < N; ++i) {
-                            nextInd = (selectedInd + N + i * direction) % N;
-                            if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
-                                break;
-                            }
-                            if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
-                                break;
-                            }
-                            nextInd = -1;
-                        }
-
-                        if (nextInd != -1) ATWListViewSelectItem(nextInd);
-                        return TRUE;
-                    }
-                    else if (isShiftPressed && pKeyboard->vkCode == VK_F1) {
-                        DestoryAltTabWindow();
-                        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hWndTrayIcon, ATAboutDlgProc);
-                        return TRUE;
-                    }
-                    else if (pKeyboard->vkCode == VK_F2) {
-                        DestoryAltTabWindow();
-                        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
-                        return TRUE;
-                    }
-                    else {
-                        AT_LOG_WARN(std::format("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, pKeyboard->vkCode).c_str());
-                    }
-                }
-            }
-        }
-
-#if 1
-        // Check for Alt key released event
-        if (isAltPressed &&
-            g_hAltTabWnd &&
-            (pKeyboard->vkCode == VK_MENU || pKeyboard->vkCode == VK_LMENU || pKeyboard->vkCode == VK_RMENU)) {
-            if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-                // Alt key released, destroy your window
-                AT_LOG_INFO("--------- Alt key released! ---------");
-                if (g_hAltTabWnd) {
-                    int selectedInd = ATWListViewGetSelectedItem();
-                    if (selectedInd != -1) {
-                        HWND hWnd = g_AltTabWindows[selectedInd].hWnd;
-                        ActivateWindow(hWnd);
-                    }
-                    DestoryAltTabWindow();
-                }
-            }
-        }
-#endif // 0
-    }
 
     // Call the next hook in the chain
-    return CallNextHookEx(kbdhook, nCode, wParam, lParam);
+    if (nCode != HC_ACTION) {
+        return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
+    }
+    
+    //AT_LOG_INFO(std::format("hAltTabWnd is nullptr: {}", hAltTabWnd == nullptr).c_str());
+    KBDLLHOOKSTRUCT* pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+    DWORD vkCode = pKeyboard->vkCode;
+        
+    //AT_LOG_INFO(std::format("wParam: {}, vkCode: {}", wParam, vkCode).c_str());
+
+    // Check if Alt key is pressed
+    bool isAltPressed  = GetAsyncKeyState(VK_MENU   ) & 0x8000;
+    bool isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
+    //AT_LOG_INFO(std::format("isAltPressed: {}", isAltPressed).c_str());
+
+    // ----------------------------------------------------------------------------
+    // Alt key is pressed
+    // ----------------------------------------------------------------------------
+    if (isAltPressed && !isCtrlPressed) {
+        // Check if Shift key is pressed
+        bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
+        int  direction      = isShiftPressed ? -1 : 1;
+
+        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+            if (g_hAltTabWnd == nullptr) {
+                // Check if windows native Alt+Tab window is displayed. If so, do not process the message.
+                // Otherwise, both native Alt+Tab window and AltTab window will be displayed.
+                bool isNativeATWDisplayed = IsNativeATWDisplayed();
+                AT_LOG_INFO(std::format("isNativeATWDisplayed: {}", isNativeATWDisplayed).c_str());
+
+                // ----------------------------------------------------------------------------
+                // Alt + Tab
+                // ----------------------------------------------------------------------------
+                if (vkCode == VK_TAB) {
+                    if (isNativeATWDisplayed) {
+                        return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
+                    }
+
+                    g_IsAltTab = true;
+                    g_IsAltBacktick = false;
+                    if (isShiftPressed) {
+                        // Alt+Shift+Tab is pressed
+                        AT_LOG_INFO("--------- Alt+Shift+Tab Pressed! ---------");
+                        ShowAltTabWindow(g_hAltTabWnd, -1);
+                    } else {
+                        // Alt+Tab is pressed
+                        AT_LOG_INFO("--------- Alt+Tab Pressed! ---------");
+                        ShowAltTabWindow(g_hAltTabWnd, 1);
+                    }
+                    return TRUE;
+                }
+                // ----------------------------------------------------------------------------
+                // Alt + Backtick
+                // ----------------------------------------------------------------------------
+                else if (vkCode == VK_OEM_3) { // 0xC0
+                    g_IsAltTab = false;
+                    g_IsAltBacktick = true;
+                    if (isShiftPressed) {
+                        // Alt+Shift+Backtick is pressed
+                        AT_LOG_INFO("--------- Alt+Shift+Backtick Pressed! ---------");
+                        ShowAltTabWindow(g_hAltTabWnd, -1);
+                    } else {
+                        // Alt+Backtick is pressed
+                        AT_LOG_INFO("--------- Alt+Backtick Pressed! ---------");
+                        ShowAltTabWindow(g_hAltTabWnd, 1);
+                    }
+                    return TRUE;
+                }
+            }
+            else {
+                // ----------------------------------------------------------------------------
+                // AltTab window is displayed.
+                // ----------------------------------------------------------------------------
+                if (vkCode == VK_TAB) {
+                    AT_LOG_INFO("Tab Pressed!");
+                    ShowAltTabWindow(g_hAltTabWnd, direction);
+                    return TRUE;
+                }
+                else if (vkCode == VK_DOWN) {
+                    AT_LOG_INFO("Down Pressed!");
+                    ShowAltTabWindow(g_hAltTabWnd, 1);
+                    return TRUE;
+                }
+                else if (vkCode == VK_UP) {
+                    AT_LOG_INFO("Up Pressed!");
+                    ShowAltTabWindow(g_hAltTabWnd, -1);
+                    return TRUE;
+                }
+                else if (vkCode == VK_ESCAPE) {
+                    AT_LOG_INFO("Escape Pressed!");
+                    DestoryAltTabWindow();
+                    return TRUE;
+                }
+                else if (vkCode == VK_HOME || vkCode == VK_PRIOR) {
+                    AT_LOG_INFO("Home/PageUp Pressed!");
+                    if (!g_AltTabWindows.empty()) {
+                        ATWListViewSelectItem(0);
+                    }
+                    return TRUE;
+                }
+                else if (vkCode == VK_END || vkCode == VK_NEXT) {
+                    AT_LOG_INFO("End/PageDown Pressed!");
+                    //ATWListViewPageDown();
+                    if (!g_AltTabWindows.empty()) {
+                        ATWListViewSelectItem((int)g_AltTabWindows.size() - 1);
+                    }
+                    return TRUE;
+                }
+                else if (vkCode == VK_DELETE) {
+                    if (isShiftPressed) {
+                        AT_LOG_INFO("Shift+Delete Pressed!");
+                        // Send the SC_CLOSE command to the window
+                        int ind = ATWListViewGetSelectedItem();
+                        DWORD pid = g_AltTabWindows[ind].PID;
+                        g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
+                        std::string killCmd = std::format("TASKKILL /PID {} /T /F", pid);
+                        AT_LOG_INFO(killCmd.c_str());
+                        int result = system(killCmd.c_str());
+                        if (result == 0) {
+                            ATWListViewDeleteItem(ind);
+                        } else {
+                            AT_LOG_ERROR("Failed to kill");
+                        }
+                    } else {
+                        AT_LOG_INFO("Delete Pressed!");
+                        // Send the SC_CLOSE command to the window
+                        int ind = ATWListViewGetSelectedItem();
+                        HWND hWnd = g_AltTabWindows[ind].hWnd;
+                        g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
+                        SendMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+                        ATWListViewDeleteItem(ind);
+                    }
+                    return TRUE;
+                }
+                else if (vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
+                    AT_LOG_INFO("Backtick Pressed!");
+
+                    // Move to next / previous same item based on the direction
+                    const int   selectedInd = ATWListViewGetSelectedItem();
+                    const int   N           = (int)g_AltTabWindows.size();
+                    const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
+                    const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
+                    int         nextInd     = -1;                                       // Next index to select
+
+                    for (int i = 1; i < N; ++i) {
+                        nextInd = (selectedInd + N + i * direction) % N;
+                        if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
+                            break;
+                        }
+                        if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
+                            break;
+                        }
+                        nextInd = -1;
+                    }
+
+                    if (nextInd != -1) ATWListViewSelectItem(nextInd);
+                    return TRUE;
+                }
+                else if (isShiftPressed && vkCode == VK_F1) {
+                    DestoryAltTabWindow();
+                    DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hWndTrayIcon, ATAboutDlgProc);
+                    return TRUE;
+                }
+                else if (vkCode == VK_F2) {
+                    DestoryAltTabWindow();
+                    DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
+                    return TRUE;
+                }
+                else {
+                    AT_LOG_WARN(std::format("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, vkCode).c_str());
+                }
+            }
+        }
+    } // if (isAltPressed && !isCtrlPressed)
+
+#if 1
+    // Check for Alt key released event
+    if (isAltPressed &&
+        g_hAltTabWnd &&
+        (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU))
+    {
+        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+            // Alt key released, destroy your window
+            AT_LOG_INFO("--------- Alt key released! ---------");
+            if (g_hAltTabWnd) {
+                int selectedInd = ATWListViewGetSelectedItem();
+                if (selectedInd != -1) {
+                    HWND hWnd = g_AltTabWindows[selectedInd].hWnd;
+                    ActivateWindow(hWnd);
+                }
+                DestoryAltTabWindow();
+                //return TRUE;
+            }
+        }
+    }
+#endif
+
+    //AT_LOG_INFO("CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);");
+    return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
 }
 
 void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
@@ -517,9 +542,9 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         g_Settings.DisableAltTab = disableAltTab;
 
         if (disableAltTab) {
-            UnhookWindowsHookEx(kbdhook);
+            UnhookWindowsHookEx(g_KeyboardHook);
         } else {
-            kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, g_hInstance, NULL);
+            g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, g_hInstance, NULL);
         }
     }
     break;
@@ -706,4 +731,39 @@ bool IsRunAtStartup() {
         return (result == ERROR_SUCCESS);
     }
     return false;
+}
+
+// ----------------------------------------------------------------------------
+// This function is used to check if the Alt+Tab window is displayed
+// On Windows 10 Alt+Tab window
+//   className = "MultitaskingViewFrame" and Title = "Task Switching"
+// I didn't check on other OS
+// ----------------------------------------------------------------------------
+BOOL CALLBACK EnumWindowsProcNAT(HWND hwnd, LPARAM lParam) {
+    char className[256] = { 0 };
+    GetClassNameA(hwnd, className, sizeof(className));
+
+    if (strcmp(className, "TaskSwitcherWnd") == 0 || strcmp(className, "MultitaskingViewFrame") == 0) {
+        *reinterpret_cast<bool*>(lParam) = true;
+        return FALSE; // Stop enumerating
+    }
+
+    return TRUE; // Continue enumerating
+}
+
+bool IsNativeATWDisplayed() {
+    bool isNativeATWDisplayed = false;
+    EnumWindows(
+        [](HWND hWnd, LPARAM lParam) -> BOOL {
+            char className[256] = { 0 };
+            GetClassNameA(hWnd, className, 256);
+            if (strcmp(className, "TaskSwitcherWnd") == 0 || strcmp(className, "MultitaskingViewFrame") == 0) {
+                *reinterpret_cast<bool*>(lParam) = true;
+                return FALSE; // Stop enumerating
+            }
+            return TRUE; // Continue enumerating
+        },
+        reinterpret_cast<LPARAM>(&isNativeATWDisplayed)
+    );
+    return isNativeATWDisplayed;
 }

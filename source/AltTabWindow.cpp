@@ -87,13 +87,13 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
             HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processId);
 
             if (hProcess != nullptr) {
-                TCHAR szProcessPath[MAX_PATH];
+                wchar_t szProcessPath[MAX_PATH];
                 if (GetModuleFileNameEx(hProcess, nullptr, szProcessPath, MAX_PATH)) {
                     std::filesystem::path filePath = szProcessPath;
 
-                    const int bufferSize = 256; // adjust the buffer size as needed
-                    TCHAR windowTitle[bufferSize];
-                    int length = GetWindowText(hWnd, windowTitle, bufferSize);
+                    const int bufferSize = 256;
+                    wchar_t windowTitle[bufferSize];
+                    int length = GetWindowTextW(hWnd, windowTitle, bufferSize);
                     if (length == 0)
                         return TRUE;
 
