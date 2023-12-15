@@ -752,18 +752,27 @@ BOOL CALLBACK EnumWindowsProcNAT(HWND hwnd, LPARAM lParam) {
 }
 
 bool IsNativeATWDisplayed() {
-    bool isNativeATWDisplayed = false;
-    EnumWindows(
-        [](HWND hWnd, LPARAM lParam) -> BOOL {
-            char className[256] = { 0 };
-            GetClassNameA(hWnd, className, 256);
-            if (strcmp(className, "TaskSwitcherWnd") == 0 || strcmp(className, "MultitaskingViewFrame") == 0) {
-                *reinterpret_cast<bool*>(lParam) = true;
-                return FALSE; // Stop enumerating
-            }
-            return TRUE; // Continue enumerating
-        },
-        reinterpret_cast<LPARAM>(&isNativeATWDisplayed)
-    );
-    return isNativeATWDisplayed;
+    HWND hWnd = GetForegroundWindow();
+    char className[256] = { 0 };
+    GetClassNameA(hWnd, className, 256);
+    return
+       strcmp(className, "TaskSwitcherWnd") == 0 ||
+       strcmp(className, "MultitaskingViewFrame") == 0;
 }
+
+//bool IsNativeATWDisplayed() {
+//    bool isNativeATWDisplayed = false;
+//    EnumWindows(
+//        [](HWND hWnd, LPARAM lParam) -> BOOL {
+//            char className[256] = { 0 };
+//            GetClassNameA(hWnd, className, 256);
+//            if (strcmp(className, "TaskSwitcherWnd") == 0 || strcmp(className, "MultitaskingViewFrame") == 0) {
+//                *reinterpret_cast<bool*>(lParam) = true;
+//                return FALSE; // Stop enumerating
+//            }
+//            return TRUE; // Continue enumerating
+//        },
+//        reinterpret_cast<LPARAM>(&isNativeATWDisplayed)
+//    );
+//    return isNativeATWDisplayed;
+//}
