@@ -246,8 +246,8 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
             // Handle SysLink notifications
             NMHDR* pnmh = (NMHDR*)lParam;
             if (pnmh->code == NM_CLICK) {
-ShellExecute(NULL, L"open", L"https://www.openai.com/", NULL, NULL, SW_SHOWNORMAL);
-                            }
+                ShellExecute(NULL, L"open", L"https://www.openai.com/", NULL, NULL, SW_SHOWNORMAL);
+            }
         }
         break;
     }
@@ -278,8 +278,6 @@ void ActivateWindow(HWND hWnd) {
 // ----------------------------------------------------------------------------
 void DestoryAltTabWindow() {
     //AT_LOG_TRACE;
-    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
-
 
     DestroyWindow(g_hAltTabWnd);
 
@@ -288,6 +286,7 @@ void DestoryAltTabWindow() {
     g_IsAltTab      = false;
     g_IsAltBacktick = false;
     g_AltTabWindows.clear();
+    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
 
 // ----------------------------------------------------------------------------
@@ -338,7 +337,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // Check if windows native Alt+Tab window is displayed. If so, do not process the message.
                 // Otherwise, both native Alt+Tab window and AltTab window will be displayed.
                 bool isNativeATWDisplayed = IsNativeATWDisplayed();
-                AT_LOG_INFO(std::format("isNativeATWDisplayed: {}", isNativeATWDisplayed).c_str());
+                //AT_LOG_INFO(std::format("isNativeATWDisplayed: {}", isNativeATWDisplayed).c_str());
 
                 // ----------------------------------------------------------------------------
                 // Alt + Tab

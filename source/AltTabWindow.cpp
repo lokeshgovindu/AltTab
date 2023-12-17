@@ -179,6 +179,16 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
 
     ATWListViewSelectItem(nextInd);
 
+    HWND hWnd = GetForegroundWindow();
+    if (hAltTabWnd != hWnd) {
+        AT_LOG_ERROR("hAltTabWnd is NOT a foreground window!");
+        SetForegroundWindow(hAltTabWnd);
+        BringWindowToTop(hAltTabWnd);
+        if (!SetActiveWindow(hAltTabWnd)) {
+            AT_LOG_ERROR("SetActiveWindow failed!");
+        }
+    }
+
     return hAltTabWnd;
 }
 
@@ -267,10 +277,10 @@ HWND CreateAltTabWindow() {
     }
 
     // Show the window
-    ShowWindow(hWnd, SW_SHOW);
+    ShowWindow(hWnd, SW_SHOWNORMAL);
     UpdateWindow(hWnd);
-    //SetForegroundWindow(hWnd);
-    //BringWindowToTop(hWnd);
+    SetForegroundWindow(hWnd);
+    BringWindowToTop(hWnd);
 
     return hWnd;
 }

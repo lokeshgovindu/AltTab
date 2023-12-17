@@ -3,7 +3,7 @@
 #define AT_VERSION_MAJOR      2023
 #define AT_VERSION_MINOR      12
 #define AT_VERSION_PATCH      0
-#define AT_VERSION_BUILD      2
+#define AT_VERSION_BUILD      3
 
 #define ATSTR_(x)             #x
 #define ATSTR(x)              ATSTR_(x)
