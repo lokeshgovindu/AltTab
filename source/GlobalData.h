@@ -5,7 +5,8 @@
 // ----------------------------------------------------------------------------
 
 extern HINSTANCE                            g_hInstance;
-extern HWND                                 g_hWndTrayIcon;              // AltTab tray icon
+extern HWND                                 g_hAltTabWnd;           // AltTab window handle
+extern HWND                                 g_hWndTrayIcon;         // AltTab tray icon
 
 struct AltTabSettings;
 struct AltTabWindowData;
@@ -18,3 +19,4 @@ extern std::vector<AltTabWindowData>        g_AltTabWindows;
 
 extern bool                                 g_IsAltTab;
 extern bool                                 g_IsAltBacktick;
+extern bool                                 g_IsAltBackShown;

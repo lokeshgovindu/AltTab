@@ -17,6 +17,12 @@ HWND  CreateAltTabWindow();
 
 HWND  ShowAltTabWindow(HWND& hAltTabWnd, int direction);
 
+void  HideAltTabWindow(HWND& hAltTabWnd);
+
+void  DestoryAltTabWindow();
+
+BOOL  AddNotificationIcon(HWND hWnd);
+
 void  ATWListViewSelectItem(int rowNumber);
 
 void  ATWListViewDeleteItem(int rowNumber);

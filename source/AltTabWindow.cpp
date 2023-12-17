@@ -24,6 +24,7 @@
 #include "Utils.h"
 #include "AltTab.h"
 #include "GlobalData.h"
+#include "version.h"
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -43,12 +44,18 @@ HFONT   g_hFont     = nullptr;
 const int COL_ICON_WIDTH     = 36;
 const int COL_PROCNAME_WIDTH = 180;
 
+UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
+
 // Forward declarations of functions included in this code module:
 INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
 bool             IsAltTabWindow(HWND hWnd);
 
 std::vector<AltTabWindowData> g_AltTabWindows;
+bool                          g_IsAltBackShown = false;
+
+static void AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowData);
+static void WindowResizeAndPosition(HWND hWnd, int wndWidth, int wndHeight);
 
 HICON GetWindowIcon(HWND hWnd) {
     // Try to get the large icon
@@ -167,19 +174,139 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 //    return 0;
 //}
 
+void ATWAddWindowsToListView() {
+    AT_LOG_TRACE;
+
+    //std::vector<AltTabWindowData> altTabWindows;
+    EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));
+    AT_LOG_INFO(std::format("g_AltTabWindows.size(): {}", g_AltTabWindows.size()).c_str());
+    if (g_AltTabWindows.empty()) {
+        g_AltTabWindows.push_back({});
+    }
+
+    // Create ImageList and add icons
+    HIMAGELIST hImageList =
+        ImageList_Create(GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), ILC_COLOR32 | ILC_MASK, 0, 1);
+
+    for (const auto& item : g_AltTabWindows) {
+        ImageList_AddIcon(hImageList, item.hIcon);
+    }
+
+    // Set the ImageList for the ListView
+    ListView_SetImageList(g_hListView, hImageList, LVSIL_SMALL);
+
+    // Add windows to ListView
+    for (int i = 0; i < g_AltTabWindows.size(); ++i) {
+        AddListViewItem(g_hListView, i, g_AltTabWindows[i]);
+    }
+
+    SetFocus(g_hListView);
+
+    // Select the first row
+    LVITEM lvItem;
+    lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
+    lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
+    SendMessage(g_hListView, LVM_SETITEMSTATE, 0, (LPARAM)&lvItem);
+}
+
+void ATWListViewCleanUp() {
+    AT_LOG_TRACE;
+    int itemCount = ListView_GetItemCount(g_hListView);
+    for (int i = itemCount - 1; i >= 0; --i) {
+        ListView_DeleteItem(g_hListView, i);
+    }
+}
+
+void ResizeAltTabWindow() {
+    // Get screen width and height
+    int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    // Compute the window size (e.g., 80% of the screen width and height)
+    int windowWidth  = static_cast<int>(screenWidth  * g_Settings.WidthPercentage  * 0.01);
+    int windowHeight = static_cast<int>(screenHeight * g_Settings.HeightPercentage * 0.01);
+
+    // Compute the window position (centered on the screen)
+    int windowX = (screenWidth  - windowWidth) / 2;
+    int windowY = (screenHeight - windowHeight) / 2;
+
+    int wndWidth  = (int)(screenWidth  * g_Settings.WidthPercentage  * 0.01);
+    int wndHeight = (int)(screenHeight * g_Settings.HeightPercentage * 0.01);
+
+    g_Settings.WindowWidth  = wndWidth;
+    g_Settings.WindowHeight = wndHeight;
+
+    // Compute the required height and resize the ListView
+    // Get the header control associated with the ListView
+    HWND hHeader = ListView_GetHeader(g_hListView);
+    int headerHeight = 0;
+    if (hHeader) {
+        RECT rcHeader;
+        GetClientRect(hHeader, &rcHeader);
+        headerHeight = rcHeader.bottom - rcHeader.top;
+    }
+    RECT rcListView;
+    GetClientRect(g_hListView, &rcListView);
+    int itemHeight =
+        ListView_GetItemRect(g_hListView, 0, &rcListView, LVIR_BOUNDS) ? rcListView.bottom - rcListView.top : 0;
+    int itemCount = ListView_GetItemCount(g_hListView);
+    int requiredHeight = itemHeight * itemCount + headerHeight;
+
+    if (requiredHeight <= g_Settings.WindowHeight) {
+        SetWindowPos(g_hAltTabWnd, nullptr, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
+        WindowResizeAndPosition(g_hAltTabWnd, wndWidth, requiredHeight);
+    } else {
+        int scrollBarWidth = GetSystemMetrics(SM_CXVSCROLL);
+        int colTitleWidth = g_Settings.WindowWidth - (COL_ICON_WIDTH + COL_PROCNAME_WIDTH) - scrollBarWidth;
+        ListView_SetColumnWidth(g_hListView, 1, colTitleWidth);
+        SetWindowPos(g_hAltTabWnd, nullptr, windowX, windowY, windowWidth, windowHeight, SWP_NOZORDER);
+        WindowResizeAndPosition(g_hAltTabWnd, wndWidth, g_Settings.WindowHeight);
+    }
+}
+
 HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
-    if (hAltTabWnd == nullptr) {
-        hAltTabWnd = CreateAltTabWindow();
+    AT_LOG_TRACE;
+    if (!g_IsAltBackShown) {
+        ATWAddWindowsToListView();
+        ResizeAltTabWindow();
+        SetFocus(g_hListView);
+        ShowWindow(hAltTabWnd, SW_SHOW);
+        g_IsAltBackShown = true;
     }
 
     // Move to next / previous item based on the direction
     int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    AT_LOG_INFO(std::format("selectedInd = {}", selectedInd).c_str());
     int N           = (int)g_AltTabWindows.size();
     int nextInd     = (selectedInd + N + direction) % N;
 
     ATWListViewSelectItem(nextInd);
 
     return hAltTabWnd;
+}
+
+void HideAltTabWindow(HWND& hAltTabWnd) {
+    if (g_IsAltBackShown) {
+        ShowWindow(hAltTabWnd, SW_HIDE);
+        g_IsAltBackShown = false;
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Destroy AltTab Window and do necessary cleanup here
+// ----------------------------------------------------------------------------
+void DestoryAltTabWindow() {
+    AT_LOG_TRACE;
+
+    ATWListViewCleanUp();
+    HideAltTabWindow(g_hAltTabWnd);
+
+    // CleanUp
+    //g_hAltTabWnd    = nullptr;
+    g_IsAltTab      = false;
+    g_IsAltBacktick = false;
+    g_AltTabWindows.clear();
+    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
 
 void ATWListViewSelectItem(int rowNumber) {
@@ -255,7 +382,7 @@ HWND CreateAltTabWindow() {
         100,                // Y
         900,                // Width
         700,                // Height
-        g_hWndTrayIcon,     // Parent window
+        nullptr,            // Parent window
         nullptr,            // Menu
         g_hInstance,        // Instance handle
         nullptr             // Additional application data
@@ -267,8 +394,8 @@ HWND CreateAltTabWindow() {
     }
 
     // Show the window
-    ShowWindow(hWnd, SW_SHOW);
-    UpdateWindow(hWnd);
+    //ShowWindow(hWnd, SW_SHOW);
+    //UpdateWindow(hWnd);
     //SetForegroundWindow(hWnd);
     //BringWindowToTop(hWnd);
 
@@ -388,6 +515,7 @@ LRESULT CALLBACK ListViewSubclassProc(
 
     case WM_KILLFOCUS:
         AT_LOG_INFO("WM_KILLFOCUS");
+        SetForegroundWindow(g_hAltTabWnd);
 
         // Handle WM_KILLFOCUS to prevent losing selection when the window loses focus
         LVITEM lvItem;
@@ -419,6 +547,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
     switch (uMsg) {
     case WM_CREATE: {
+        AT_LOG_INFO("WM_CREATE");
         // Get screen width and height
         int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
         int screenHeight = GetSystemMetrics(SM_CYSCREEN);
@@ -466,60 +595,6 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
         SetLayeredWindowAttributes(hWnd, RGB(255, 255, 255), g_Settings.Transparency, LWA_ALPHA);
 
-        //std::vector<AltTabWindowData> altTabWindows;
-        EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));
-
-        // Create ImageList and add icons
-        HIMAGELIST hImageList =
-            ImageList_Create(GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), ILC_COLOR32 | ILC_MASK, 0, 1);
-
-        for (const auto& item : g_AltTabWindows) {
-            ImageList_AddIcon(hImageList, item.hIcon);
-        }
-
-        // Set the ImageList for the ListView
-        ListView_SetImageList(hListView, hImageList, LVSIL_SMALL);
-
-        // Add windows to ListView
-        for (int i = 0; i < g_AltTabWindows.size(); ++i) {
-            AddListViewItem(hListView, i, g_AltTabWindows[i]);
-        }
-
-        // Compute the required height and resize the ListView
-        // Get the header control associated with the ListView
-        HWND hHeader = ListView_GetHeader(g_hListView);
-        int headerHeight = 0;
-        if (hHeader) {
-            RECT rcHeader;
-            GetClientRect(hHeader, &rcHeader);
-            headerHeight = rcHeader.bottom - rcHeader.top;
-        }
-        RECT rcListView;
-        GetClientRect(g_hListView, &rcListView);
-        int itemHeight =
-            ListView_GetItemRect(g_hListView, 0, &rcListView, LVIR_BOUNDS) ? rcListView.bottom - rcListView.top : 0;
-        int itemCount = ListView_GetItemCount(g_hListView);
-        int requiredHeight = itemHeight * itemCount + headerHeight;
-
-        if (requiredHeight <= g_Settings.WindowHeight) {
-            SetWindowPos(hWnd, nullptr, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
-            WindowResizeAndPosition(hWnd, wndWidth, requiredHeight);
-        } else {
-            int scrollBarWidth = GetSystemMetrics(SM_CXVSCROLL);
-            int colTitleWidth = g_Settings.WindowWidth - (COL_ICON_WIDTH + COL_PROCNAME_WIDTH) - scrollBarWidth;
-            ListView_SetColumnWidth(hListView, 1, colTitleWidth);
-            SetWindowPos(hWnd, nullptr, windowX, windowY, windowWidth, windowHeight, SWP_NOZORDER);
-            WindowResizeAndPosition(hWnd, wndWidth, g_Settings.WindowHeight);
-        }
-
-        SetFocus(hListView);
-
-        // Select the first row
-        LVITEM lvItem;
-        lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
-        lvItem.state     = LVIS_FOCUSED | LVIS_SELECTED;
-        SendMessage(hListView, LVM_SETITEMSTATE, 0, (LPARAM)&lvItem);
-
         break;
     }
 
@@ -557,6 +632,16 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         AT_LOG_INFO("WM_KILLFOCUS");
         break;
 
+    case WM_USER_ALTTAB_TRAYICON:
+        switch (LOWORD(lParam)) {
+        case WM_RBUTTONDOWN: {
+            POINT pt;
+            GetCursorPos(&pt);
+            ShowContextMenu(hWnd, pt);
+        } break;
+        }
+        break;
+
     //case WM_NOTIFY:
     //    AT_LOG_INFO("WM_NOTIFY");
     //    break;
@@ -566,6 +651,20 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     }
 
     return FALSE;
+}
+
+BOOL AddNotificationIcon(HWND hWnd) {
+    // Set up the NOTIFYICONDATA structure
+    NOTIFYICONDATA nid   = { 0 };
+    nid.cbSize           = sizeof(NOTIFYICONDATA);
+    nid.hWnd             = hWnd;
+    nid.uID              = 1;
+    nid.uFlags           = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    nid.uCallbackMessage = WM_USER_ALTTAB_TRAYICON;
+    nid.hIcon            = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+    wcscpy_s(nid.szTip, AT_PRODUCT_NAMEW);
+
+    return Shell_NotifyIcon(NIM_ADD, &nid);
 }
 
 bool IsInvisibleWin10BackgroundAppWindow(HWND hWnd) {

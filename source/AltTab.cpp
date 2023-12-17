@@ -27,8 +27,6 @@ HWND           g_hWndTrayIcon    = nullptr;              // AltTab tray icon
 bool           g_IsAltTab        = false;                // Is Alt+Tab pressed
 bool           g_IsAltBacktick   = false;                // Is Alt+Backtick pressed
 
-UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
-
 /**
  * AltTab system tray icon procedure
  * 
@@ -39,113 +37,100 @@ UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
  * 
  * \return 
  */
-LRESULT CALLBACK AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message) {
-    case WM_COMMAND: {
-        int const wmId = LOWORD(wParam);
-        // Parse the menu selections:
-        switch (wmId) {
-        case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
-            DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
-            break;
-
-        case ID_TRAYCONTEXTMENU_README:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
-            break;
-
-        case ID_TRAYCONTEXTMENU_HELP:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
-            break;
-
-        case ID_TRAYCONTEXTMENU_RELEASENOTES:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
-            break;
-
-        case ID_TRAYCONTEXTMENU_SETTINGS:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
-            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
-            break;
-
-        case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
-            break;
-
-        case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
-            break;
-
-        case ID_TRAYCONTEXTMENU_RUNATSTARTUP:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
-            break;
-
-        case ID_TRAYCONTEXTMENU_EXIT:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
-            int result = MessageBoxW(
-                hWnd,
-                L"Are you sure you want to exit?",
-                AT_PRODUCT_NAMEW,
-                MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
-            if (result == IDOK) {
-                PostQuitMessage(0);
-            }
-            break;
-        }
-
-    } break;
-
-    case WM_USER_ALTTAB_TRAYICON:
-        switch (LOWORD(lParam)) {
-            case WM_RBUTTONDOWN: {
-                POINT pt;
-                GetCursorPos(&pt);
-                ShowContextMenu(hWnd, pt);
-            }
-            break;
-        }
-        break;
-    
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
+//LRESULT CALLBACK AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+//    AT_LOG_TRACE;
+//    switch (message) {
+//    case WM_COMMAND: {
+//        int const wmId = LOWORD(wParam);
+//        // Parse the menu selections:
+//        switch (wmId) {
+//        case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
+//            DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_README:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_HELP:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_RELEASENOTES:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_SETTINGS:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
+//            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_RUNATSTARTUP:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
+//            break;
+//
+//        case ID_TRAYCONTEXTMENU_EXIT:
+//            AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
+//            int result = MessageBoxW(
+//                hWnd,
+//                L"Are you sure you want to exit?",
+//                AT_PRODUCT_NAMEW,
+//                MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
+//            if (result == IDOK) {
+//                PostQuitMessage(0);
+//            }
+//            break;
+//        }
+//
+//    } break;
+//
+//    case WM_USER_ALTTAB_TRAYICON:
+//        switch (LOWORD(lParam)) {
+//            case WM_RBUTTONDOWN: {
+//                POINT pt;
+//                GetCursorPos(&pt);
+//                ShowContextMenu(hWnd, pt);
+//            }
+//            break;
+//        }
+//        break;
+//    
+//    default:
+//        return DefWindowProc(hWnd, message, wParam, lParam);
+//    }
+//    return 0;
+//}
 
 // Function to create a hidden window for tray icon handling
-HWND CreateTrayIconWindow(HINSTANCE hInstance) {
-    WNDCLASS wc      = { 0 };
-    wc.lpfnWndProc   = AltTabTrayIconProc;
-    wc.hInstance     = hInstance;
-    wc.lpszClassName = L"AltTabTrayIconWindowClass";
-    RegisterClass(&wc);
-
-    return CreateWindowW(
-        wc.lpszClassName,
-        L"AltTabTrayIconWindow",
-        0,
-        0,
-        0,
-        1,
-        1,
-        HWND_MESSAGE,
-        nullptr,
-        hInstance,
-        nullptr);
-}
-
-BOOL AddNotificationIcon(HWND hWndTrayIcon) {
-    // Set up the NOTIFYICONDATA structure
-    NOTIFYICONDATA nid   = { 0 };
-    nid.cbSize           = sizeof(NOTIFYICONDATA);
-    nid.hWnd             = hWndTrayIcon;
-    nid.uID              = 1;
-    nid.uFlags           = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.uCallbackMessage = WM_USER_ALTTAB_TRAYICON;
-    nid.hIcon            = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
-    wcscpy_s(nid.szTip, AT_PRODUCT_NAMEW);
-
-    return Shell_NotifyIcon(NIM_ADD, &nid);
-}
+//HWND CreateTrayIconWindow(HINSTANCE hInstance) {
+//    WNDCLASS wc      = { 0 };
+//    wc.lpfnWndProc   = AltTabTrayIconProc;
+//    wc.hInstance     = hInstance;
+//    wc.lpszClassName = L"AltTabTrayIconWindowClass";
+//    RegisterClass(&wc);
+//
+//    return CreateWindowW(
+//        wc.lpszClassName,
+//        L"AltTabTrayIconWindow",
+//        0,
+//        0,
+//        0,
+//        1,
+//        1,
+//        HWND_MESSAGE,
+//        nullptr,
+//        hInstance,
+//        nullptr);
+//}
 
 int APIENTRY wWinMain(
     _In_        HINSTANCE   hInstance,
@@ -170,17 +155,19 @@ int APIENTRY wWinMain(
     // Run At Startup
     //RunAtStartup(true);
 
-    // System tray
-    // Create a hidden window for tray icon handling
-    g_hWndTrayIcon = CreateTrayIconWindow(hInstance);
-
-    // TODO: This is a temporary solution to fix for application focus issue.
-    // https://stackoverflow.com/questions/22422708/popup-window-unable-to-receive-focus-when-top-level-window-is-minimized
     g_hAltTabWnd = CreateAltTabWindow();
+    ShowAltTabWindow(g_hAltTabWnd, 0);
+    //ShowWindow(g_hAltTabWnd, SW_SHOW);
+    //UpdateWindow(g_hAltTabWnd);
+
     DestoryAltTabWindow();
 
+    // System tray
+    // Create a hidden window for tray icon handling
+    //g_hWndTrayIcon = CreateTrayIconWindow(hInstance);
+
     // Add the tray icon
-    if (!AddNotificationIcon(g_hWndTrayIcon)) {
+    if (!AddNotificationIcon(g_hAltTabWnd)) {
         AT_LOG_ERROR("Failed to add AltTab tray icon.");
     }
 
@@ -274,23 +261,6 @@ void ActivateWindow(HWND hWnd) {
 }
 
 // ----------------------------------------------------------------------------
-// Destroy AltTab Window and do necessary cleanup here
-// ----------------------------------------------------------------------------
-void DestoryAltTabWindow() {
-    //AT_LOG_TRACE;
-    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
-
-
-    DestroyWindow(g_hAltTabWnd);
-
-    // CleanUp
-    g_hAltTabWnd    = nullptr;
-    g_IsAltTab      = false;
-    g_IsAltBacktick = false;
-    g_AltTabWindows.clear();
-}
-
-// ----------------------------------------------------------------------------
 // Low level keyboard procedure
 // 
 // If nCode is less than zero:
@@ -334,7 +304,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         int  direction      = isShiftPressed ? -1 : 1;
 
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-            if (g_hAltTabWnd == nullptr) {
+            if (!g_IsAltBackShown) {
                 // Check if windows native Alt+Tab window is displayed. If so, do not process the message.
                 // Otherwise, both native Alt+Tab window and AltTab window will be displayed.
                 bool isNativeATWDisplayed = IsNativeATWDisplayed();
@@ -494,7 +464,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
             // Alt key released, destroy your window
             AT_LOG_INFO("--------- Alt key released! ---------");
-            if (g_hAltTabWnd) {
+            if (g_hAltTabWnd && !g_AltTabWindows.empty()) {
                 int selectedInd = ATWListViewGetSelectedItem();
                 if (selectedInd != -1) {
                     HWND hWnd = g_AltTabWindows[selectedInd].hWnd;
