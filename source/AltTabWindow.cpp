@@ -47,6 +47,7 @@ const int COL_PROCNAME_WIDTH = 180;
 INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
 bool             IsAltTabWindow(HWND hWnd);
+HWND             GetOwnerWindowHwnd(HWND hWnd);
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 
@@ -80,6 +81,7 @@ HICON GetWindowIcon(HWND hWnd) {
 
 BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
     if (IsAltTabWindow(hWnd)) {
+        HWND hOwner = GetOwnerWindowHwnd(hWnd);
         DWORD processId;
         GetWindowThreadProcessId(hWnd, &processId);
 
@@ -93,11 +95,11 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 
                     const int bufferSize = 256;
                     wchar_t windowTitle[bufferSize];
-                    int length = GetWindowTextW(hWnd, windowTitle, bufferSize);
+                    int length = GetWindowTextW(hOwner, windowTitle, bufferSize);
                     if (length == 0)
                         return TRUE;
 
-                    AltTabWindowData item = { hWnd, GetWindowIcon(hWnd), windowTitle, filePath.filename().wstring(), processId };
+                    AltTabWindowData item = { hWnd, hOwner, GetWindowIcon(hOwner), windowTitle, filePath.filename().wstring(), processId };
                     auto vItems = (std::vector<AltTabWindowData>*)lParam;
                     bool insert = false;
 
@@ -352,7 +354,7 @@ LRESULT CALLBACK ListViewSubclassProc(
     UINT_PTR   uIdSubclass,
     DWORD_PTR  dwRefData)
 {
-    //AT_LOG_TRACE;
+    AT_LOG_TRACE;
     //AT_LOG_INFO(std::format("uMsg: {:4}, wParam: {}, lParam: {}", uMsg, wParam, lParam).c_str());
     switch (uMsg) {
     case WM_KEYDOWN:
@@ -617,4 +619,13 @@ bool IsAltTabWindow(HWND hWnd) {
 std::vector<AltTabWindowData> GetAltTabWindowsList() {
     EnumWindows(EnumWindowsProc, 0);
     return {};
+}
+
+HWND GetOwnerWindowHwnd(HWND hWnd) {
+    HWND hOwner = hWnd;
+    do {
+        hOwner = GetWindow(hOwner, GW_OWNER);
+    } while (GetWindow(hOwner, GW_OWNER));
+    hOwner = hOwner ? hOwner : hWnd;
+    return hOwner;
 }

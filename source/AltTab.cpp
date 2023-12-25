@@ -156,11 +156,24 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-//#ifdef _AT_LOGGER
+    // Make sure only one instance is running
+    HANDLE hMutex = CreateMutex(nullptr, TRUE, AT_PRODUCT_NAMEW);
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        // Another instance is running, handle it here
+        std::wstring info = std::format(L"Another instance of {} is running!", AT_PRODUCT_NAMEW);
+        MessageBoxW(nullptr, info.c_str(), AT_PRODUCT_NAMEW, MB_OK | MB_ICONEXCLAMATION);
+        if (hMutex != nullptr) {
+            CloseHandle(hMutex);
+        }
+        return 1;
+    }
+
+
+#ifdef _AT_LOGGER
     CreateLogger();
     gLogger->info("-------------------------------------------------------------------------------");
     gLogger->info("CreateLogger done.");
-//#endif // _AT_LOGGER
+#endif // _AT_LOGGER
 
     g_hInstance = hInstance; // Store instance handle in our global variable
 
@@ -266,18 +279,19 @@ void ActivateWindow(HWND hWnd) {
     }
     else if (!BringWindowToTop(hWnd)) {
         // Failed to bring an elevated window to the top from a non-elevated process.
-        AT_LOG_INFO("BringWindowToTop(hWnd) failed!");
+        //AT_LOG_INFO("BringWindowToTop(hWnd) failed!");
 
         ShowWindow(hWnd, SW_SHOW);
         SetForegroundWindow(hWnd);
     }
+    SetActiveWindow(hWnd);
 }
 
 // ----------------------------------------------------------------------------
 // Destroy AltTab Window and do necessary cleanup here
 // ----------------------------------------------------------------------------
 void DestoryAltTabWindow() {
-    //AT_LOG_TRACE;
+    AT_LOG_TRACE;
 
     DestroyWindow(g_hAltTabWnd);
 
@@ -337,7 +351,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // Check if windows native Alt+Tab window is displayed. If so, do not process the message.
                 // Otherwise, both native Alt+Tab window and AltTab window will be displayed.
                 bool isNativeATWDisplayed = IsNativeATWDisplayed();
-                //AT_LOG_INFO(std::format("isNativeATWDisplayed: {}", isNativeATWDisplayed).c_str());
+                AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
 
                 // ----------------------------------------------------------------------------
                 // Alt + Tab
@@ -478,7 +492,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     return TRUE;
                 }
                 else {
-                    AT_LOG_WARN(std::format("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, vkCode).c_str());
+                    //AT_LOG_WARN("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, vkCode);
                 }
             }
         }
@@ -679,7 +693,7 @@ bool RunAtStartup(bool flag) {
     DWORD length = GetModuleFileName(nullptr, applicationPath, MAX_PATH);
 
     if (length == 0) {
-        AT_LOG_ERROR(L"Failed to retrieve the path of the currently running process.");
+        AT_LOG_ERROR("Failed to retrieve the path of the currently running process.");
         return false;
     }
 

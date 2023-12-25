@@ -5,11 +5,13 @@
 #include "AltTabSettings.h"
 #include "GlobalData.h"
 
+#ifdef _AT_LOGGER
+
 std::shared_ptr<log4cpp::Category> gLogger;
 
 void CreateLogger() {
     // Create an appender and a layout
-#ifdef _AT_LOGGER
+#if defined(_DEBUG)
     EnableConsoleWindow();
     log4cpp::Appender* appender = new log4cpp::OstreamAppender("console", &std::cout);
 #else
@@ -17,7 +19,7 @@ void CreateLogger() {
     logFilePath.append("AltTab.log");
 
     log4cpp::Appender* appender = new log4cpp::FileAppender("FileAppender", logFilePath.string());
-#endif // 0
+#endif
 
     //appender->setLayout(new log4cpp::BasicLayout());
     // Create a pattern layout
@@ -34,3 +36,5 @@ void CreateLogger() {
     // Set priority for root logger
     gLogger->setPriority(log4cpp::Priority::DEBUG);
 }
+
+#endif // _AT_LOGGER
