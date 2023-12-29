@@ -186,6 +186,7 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
         AT_LOG_ERROR("hAltTabWnd is NOT a foreground window!");
         SetForegroundWindow(hAltTabWnd);
         BringWindowToTop(hAltTabWnd);
+        SetWindowPos(hAltTabWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         if (!SetActiveWindow(hAltTabWnd)) {
             AT_LOG_ERROR("SetActiveWindow failed!");
         }
@@ -422,7 +423,7 @@ void WindowResizeAndPosition(HWND hWnd, int wndWidth, int wndHeight) {
     int yPos = (screenHeight - wndHeight) / 2;
 
     // Set the window position
-    SetWindowPos(hWnd, HWND_TOP, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE);
+    SetWindowPos(hWnd, HWND_TOPMOST, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE);
 }
 
 INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

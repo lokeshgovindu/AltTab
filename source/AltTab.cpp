@@ -241,7 +241,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         HWND hSysLink = GetDlgItem(hDlg, IDC_SYSLINK1);
 
         // Set the link text and URL
-        SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://www.openai.com/\">Visit OpenAI's website</a>");
+        SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://lokeshgovindu.github.io/AltTabAlternative/\">Visit AltTab's website</a>");
    
     }
     return (INT_PTR)TRUE;
@@ -259,7 +259,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
             // Handle SysLink notifications
             NMHDR* pnmh = (NMHDR*)lParam;
             if (pnmh->code == NM_CLICK) {
-                ShellExecute(NULL, L"open", L"https://www.openai.com/", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecute(NULL, L"open", L"https://lokeshgovindu.github.io/AltTabAlternative/", NULL, NULL, SW_SHOWNORMAL);
             }
         }
         break;
@@ -272,17 +272,34 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 // ----------------------------------------------------------------------------
 void ActivateWindow(HWND hWnd) {
     AT_LOG_TRACE;
+
+	HWND hwndFrgnd = GetForegroundWindow();
+    if (hWnd == hwndFrgnd)
+        return;
+
     // Bring the window to the foreground
     // Determines whether the specified window is minimized (iconic).
     if (IsIconic(hWnd)) {
-        ShowWindow(hWnd, SW_RESTORE);
-    }
-    else if (!BringWindowToTop(hWnd)) {
-        // Failed to bring an elevated window to the top from a non-elevated process.
-        //AT_LOG_INFO("BringWindowToTop(hWnd) failed!");
+        //ShowWindow(hWnd, SW_RESTORE);
+        PostMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+    } else {
+        //BringWindowToTop(hWnd);
+        //SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        //if (!SetForegroundWindow(hWnd)) {
+        //    // Failed to bring a non-elevated window to the top from an elevated process.
+        //    AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
+        //    ShowWindow(hWnd, SW_RESTORE);
+        //}
 
-        ShowWindow(hWnd, SW_SHOW);
-        SetForegroundWindow(hWnd);
+        if (!BringWindowToTop(hWnd)) {
+            // Failed to bring an elevated window to the top from a non-elevated process.
+            AT_LOG_ERROR("BringWindowToTop(hWnd) failed!");
+
+            ShowWindow(hWnd, SW_SHOW);
+            if (!SetForegroundWindow(hWnd)) {
+                AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
+            }
+        }
     }
     SetActiveWindow(hWnd);
 }
