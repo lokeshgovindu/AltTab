@@ -7,6 +7,7 @@
 
 struct AltTabWindowData {
     HWND          hWnd;
+    HWND          hOwner;
     HICON         hIcon;
     std::wstring  Title;
     std::wstring  ProcessName;

@@ -50,6 +50,7 @@ UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
 bool             IsAltTabWindow(HWND hWnd);
+HWND             GetOwnerWindowHwnd(HWND hWnd);
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 bool                          g_IsAltBackShown = false;
@@ -87,6 +88,7 @@ HICON GetWindowIcon(HWND hWnd) {
 
 BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
     if (IsAltTabWindow(hWnd)) {
+        HWND hOwner = GetOwnerWindowHwnd(hWnd);
         DWORD processId;
         GetWindowThreadProcessId(hWnd, &processId);
 
@@ -100,11 +102,11 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 
                     const int bufferSize = 256;
                     wchar_t windowTitle[bufferSize];
-                    int length = GetWindowTextW(hWnd, windowTitle, bufferSize);
+                    int length = GetWindowTextW(hOwner, windowTitle, bufferSize);
                     if (length == 0)
                         return TRUE;
 
-                    AltTabWindowData item = { hWnd, GetWindowIcon(hWnd), windowTitle, filePath.filename().wstring(), processId };
+                    AltTabWindowData item = { hWnd, hOwner, GetWindowIcon(hOwner), windowTitle, filePath.filename().wstring(), processId };
                     auto vItems = (std::vector<AltTabWindowData>*)lParam;
                     bool insert = false;
 
@@ -287,6 +289,7 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
         AT_LOG_ERROR("hAltTabWnd is NOT a foreground window!");
         SetForegroundWindow(hAltTabWnd);
         BringWindowToTop(hAltTabWnd);
+        SetWindowPos(hAltTabWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         if (!SetActiveWindow(hAltTabWnd)) {
             AT_LOG_ERROR("SetActiveWindow failed!");
         }
@@ -406,8 +409,8 @@ HWND CreateAltTabWindow() {
     // Show the window
     //ShowWindow(hWnd, SW_SHOW);
     //UpdateWindow(hWnd);
-    //SetForegroundWindow(hWnd);
-    //BringWindowToTop(hWnd);
+    SetForegroundWindow(hWnd);
+    BringWindowToTop(hWnd);
 
     return hWnd;
 }
@@ -479,7 +482,7 @@ LRESULT CALLBACK ListViewSubclassProc(
     UINT_PTR   uIdSubclass,
     DWORD_PTR  dwRefData)
 {
-    //AT_LOG_TRACE;
+    AT_LOG_TRACE;
     //AT_LOG_INFO(std::format("uMsg: {:4}, wParam: {}, lParam: {}", uMsg, wParam, lParam).c_str());
     switch (uMsg) {
     case WM_KEYDOWN:
@@ -548,7 +551,7 @@ void WindowResizeAndPosition(HWND hWnd, int wndWidth, int wndHeight) {
     int yPos = (screenHeight - wndHeight) / 2;
 
     // Set the window position
-    SetWindowPos(hWnd, HWND_TOP, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE);
+    SetWindowPos(hWnd, HWND_TOPMOST, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE);
 }
 
 INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -716,4 +719,13 @@ bool IsAltTabWindow(HWND hWnd) {
 std::vector<AltTabWindowData> GetAltTabWindowsList() {
     EnumWindows(EnumWindowsProc, 0);
     return {};
+}
+
+HWND GetOwnerWindowHwnd(HWND hWnd) {
+    HWND hOwner = hWnd;
+    do {
+        hOwner = GetWindow(hOwner, GW_OWNER);
+    } while (GetWindow(hOwner, GW_OWNER));
+    hOwner = hOwner ? hOwner : hWnd;
+    return hOwner;
 }

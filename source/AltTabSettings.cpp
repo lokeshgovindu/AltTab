@@ -83,7 +83,7 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         int posX = (screenWidth  - dlgWidth ) / 2;
         int posY = (screenHeight - dlgHeight) / 2;
 
-        SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hDlg, HWND_TOPMOST, posX, posY, 0, 0, SWP_NOSIZE);
     }
     return (INT_PTR)TRUE;
 

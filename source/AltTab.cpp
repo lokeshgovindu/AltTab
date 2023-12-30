@@ -141,11 +141,24 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-//#ifdef _AT_LOGGER
+    // Make sure only one instance is running
+    HANDLE hMutex = CreateMutex(nullptr, TRUE, AT_PRODUCT_NAMEW);
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        // Another instance is running, handle it here
+        std::wstring info = std::format(L"Another instance of {} is running!", AT_PRODUCT_NAMEW);
+        MessageBoxW(nullptr, info.c_str(), AT_PRODUCT_NAMEW, MB_OK | MB_ICONEXCLAMATION);
+        if (hMutex != nullptr) {
+            CloseHandle(hMutex);
+        }
+        return 1;
+    }
+
+
+#ifdef _AT_LOGGER
     CreateLogger();
     gLogger->info("-------------------------------------------------------------------------------");
     gLogger->info("CreateLogger done.");
-//#endif // _AT_LOGGER
+#endif // _AT_LOGGER
 
     g_hInstance = hInstance; // Store instance handle in our global variable
 
@@ -215,7 +228,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         HWND hSysLink = GetDlgItem(hDlg, IDC_SYSLINK1);
 
         // Set the link text and URL
-        SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://www.openai.com/\">Visit OpenAI's website</a>");
+        SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://lokeshgovindu.github.io/AltTabAlternative/\">Visit AltTab's website</a>");
    
     }
     return (INT_PTR)TRUE;
@@ -233,8 +246,8 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
             // Handle SysLink notifications
             NMHDR* pnmh = (NMHDR*)lParam;
             if (pnmh->code == NM_CLICK) {
-ShellExecute(NULL, L"open", L"https://www.openai.com/", NULL, NULL, SW_SHOWNORMAL);
-                            }
+                ShellExecute(NULL, L"open", L"https://lokeshgovindu.github.io/AltTabAlternative/", NULL, NULL, SW_SHOWNORMAL);
+            }
         }
         break;
     }
@@ -246,18 +259,52 @@ ShellExecute(NULL, L"open", L"https://www.openai.com/", NULL, NULL, SW_SHOWNORMA
 // ----------------------------------------------------------------------------
 void ActivateWindow(HWND hWnd) {
     AT_LOG_TRACE;
+
+	HWND hwndFrgnd = GetForegroundWindow();
+    if (hWnd == hwndFrgnd)
+        return;
+
     // Bring the window to the foreground
     // Determines whether the specified window is minimized (iconic).
     if (IsIconic(hWnd)) {
-        ShowWindow(hWnd, SW_RESTORE);
-    }
-    else if (!BringWindowToTop(hWnd)) {
-        // Failed to bring an elevated window to the top from a non-elevated process.
-        AT_LOG_INFO("BringWindowToTop(hWnd) failed!");
+        //ShowWindow(hWnd, SW_RESTORE);
+        PostMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+    } else {
+        //BringWindowToTop(hWnd);
+        //SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        //if (!SetForegroundWindow(hWnd)) {
+        //    // Failed to bring a non-elevated window to the top from an elevated process.
+        //    AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
+        //    ShowWindow(hWnd, SW_RESTORE);
+        //}
 
-        ShowWindow(hWnd, SW_SHOW);
-        SetForegroundWindow(hWnd);
+        if (!BringWindowToTop(hWnd)) {
+            // Failed to bring an elevated window to the top from a non-elevated process.
+            AT_LOG_ERROR("BringWindowToTop(hWnd) failed!");
+
+            ShowWindow(hWnd, SW_SHOW);
+            if (!SetForegroundWindow(hWnd)) {
+                AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
+            }
+        }
     }
+    SetActiveWindow(hWnd);
+}
+
+// ----------------------------------------------------------------------------
+// Destroy AltTab Window and do necessary cleanup here
+// ----------------------------------------------------------------------------
+void DestoryAltTabWindow() {
+    AT_LOG_TRACE;
+
+    DestroyWindow(g_hAltTabWnd);
+
+    // CleanUp
+    g_hAltTabWnd    = nullptr;
+    g_IsAltTab      = false;
+    g_IsAltBacktick = false;
+    g_AltTabWindows.clear();
+    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
 
 // ----------------------------------------------------------------------------
@@ -308,7 +355,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // Check if windows native Alt+Tab window is displayed. If so, do not process the message.
                 // Otherwise, both native Alt+Tab window and AltTab window will be displayed.
                 bool isNativeATWDisplayed = IsNativeATWDisplayed();
-                AT_LOG_INFO(std::format("isNativeATWDisplayed: {}", isNativeATWDisplayed).c_str());
+                AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
 
                 // ----------------------------------------------------------------------------
                 // Alt + Tab
@@ -449,7 +496,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     return TRUE;
                 }
                 else {
-                    AT_LOG_WARN(std::format("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, vkCode).c_str());
+                    //AT_LOG_WARN("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, vkCode);
                 }
             }
         }
@@ -650,7 +697,7 @@ bool RunAtStartup(bool flag) {
     DWORD length = GetModuleFileName(nullptr, applicationPath, MAX_PATH);
 
     if (length == 0) {
-        AT_LOG_ERROR(L"Failed to retrieve the path of the currently running process.");
+        AT_LOG_ERROR("Failed to retrieve the path of the currently running process.");
         return false;
     }
 
