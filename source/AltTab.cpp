@@ -291,21 +291,6 @@ void ActivateWindow(HWND hWnd) {
     SetActiveWindow(hWnd);
 }
 
-// ----------------------------------------------------------------------------
-// Destroy AltTab Window and do necessary cleanup here
-// ----------------------------------------------------------------------------
-void DestoryAltTabWindow() {
-    AT_LOG_TRACE;
-
-    DestroyWindow(g_hAltTabWnd);
-
-    // CleanUp
-    g_hAltTabWnd    = nullptr;
-    g_IsAltTab      = false;
-    g_IsAltBacktick = false;
-    g_AltTabWindows.clear();
-    AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
-}
 
 // ----------------------------------------------------------------------------
 // Low level keyboard procedure
