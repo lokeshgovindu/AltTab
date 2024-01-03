@@ -18,7 +18,11 @@ HWND  CreateAltTabWindow();
 
 HWND  ShowAltTabWindow(HWND& hAltTabWnd, int direction);
 
+void  RefreshAltTabWindow();
+
 void  ATWListViewSelectItem(int rowNumber);
+void  ATWListViewSelectNextItem();
+void  ATWListViewSelectPrevItem();
 
 void  ATWListViewDeleteItem(int rowNumber);
 

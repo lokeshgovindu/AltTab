@@ -20,132 +20,18 @@
 #define MAX_LOADSTRING 100
 
 // Global Variables:
-HINSTANCE      g_hInstance;                              // Current instance
-HHOOK          g_KeyboardHook;                           // Keyboard Hook
-HWND           g_hAltTabWnd      = nullptr;              // AltTab window handle
-HWND           g_hWndTrayIcon    = nullptr;              // AltTab tray icon
-bool           g_IsAltTab        = false;                // Is Alt+Tab pressed
-bool           g_IsAltBacktick   = false;                // Is Alt+Backtick pressed
+HINSTANCE   g_hInstance;                              // Current instance
+HHOOK       g_KeyboardHook;                           // Keyboard Hook
+HWND        g_hAltTabWnd      = nullptr;              // AltTab window handle
+HWND        g_hMainWnd        = nullptr;              // AltTab main window handle
+bool        g_IsAltTab        = false;                // Is Alt+Tab pressed
+bool        g_IsAltBacktick   = false;                // Is Alt+Backtick pressed
+DWORD       g_MainThreadID    = GetCurrentThreadId(); // Main thread ID
+UINT const  WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 
-UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
-
-/**
- * AltTab system tray icon procedure
- * 
- * \param hWnd      hWnd
- * \param message   message
- * \param wParam    wParam
- * \param lParam    lParam
- * 
- * \return 
- */
-LRESULT CALLBACK AltTabTrayIconProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message) {
-    case WM_COMMAND: {
-        int const wmId = LOWORD(wParam);
-        // Parse the menu selections:
-        switch (wmId) {
-        case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
-            DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
-            break;
-
-        case ID_TRAYCONTEXTMENU_README:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
-            break;
-
-        case ID_TRAYCONTEXTMENU_HELP:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
-            break;
-
-        case ID_TRAYCONTEXTMENU_RELEASENOTES:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
-            break;
-
-        case ID_TRAYCONTEXTMENU_SETTINGS:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
-            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
-            break;
-
-        case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
-            break;
-
-        case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
-            break;
-
-        case ID_TRAYCONTEXTMENU_RUNATSTARTUP:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
-            break;
-
-        case ID_TRAYCONTEXTMENU_EXIT:
-            AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
-            int result = MessageBoxW(
-                hWnd,
-                L"Are you sure you want to exit?",
-                AT_PRODUCT_NAMEW,
-                MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
-            if (result == IDOK) {
-                PostQuitMessage(0);
-            }
-            break;
-        }
-
-    } break;
-
-    case WM_USER_ALTTAB_TRAYICON:
-        switch (LOWORD(lParam)) {
-            case WM_RBUTTONDOWN: {
-                POINT pt;
-                GetCursorPos(&pt);
-                ShowContextMenu(hWnd, pt);
-            }
-            break;
-        }
-        break;
-    
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
-
-// Function to create a hidden window for tray icon handling
-HWND CreateTrayIconWindow(HINSTANCE hInstance) {
-    WNDCLASS wc      = { 0 };
-    wc.lpfnWndProc   = AltTabTrayIconProc;
-    wc.hInstance     = hInstance;
-    wc.lpszClassName = L"AltTabTrayIconWindowClass";
-    RegisterClass(&wc);
-
-    return CreateWindowW(
-        wc.lpszClassName,
-        L"AltTabTrayIconWindow",
-        0,
-        0,
-        0,
-        1,
-        1,
-        HWND_MESSAGE,
-        nullptr,
-        hInstance,
-        nullptr);
-}
-
-BOOL AddNotificationIcon(HWND hWndTrayIcon) {
-    // Set up the NOTIFYICONDATA structure
-    NOTIFYICONDATA nid   = { 0 };
-    nid.cbSize           = sizeof(NOTIFYICONDATA);
-    nid.hWnd             = hWndTrayIcon;
-    nid.uID              = 1;
-    nid.uFlags           = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    nid.uCallbackMessage = WM_USER_ALTTAB_TRAYICON;
-    nid.hIcon            = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
-    wcscpy_s(nid.szTip, AT_PRODUCT_NAMEW);
-
-    return Shell_NotifyIcon(NIM_ADD, &nid);
-}
+HWND CreateMainWindow(HINSTANCE hInstance);
+BOOL AddNotificationIcon(HWND hWndTrayIcon);
+void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
 int APIENTRY wWinMain(
     _In_        HINSTANCE   hInstance,
@@ -185,7 +71,7 @@ int APIENTRY wWinMain(
 
     // System tray
     // Create a hidden window for tray icon handling
-    g_hWndTrayIcon = CreateTrayIconWindow(hInstance);
+    g_hMainWnd = CreateMainWindow(hInstance);
 
     // TODO: This is a temporary solution to fix for application focus issue.
     // https://stackoverflow.com/questions/22422708/popup-window-unable-to-receive-focus-when-top-level-window-is-minimized
@@ -193,7 +79,7 @@ int APIENTRY wWinMain(
     DestoryAltTabWindow();
 
     // Add the tray icon
-    if (!AddNotificationIcon(g_hWndTrayIcon)) {
+    if (!AddNotificationIcon(g_hMainWnd)) {
         AT_LOG_ERROR("Failed to add AltTab tray icon.");
     }
 
@@ -216,6 +102,126 @@ int APIENTRY wWinMain(
     return (int) msg.wParam;
 }
 
+/**
+ * AltTab system tray icon procedure
+ * 
+ * \param hWnd      hWnd
+ * \param message   message
+ * \param wParam    wParam
+ * \param lParam    lParam
+ * 
+ * \return 
+ */
+LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_COMMAND: {
+        int const wmId = LOWORD(wParam);
+        // Parse the menu selections:
+        switch (wmId) {
+        case ID_TRAYCONTEXTMENU_ABOUTALTTAB:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_ABOUTALTTAB");
+            DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, ATAboutDlgProc);
+            break;
+
+        case ID_TRAYCONTEXTMENU_README:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
+            break;
+
+        case ID_TRAYCONTEXTMENU_HELP:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
+            break;
+
+        case ID_TRAYCONTEXTMENU_RELEASENOTES:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
+            break;
+
+        case ID_TRAYCONTEXTMENU_SETTINGS:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
+            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
+            break;
+
+        case ID_TRAYCONTEXTMENU_DISABLEALTTAB:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_DISABLEALTTAB");
+            break;
+
+        case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
+            break;
+
+        case ID_TRAYCONTEXTMENU_RUNATSTARTUP:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
+            break;
+
+        case ID_TRAYCONTEXTMENU_EXIT:
+            AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
+            PostQuitMessage(0);
+            //int result = MessageBoxW(
+            //    hWnd,
+            //    L"Are you sure you want to exit?",
+            //    AT_PRODUCT_NAMEW,
+            //    MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
+            //if (result == IDOK) {
+            //    PostQuitMessage(0);
+            //}
+            break;
+        }
+
+    } break;
+
+    case WM_USER_ALTTAB_TRAYICON:
+        switch (LOWORD(lParam)) {
+            case WM_RBUTTONDOWN: {
+                POINT pt;
+                GetCursorPos(&pt);
+                ShowContextMenu(hWnd, pt);
+            }
+            break;
+        }
+        break;
+    
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+
+// Function to create a hidden window for tray icon handling
+HWND CreateMainWindow(HINSTANCE hInstance) {
+    WNDCLASS wc      = { 0 };
+    wc.lpfnWndProc   = MainWndProc;
+    wc.hInstance     = hInstance;
+    wc.lpszClassName = L"__AltTab_MainWndCls__";
+    wc.hIcon         = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+    RegisterClass(&wc);
+
+    return CreateWindowW(
+        wc.lpszClassName,       // Class Name
+        L"AltTabMainWindow",    // Window Name
+        0,                      // Style
+        0,                      // X
+        0,                      // Y
+        1,                      // Width
+        1,                      // Height
+        nullptr,                // Parent
+        nullptr,                // Menu
+        hInstance,              // Instance
+        nullptr                 // Extra
+    );
+}
+
+BOOL AddNotificationIcon(HWND hWndTrayIcon) {
+    // Set up the NOTIFYICONDATA structure
+    NOTIFYICONDATA nid   = { 0 };
+    nid.cbSize           = sizeof(NOTIFYICONDATA);
+    nid.hWnd             = hWndTrayIcon;
+    nid.uID              = 1;
+    nid.uFlags           = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    nid.uCallbackMessage = WM_USER_ALTTAB_TRAYICON;
+    nid.hIcon            = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+    wcscpy_s(nid.szTip, AT_PRODUCT_NAMEW);
+
+    return Shell_NotifyIcon(NIM_ADD, &nid);
+}
 // ----------------------------------------------------------------------------
 // Message handler for about box.
 // ----------------------------------------------------------------------------
@@ -274,8 +280,10 @@ void ActivateWindow(HWND hWnd) {
     AT_LOG_TRACE;
 
 	HWND hwndFrgnd = GetForegroundWindow();
-    if (hWnd == hwndFrgnd)
+    if (hWnd == hwndFrgnd) {
+        SetFocus(hWnd);
         return;
+    }
 
     // Bring the window to the foreground
     // Determines whether the specified window is minimized (iconic).
@@ -283,21 +291,19 @@ void ActivateWindow(HWND hWnd) {
         //ShowWindow(hWnd, SW_RESTORE);
         PostMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
     } else {
-        //BringWindowToTop(hWnd);
-        //SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-        //if (!SetForegroundWindow(hWnd)) {
-        //    // Failed to bring a non-elevated window to the top from an elevated process.
-        //    AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
-        //    ShowWindow(hWnd, SW_RESTORE);
-        //}
-
-        if (!BringWindowToTop(hWnd)) {
+        BOOL result = SetForegroundWindow(hWnd);
+        Sleep(10);
+        HWND hFGWnd = GetForegroundWindow();
+        if (!result && hFGWnd != hWnd) {
             // Failed to bring an elevated window to the top from a non-elevated process.
-            AT_LOG_ERROR("BringWindowToTop(hWnd) failed!");
+            AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
 
             ShowWindow(hWnd, SW_SHOW);
-            if (!SetForegroundWindow(hWnd)) {
-                AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
+            result = BringWindowToTop(hWnd);
+            Sleep(10);
+            HWND hFGWnd = GetForegroundWindow();
+            if (!result && hFGWnd != hWnd) {
+                AT_LOG_ERROR("BringWindowToTop(hWnd) failed!");
             }
         }
     }
@@ -307,15 +313,29 @@ void ActivateWindow(HWND hWnd) {
 // ----------------------------------------------------------------------------
 // Destroy AltTab Window and do necessary cleanup here
 // ----------------------------------------------------------------------------
-void DestoryAltTabWindow() {
+void DestoryAltTabWindow(bool activate) {
     AT_LOG_TRACE;
 
-    DestroyWindow(g_hAltTabWnd);
+    KillTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP);
 
+    if (activate) {
+        int selectedInd = ATWListViewGetSelectedItem();
+        HWND hWnd = nullptr;
+        if (selectedInd != -1) {
+            hWnd = g_AltTabWindows[selectedInd].hWnd;
+            AT_LOG_INFO("hWnd = %#x", hWnd);
+        }
+        DestroyWindow(g_hAltTabWnd);
+        ActivateWindow(hWnd);
+    } else {
+        DestroyWindow(g_hAltTabWnd);
+    }
+    
     // CleanUp
     g_hAltTabWnd    = nullptr;
     g_IsAltTab      = false;
     g_IsAltBacktick = false;
+    g_SelectedIndex = -1;
     g_AltTabWindows.clear();
     AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
@@ -348,17 +368,14 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     KBDLLHOOKSTRUCT* pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
     DWORD vkCode = pKeyboard->vkCode;
         
-    //AT_LOG_INFO(std::format("wParam: {}, vkCode: {}", wParam, vkCode).c_str());
-
     // Check if Alt key is pressed
     bool isAltPressed  = GetAsyncKeyState(VK_MENU   ) & 0x8000;
     bool isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
-    //AT_LOG_INFO(std::format("isAltPressed: {}", isAltPressed).c_str());
 
     // ----------------------------------------------------------------------------
     // Alt key is pressed
     // ----------------------------------------------------------------------------
-    if (isAltPressed && !isCtrlPressed) {
+    if (isAltPressed && !isCtrlPressed && pKeyboard->flags & LLKHF_ALTDOWN) {
         // Check if Shift key is pressed
         bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
         int  direction      = isShiftPressed ? -1 : 1;
@@ -368,13 +385,14 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // Check if windows native Alt+Tab window is displayed. If so, do not process the message.
                 // Otherwise, both native Alt+Tab window and AltTab window will be displayed.
                 bool isNativeATWDisplayed = IsNativeATWDisplayed();
-                AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
+                //AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
 
                 // ----------------------------------------------------------------------------
                 // Alt + Tab
                 // ----------------------------------------------------------------------------
                 if (vkCode == VK_TAB) {
                     if (isNativeATWDisplayed) {
+                        AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
                         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
                     }
 
@@ -389,7 +407,6 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         AT_LOG_INFO("--------- Alt+Tab Pressed! ---------");
                         ShowAltTabWindow(g_hAltTabWnd, 1);
                     }
-                    return TRUE;
                 }
                 // ----------------------------------------------------------------------------
                 // Alt + Backtick
@@ -406,131 +423,82 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         AT_LOG_INFO("--------- Alt+Backtick Pressed! ---------");
                         ShowAltTabWindow(g_hAltTabWnd, 1);
                     }
+                }
+
+                // ----------------------------------------------------------------------------
+                // Create timer here to check the Alt key is released.
+                // ----------------------------------------------------------------------------
+                if (g_IsAltTab || g_IsAltBacktick) {
+                    SetTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP, 50, CheckAltKeyIsReleased);
                     return TRUE;
                 }
-            }
-            else {
+            } else {
                 // ----------------------------------------------------------------------------
                 // AltTab window is displayed.
                 // ----------------------------------------------------------------------------
                 if (vkCode == VK_TAB) {
-                    AT_LOG_INFO("Tab Pressed!");
+                    //AT_LOG_INFO("Tab Pressed!");
                     ShowAltTabWindow(g_hAltTabWnd, direction);
                     return TRUE;
-                }
-                else if (vkCode == VK_DOWN) {
-                    AT_LOG_INFO("Down Pressed!");
-                    ShowAltTabWindow(g_hAltTabWnd, 1);
-                    return TRUE;
-                }
-                else if (vkCode == VK_UP) {
-                    AT_LOG_INFO("Up Pressed!");
-                    ShowAltTabWindow(g_hAltTabWnd, -1);
-                    return TRUE;
-                }
-                else if (vkCode == VK_ESCAPE) {
+                } 
+                
+                if (vkCode == VK_ESCAPE) {
                     AT_LOG_INFO("Escape Pressed!");
                     DestoryAltTabWindow();
                     return TRUE;
                 }
-                else if (vkCode == VK_HOME || vkCode == VK_PRIOR) {
-                    AT_LOG_INFO("Home/PageUp Pressed!");
-                    if (!g_AltTabWindows.empty()) {
-                        ATWListViewSelectItem(0);
-                    }
+                
+                if (vkCode == VK_F4) {
+                    // DO NOT DESTROY ALT TAB
                     return TRUE;
                 }
-                else if (vkCode == VK_END || vkCode == VK_NEXT) {
-                    AT_LOG_INFO("End/PageDown Pressed!");
-                    //ATWListViewPageDown();
-                    if (!g_AltTabWindows.empty()) {
-                        ATWListViewSelectItem((int)g_AltTabWindows.size() - 1);
-                    }
-                    return TRUE;
-                }
-                else if (vkCode == VK_DELETE) {
-                    if (isShiftPressed) {
-                        AT_LOG_INFO("Shift+Delete Pressed!");
-                        // Send the SC_CLOSE command to the window
-                        int ind = ATWListViewGetSelectedItem();
-                        DWORD pid = g_AltTabWindows[ind].PID;
-                        g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
-                        std::string killCmd = std::format("TASKKILL /PID {} /T /F", pid);
-                        AT_LOG_INFO(killCmd.c_str());
-                        int result = system(killCmd.c_str());
-                        if (result == 0) {
-                            ATWListViewDeleteItem(ind);
-                        } else {
-                            AT_LOG_ERROR("Failed to kill");
-                        }
-                    } else {
-                        AT_LOG_INFO("Delete Pressed!");
-                        // Send the SC_CLOSE command to the window
-                        int ind = ATWListViewGetSelectedItem();
-                        HWND hWnd = g_AltTabWindows[ind].hWnd;
-                        g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
-                        SendMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
-                        ATWListViewDeleteItem(ind);
-                    }
-                    return TRUE;
-                }
-                else if (vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
-                    AT_LOG_INFO("Backtick Pressed!");
 
-                    // Move to next / previous same item based on the direction
-                    const int   selectedInd = ATWListViewGetSelectedItem();
-                    const int   N           = (int)g_AltTabWindows.size();
-                    const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
-                    const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
-                    int         nextInd     = -1;                                       // Next index to select
-
-                    for (int i = 1; i < N; ++i) {
-                        nextInd = (selectedInd + N + i * direction) % N;
-                        if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
-                            break;
-                        }
-                        if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
-                            break;
-                        }
-                        nextInd = -1;
-                    }
-
-                    if (nextInd != -1) ATWListViewSelectItem(nextInd);
-                    return TRUE;
-                }
-                else if (isShiftPressed && vkCode == VK_F1) {
-                    DestoryAltTabWindow();
-                    DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hWndTrayIcon, ATAboutDlgProc);
-                    return TRUE;
-                }
-                else if (vkCode == VK_F2) {
-                    DestoryAltTabWindow();
-                    DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
-                    return TRUE;
-                }
-                else {
-                    //AT_LOG_WARN("NotHandled: wParam: {:#x}, vkCode: {:#x}", wParam, vkCode);
-                }
+                AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x", wParam, vkCode);
             }
         }
     } // if (isAltPressed && !isCtrlPressed)
 
-#if 1
+#if 0
+    if (g_hAltTabWnd && (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU)) {
+        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+            // Alt key released, destroy your window
+            AT_LOG_INFO("--------- Alt key released! ---------");
+            DestoryAltTabWindow();
+        }
+        //return TRUE;
+    }
+#endif
+
+#if 0
     // Check for Alt key released event
-    if (isAltPressed &&
-        g_hAltTabWnd &&
-        (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU))
+    if (g_hAltTabWnd && (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU))
     {
         if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
             // Alt key released, destroy your window
             AT_LOG_INFO("--------- Alt key released! ---------");
+            Sleep(100);
             if (g_hAltTabWnd) {
                 int selectedInd = ATWListViewGetSelectedItem();
+                ShowWindow(g_hAltTabWnd, SW_HIDE);
+                Sleep(10);
+                HWND hWnd = nullptr;
                 if (selectedInd != -1) {
-                    HWND hWnd = g_AltTabWindows[selectedInd].hWnd;
-                    ActivateWindow(hWnd);
+                    hWnd = g_AltTabWindows[selectedInd].hWnd;
+                    AT_LOG_INFO("hWnd = %#x", hWnd);
                 }
                 DestoryAltTabWindow();
+
+                // Simulate Alt keyup event using keybd_event
+                //keybd_event(VK_MENU, 0, 0, 0);
+                //Sleep(10);
+                AT_LOG_INFO("hWnd = %#x", hWnd);
+                if (hWnd) {
+                    ActivateWindow(hWnd);
+                }
+                //keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+                //keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+                //PostMessageW(hWnd, WM_KEYUP, VK_LMENU, 0);
+                //Sleep(10);
                 //return TRUE;
             }
         }
@@ -539,6 +507,17 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
     //AT_LOG_INFO("CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);");
     return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
+}
+
+// Timer callback function
+void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+    //AT_LOG_TRACE;
+    bool isAltPressed = GetAsyncKeyState(VK_MENU) & 0x8000;
+    if (g_hAltTabWnd && !isAltPressed) {
+        // Alt key released, destroy your window
+        AT_LOG_INFO("--------- Alt key released! ---------");
+        DestoryAltTabWindow(true);
+    }
 }
 
 void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
@@ -562,7 +541,7 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 
     case ID_TRAYCONTEXTMENU_SETTINGS:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_SETTINGS");
-        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hWndTrayIcon, ATSettingsDlgProc);
+        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
         break;
 
     case ID_TRAYCONTEXTMENU_DISABLEALTTAB: {
@@ -613,14 +592,15 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 
     case ID_TRAYCONTEXTMENU_EXIT:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
-        int result = MessageBoxW(
-            hWnd,
-            L"Are you sure you want to exit?",
-            AT_PRODUCT_NAMEW,
-            MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
-        if (result == IDOK) {
-            PostQuitMessage(0);
-        }
+        PostQuitMessage(0);
+        //int result = MessageBoxW(
+        //    hWnd,
+        //    L"Are you sure you want to exit?",
+        //    AT_PRODUCT_NAMEW,
+        //    MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
+        //if (result == IDOK) {
+        //    PostQuitMessage(0);
+        //}
         break;
     }
 }
@@ -653,16 +633,12 @@ void ShowContextMenu(HWND hWnd, POINT pt) {
                 uFlags |= TPM_LEFTALIGN;
             }
 
-            //TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
-
             // Use TPM_RETURNCMD flag let TrackPopupMenuEx function return the 
             // menu item identifier of the user's selection in the return value.
             uFlags |= TPM_RETURNCMD;
             UINT menuItemId = TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
 
             TrayContextMenuItemHandler(hWnd, hSubMenu, menuItemId);
-
-            //ToggleCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNATSTARTUP);
         }
         DestroyMenu(hMenu);
     }
@@ -789,20 +765,3 @@ bool IsNativeATWDisplayed() {
        strcmp(className, "TaskSwitcherWnd") == 0 ||
        strcmp(className, "MultitaskingViewFrame") == 0;
 }
-
-//bool IsNativeATWDisplayed() {
-//    bool isNativeATWDisplayed = false;
-//    EnumWindows(
-//        [](HWND hWnd, LPARAM lParam) -> BOOL {
-//            char className[256] = { 0 };
-//            GetClassNameA(hWnd, className, 256);
-//            if (strcmp(className, "TaskSwitcherWnd") == 0 || strcmp(className, "MultitaskingViewFrame") == 0) {
-//                *reinterpret_cast<bool*>(lParam) = true;
-//                return FALSE; // Stop enumerating
-//            }
-//            return TRUE; // Continue enumerating
-//        },
-//        reinterpret_cast<LPARAM>(&isNativeATWDisplayed)
-//    );
-//    return isNativeATWDisplayed;
-//}

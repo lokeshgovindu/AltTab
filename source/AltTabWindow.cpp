@@ -37,8 +37,9 @@
             "language='*' "                                                                                            \
             "\"")
 
-HWND    g_hListView = nullptr;
-HFONT   g_hFont     = nullptr;
+HWND    g_hListView         = nullptr;
+HFONT   g_hFont             = nullptr;
+int     g_SelectedIndex     = 0;
 
 const int COL_ICON_WIDTH     = 36;
 const int COL_PROCNAME_WIDTH = 180;
@@ -48,6 +49,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
 bool             IsAltTabWindow(HWND hWnd);
 HWND             GetOwnerWindowHwnd(HWND hWnd);
+static void      AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowData);
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 
@@ -184,15 +186,43 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     HWND hWnd = GetForegroundWindow();
     if (hAltTabWnd != hWnd) {
         AT_LOG_ERROR("hAltTabWnd is NOT a foreground window!");
-        SetForegroundWindow(hAltTabWnd);
-        BringWindowToTop(hAltTabWnd);
-        SetWindowPos(hAltTabWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-        if (!SetActiveWindow(hAltTabWnd)) {
-            AT_LOG_ERROR("SetActiveWindow failed!");
-        }
+        ActivateWindow(hAltTabWnd);
+        //SetForegroundWindow(hAltTabWnd);
+        //BringWindowToTop(hAltTabWnd);
+        //SetWindowPos(hAltTabWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        //if (!SetActiveWindow(hAltTabWnd)) {
+        //    AT_LOG_ERROR("SetActiveWindow failed!");
+        //}
     }
 
     return hAltTabWnd;
+}
+
+void RefreshAltTabWindow() {
+    // Clear the list
+    ListView_DeleteAllItems(g_hListView);
+    g_AltTabWindows.clear();
+
+    EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));
+
+    // Create ImageList and add icons
+    HIMAGELIST hImageList =
+        ImageList_Create(GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), ILC_COLOR32 | ILC_MASK, 0, 1);
+
+    for (const auto& item : g_AltTabWindows) {
+        ImageList_AddIcon(hImageList, item.hIcon);
+    }
+
+    // Set the ImageList for the ListView
+    ListView_SetImageList(g_hListView, hImageList, LVSIL_SMALL);
+
+    // Add windows to ListView
+    for (int i = 0; i < g_AltTabWindows.size(); ++i) {
+        AddListViewItem(g_hListView, i, g_AltTabWindows[i]);
+    }
+
+    // Select the previously selected item
+    ATWListViewSelectItem(g_SelectedIndex);
 }
 
 void ATWListViewSelectItem(int rowNumber) {
@@ -209,6 +239,49 @@ void ATWListViewSelectItem(int rowNumber) {
     lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
     SendMessageW(g_hListView, LVM_SETITEMSTATE  , rowNumber, (LPARAM)&lvItem);
     SendMessageW(g_hListView, LVM_ENSUREVISIBLE , rowNumber, (LPARAM)&lvItem);
+
+    g_SelectedIndex = rowNumber;
+}
+
+void ATWListViewSelectPrevItem() {
+    // Move to next / previous item based on the direction
+    int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    int N           = (int)g_AltTabWindows.size();
+    int prevInd     = (selectedInd + N - 1) % N;
+
+    LVITEM lvItem;
+    lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
+    lvItem.state = 0;
+    SendMessageW(g_hListView, LVM_SETITEMSTATE, selectedInd, (LPARAM)&lvItem);
+
+    prevInd = max(0, min(prevInd, (int)g_AltTabWindows.size() - 1));
+
+    lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
+    SendMessageW(g_hListView, LVM_SETITEMSTATE  , prevInd, (LPARAM)&lvItem);
+    SendMessageW(g_hListView, LVM_ENSUREVISIBLE , prevInd, (LPARAM)&lvItem);
+
+    g_SelectedIndex = prevInd;
+
+}
+void ATWListViewSelectNextItem() {
+    // Move to next / previous item based on the direction
+    int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    int N           = (int)g_AltTabWindows.size();
+    int nextInd     = (selectedInd + N + 1) % N;
+
+    LVITEM lvItem;
+    lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
+    lvItem.state = 0;
+    SendMessageW(g_hListView, LVM_SETITEMSTATE, selectedInd, (LPARAM)&lvItem);
+
+    nextInd = max(0, min(nextInd, (int)g_AltTabWindows.size() - 1));
+
+    lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
+    SendMessageW(g_hListView, LVM_SETITEMSTATE  , nextInd, (LPARAM)&lvItem);
+    SendMessageW(g_hListView, LVM_ENSUREVISIBLE , nextInd, (LPARAM)&lvItem);
+
+    g_SelectedIndex = nextInd;
+
 }
 
 void ATWListViewDeleteItem(int rowNumber) {
@@ -233,7 +306,6 @@ void ATWListViewPageDown() {
     // Scroll up one page
     SendMessage(g_hListView, LVM_SCROLL, 0, -1);
 
-    
     //SendMessage(g_hListView, WM_VSCROLL, MAKEWPARAM(SB_PAGEDOWN, 0), 0);
 
     //int selectedRow = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
@@ -246,7 +318,8 @@ void ATWListViewPageDown() {
 HWND CreateAltTabWindow() {
     AT_LOG_TRACE;
     // Register the window class
-    const wchar_t CLASS_NAME[] = L"AltTab";
+    const wchar_t CLASS_NAME[]  = L"AltTab";
+    const wchar_t WINDOW_NAME[] = L"AltTab Window";
 
     WNDCLASS wc      = {};
     wc.lpfnWndProc   = AltTabWindowProc;
@@ -262,13 +335,13 @@ HWND CreateAltTabWindow() {
     HWND hWnd = CreateWindowExW(
         exStyle,            // Optional window styles
         CLASS_NAME,         // Window class
-        CLASS_NAME,         // Window title
+        WINDOW_NAME,        // Window title
         style,              // Styles
         100,                // X
         100,                // Y
         900,                // Width
         700,                // Height
-        g_hWndTrayIcon,     // Parent window
+        nullptr,            // Parent window
         nullptr,            // Menu
         g_hInstance,        // Instance handle
         nullptr             // Additional application data
@@ -279,16 +352,17 @@ HWND CreateAltTabWindow() {
         return nullptr;
     }
 
-    // Show the window
+    // Show the window and bring to the top
+    SetForegroundWindow(hWnd);
+    SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
     ShowWindow(hWnd, SW_SHOWNORMAL);
     UpdateWindow(hWnd);
-    SetForegroundWindow(hWnd);
     BringWindowToTop(hWnd);
 
     return hWnd;
 }
 
-static void AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowData) {
+void AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowData) {
     LVITEM lvItem    = {0};
     lvItem.mask      = LVIF_TEXT | LVIF_IMAGE;
     lvItem.iItem     = index;
@@ -355,52 +429,106 @@ LRESULT CALLBACK ListViewSubclassProc(
     UINT_PTR   uIdSubclass,
     DWORD_PTR  dwRefData)
 {
-    AT_LOG_TRACE;
     //AT_LOG_INFO(std::format("uMsg: {:4}, wParam: {}, lParam: {}", uMsg, wParam, lParam).c_str());
+    auto vkCode = wParam;
+    bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
+
     switch (uMsg) {
     case WM_KEYDOWN:
-        AT_LOG_INFO("WM_KEYDOWN");
-
+    case WM_SYSKEYDOWN:
         if (wParam == VK_ESCAPE) {
             AT_LOG_INFO("VK_ESCAPE");
-            PostQuitMessage(0);
+            DestoryAltTabWindow();
         } else if (wParam == VK_DOWN) {
-            AT_LOG_INFO("VK_DOWN");
-
-            int selectedRow = (int)SendMessageW(hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
-            int N = (int)g_AltTabWindows.size();
-
-            LVITEM lvItem;
-            lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
-            if (selectedRow == N - 1) {
-                lvItem.state = 0;
-                SendMessageW(hListView, LVM_SETITEMSTATE, selectedRow, (LPARAM)&lvItem);
-
-                lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
-                SendMessageW(hListView, LVM_SETITEMSTATE, 0, (LPARAM)&lvItem);
-                return 0;
-            }
+            AT_LOG_INFO("Down Pressed!");
+            ATWListViewSelectNextItem();
+            return TRUE;
         } else if (wParam == VK_UP) {
-            AT_LOG_INFO("VK_UP");
-
-            int selectedRow = (int)SendMessageW(hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
-            int N = (int)g_AltTabWindows.size();
-
-            LVITEM lvItem;
-            lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
-            if (selectedRow == 0) {
-                lvItem.state = 0;
-                SendMessage(hListView, LVM_SETITEMSTATE, selectedRow, (LPARAM)&lvItem);
-
-                lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
-                SendMessage(hListView, LVM_SETITEMSTATE, N - 1, (LPARAM)&lvItem);
-                return 0;
+            AT_LOG_INFO("Up Pressed!");
+            ATWListViewSelectPrevItem();
+            return TRUE;
+        } else if (vkCode == VK_HOME || vkCode == VK_PRIOR) {
+            AT_LOG_INFO("Home/PageUp Pressed!");
+            if (!g_AltTabWindows.empty()) {
+                ATWListViewSelectItem(0);
             }
+            return TRUE;
+        } else if (vkCode == VK_END || vkCode == VK_NEXT) {
+            AT_LOG_INFO("End/PageDown Pressed!");
+            if (!g_AltTabWindows.empty()) {
+                ATWListViewSelectItem((int)g_AltTabWindows.size() - 1);
+            }
+            return TRUE;
+        }
+        else if (vkCode == VK_DELETE) {
+            int  direction      = isShiftPressed ? -1 : 1;
+
+            if (isShiftPressed) {
+                AT_LOG_INFO("Shift+Delete Pressed!");
+                // Send the SC_CLOSE command to the window
+                int ind = ATWListViewGetSelectedItem();
+                DWORD pid = g_AltTabWindows[ind].PID;
+                g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
+                std::string killCmd = std::format("TASKKILL /PID {} /T /F", pid);
+                AT_LOG_INFO(killCmd.c_str());
+                int result = system(killCmd.c_str());
+                if (result == 0) {
+                    ATWListViewDeleteItem(ind);
+                } else {
+                    AT_LOG_ERROR("Failed to kill");
+                }
+            } else {
+                AT_LOG_INFO("Delete Pressed!");
+                // Send the SC_CLOSE command to the window
+                int ind = ATWListViewGetSelectedItem();
+                HWND hWnd = g_AltTabWindows[ind].hWnd;
+                PostMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+            }
+            return TRUE;
+        }
+        else if (vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
+            AT_LOG_INFO("Backtick Pressed!");
+            int  direction      = isShiftPressed ? -1 : 1;
+
+            // Move to next / previous same item based on the direction
+            const int   selectedInd = ATWListViewGetSelectedItem();
+            const int   N           = (int)g_AltTabWindows.size();
+            const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
+            const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
+            int         nextInd     = -1;                                       // Next index to select
+
+            for (int i = 1; i < N; ++i) {
+                nextInd = (selectedInd + N + i * direction) % N;
+                if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
+                    break;
+                }
+                if (EqualsIgnoreCase(processName, g_AltTabWindows[nextInd].ProcessName)) {
+                    break;
+                }
+                nextInd = -1;
+            }
+
+            if (nextInd != -1) ATWListViewSelectItem(nextInd);
+            return TRUE;
+        }
+        else if (isShiftPressed && vkCode == VK_F1) {
+            DestoryAltTabWindow();
+            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hMainWnd, ATAboutDlgProc);
+            return TRUE;
+        }
+        else if (vkCode == VK_F2) {
+            DestoryAltTabWindow();
+            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
+            return TRUE;
+        } else {
+            AT_LOG_INFO("Not handled: wParam: %u", wParam);
         }
         break;
 
     case WM_KILLFOCUS:
         AT_LOG_INFO("WM_KILLFOCUS");
+
+        ActivateWindow(g_hAltTabWnd);
 
         // Handle WM_KILLFOCUS to prevent losing selection when the window loses focus
         LVITEM lvItem;
@@ -443,15 +571,16 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         // Compute the window position (centered on the screen)
         int windowX = (screenWidth  - windowWidth) / 2;
         int windowY = (screenHeight - windowHeight) / 2;
+        DWORD style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS;
 
         // Create ListView control
         HWND hListView = CreateWindowExW(
             0,                                  // Optional window styles
             WC_LISTVIEW,                        // Predefined class
             L"",                                // No window title
-            WS_VISIBLE | WS_CHILD | LVS_REPORT, // Styles
-            0,
-            0,
+            style,                              // Styles
+            0,                                  // X
+            0,                                  // Y
             windowWidth,
             windowHeight,                       // Position and size
             hWnd,                               // Parent window
@@ -463,7 +592,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         g_hListView = hListView;
 
         // Subclass the ListView control
-        //SetWindowSubclass(hListView, ListViewSubclassProc, 1, 0);
+        SetWindowSubclass(hListView, ListViewSubclassProc, 1, 0);
 
         int wndWidth  = (int)(screenWidth  * g_Settings.WidthPercentage  * 0.01);
         int wndHeight = (int)(screenHeight * g_Settings.HeightPercentage * 0.01);
@@ -533,6 +662,9 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         lvItem.state     = LVIS_FOCUSED | LVIS_SELECTED;
         SendMessage(hListView, LVM_SETITEMSTATE, 0, (LPARAM)&lvItem);
 
+        // Create a timer to refresh the ListView when there is a change in windows
+        SetTimer(hWnd, TIMER_WINDOW_COUNT, 100, nullptr);
+
         break;
     }
 
@@ -573,6 +705,27 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     //case WM_NOTIFY:
     //    AT_LOG_INFO("WM_NOTIFY");
     //    break;
+
+    case WM_TIMER: {
+        //AT_LOG_INFO("WM_TIMER");
+        std::vector<AltTabWindowData> altTabWindows;
+        EnumWindows(EnumWindowsProc, (LPARAM)(&altTabWindows));
+        if (altTabWindows.size() != g_AltTabWindows.size()) {
+            RefreshAltTabWindow();
+            //g_AltTabWindows = altTabWindows;
+            //ListView_DeleteAllItems(g_hListView);
+            //for (int i = 0; i < g_AltTabWindows.size(); ++i) {
+            //    AddListViewItem(g_hListView, i, g_AltTabWindows[i]);
+            //}
+        }
+
+    }
+    break;
+
+    case WM_DESTROY:
+        AT_LOG_INFO("WM_DESTROY");
+        KillTimer(hWnd, TIMER_WINDOW_COUNT);
+        break;
 
     default:
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
