@@ -40,6 +40,7 @@
 HWND    g_hListView         = nullptr;
 HFONT   g_hFont             = nullptr;
 int     g_SelectedIndex     = 0;
+HANDLE  g_hAltTabThread     = nullptr;
 
 const int COL_ICON_WIDTH     = 36;
 const int COL_PROCNAME_WIDTH = 180;
@@ -55,28 +56,33 @@ std::vector<AltTabWindowData> g_AltTabWindows;
 
 HICON GetWindowIcon(HWND hWnd) {
     // Try to get the large icon
-    HICON hIcon = (HICON)SendMessage(hWnd, WM_GETICON, ICON_BIG, 0);
-    if (hIcon)
-        return hIcon;
-
-    // If the large icon is not available, try to get the small icon
-    hIcon = (HICON)SendMessage(hWnd, WM_GETICON, ICON_SMALL2, 0);
-    if (hIcon)
-        return hIcon;
-
-    hIcon = (HICON)SendMessage(hWnd, WM_GETICON, ICON_SMALL, 0);
-    if (hIcon)
-        return hIcon;
-
-    // Get the class long value that contains the icon handle
-    hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICON);
-    if (!hIcon) {
-        // If the class does not have an icon, try to get the small icon
-        hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICONSM);
-        if (!hIcon) {
-            hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    HICON hIcon;
+    // Use SendMessageTimeout to get the icon with a timeout
+    LRESULT responding = SendMessageTimeout(hWnd, WM_GETICON, ICON_BIG, 0, SMTO_ABORTIFHUNG, 10, reinterpret_cast<PDWORD_PTR>(&hIcon));
+    if (responding) {
+        if (hIcon)
             return hIcon;
+
+        // If the large icon is not available, try to get the small icon
+        hIcon = (HICON)SendMessage(hWnd, WM_GETICON, ICON_SMALL2, 0);
+        if (hIcon)
+            return hIcon;
+
+        hIcon = (HICON)SendMessage(hWnd, WM_GETICON, ICON_SMALL, 0);
+        if (hIcon)
+            return hIcon;
+
+        // Get the class long value that contains the icon handle
+        hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICON);
+        if (!hIcon) {
+            // If the class does not have an icon, try to get the small icon
+            hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICONSM);
         }
+    }
+
+    if (!hIcon) {
+        hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+        return hIcon;
     }
     return hIcon;
 }
@@ -171,7 +177,51 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 //    return 0;
 //}
 
+DWORD WINAPI AltTabThread(LPVOID pvParam) {
+    AT_LOG_TRACE;
+    int direction = (int)pvParam;
+    CreateAltTabWindow();
+    //ShowAltTabWindow(g_hAltTabWnd, direction);
+
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return 0;
+}
+
 HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
+#if 0
+    if (g_hAltTabThread && WaitForSingleObject(g_hAltTabThread, 0) != WAIT_OBJECT_0) {
+        // Move to next / previous item based on the direction
+        int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+        int N = (int)g_AltTabWindows.size();
+        int nextInd = (selectedInd + N + direction) % N;
+
+        ATWListViewSelectItem(nextInd);
+
+        HWND hWnd = GetForegroundWindow();
+        if (hAltTabWnd != hWnd) {
+            AT_LOG_ERROR("hAltTabWnd is NOT a foreground window!");
+            ActivateWindow(hAltTabWnd);
+        }
+        return hAltTabWnd;
+    }
+    if (g_hAltTabThread) {
+        CloseHandle(g_hAltTabThread);
+        g_hAltTabThread = nullptr;
+    }
+
+	g_hAltTabThread = CreateThread(nullptr, 0, AltTabThread, (LPVOID)(UINT_PTR)direction, CREATE_SUSPENDED, nullptr);
+    if (!g_hAltTabThread)
+        return nullptr;
+
+    ResumeThread(g_hAltTabThread);
+
+    return hAltTabWnd;
+#else
     if (hAltTabWnd == nullptr) {
         hAltTabWnd = CreateAltTabWindow();
     }
@@ -196,6 +246,7 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     }
 
     return hAltTabWnd;
+#endif // 0
 }
 
 void RefreshAltTabWindow() {
@@ -329,7 +380,7 @@ HWND CreateAltTabWindow() {
     RegisterClass(&wc);
 
     DWORD exStyle = WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
-    DWORD style   = WS_POPUP | WS_VISIBLE | WS_BORDER;
+    DWORD style   = WS_POPUP | WS_BORDER | CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 
     // Create the window
     HWND hWnd = CreateWindowExW(
@@ -341,7 +392,7 @@ HWND CreateAltTabWindow() {
         100,                // Y
         900,                // Width
         700,                // Height
-        nullptr,            // Parent window
+        g_hMainWnd,            // Parent window
         nullptr,            // Menu
         g_hInstance,        // Instance handle
         nullptr             // Additional application data
@@ -521,7 +572,7 @@ LRESULT CALLBACK ListViewSubclassProc(
             DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
             return TRUE;
         } else {
-            AT_LOG_INFO("Not handled: wParam: %u", wParam);
+            //AT_LOG_INFO("Not handled: wParam: %u", wParam);
         }
         break;
 
@@ -560,6 +611,8 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
     switch (uMsg) {
     case WM_CREATE: {
+        g_hAltTabWnd = hWnd;
+
         // Get screen width and height
         int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
         int screenHeight = GetSystemMetrics(SM_CYSCREEN);
@@ -654,6 +707,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             WindowResizeAndPosition(hWnd, wndWidth, g_Settings.WindowHeight);
         }
 
+        SetForegroundWindow(hWnd);
         SetFocus(hListView);
 
         // Select the first row
@@ -664,7 +718,6 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         // Create a timer to refresh the ListView when there is a change in windows
         SetTimer(hWnd, TIMER_WINDOW_COUNT, 100, nullptr);
-
         break;
     }
 

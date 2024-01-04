@@ -75,8 +75,8 @@ int APIENTRY wWinMain(
 
     // TODO: This is a temporary solution to fix for application focus issue.
     // https://stackoverflow.com/questions/22422708/popup-window-unable-to-receive-focus-when-top-level-window-is-minimized
-    g_hAltTabWnd = CreateAltTabWindow();
-    DestoryAltTabWindow();
+    //g_hAltTabWnd = CreateAltTabWindow();
+    //DestoryAltTabWindow();
 
     // Add the tray icon
     if (!AddNotificationIcon(g_hMainWnd)) {
@@ -187,6 +187,11 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 // Function to create a hidden window for tray icon handling
 HWND CreateMainWindow(HINSTANCE hInstance) {
+    HWND hwndFrgnd = GetForegroundWindow();
+    DWORD idThreadAttachTo = hwndFrgnd ? GetWindowThreadProcessId(hwndFrgnd, NULL) : 0;
+    if (idThreadAttachTo) {
+        AttachThreadInput(GetCurrentThreadId(), idThreadAttachTo, TRUE);
+    }
     WNDCLASS wc      = { 0 };
     wc.lpfnWndProc   = MainWndProc;
     wc.hInstance     = hInstance;
@@ -222,6 +227,7 @@ BOOL AddNotificationIcon(HWND hWndTrayIcon) {
 
     return Shell_NotifyIcon(NIM_ADD, &nid);
 }
+
 // ----------------------------------------------------------------------------
 // Message handler for about box.
 // ----------------------------------------------------------------------------
@@ -292,7 +298,6 @@ void ActivateWindow(HWND hWnd) {
         PostMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
     } else {
         BOOL result = SetForegroundWindow(hWnd);
-        Sleep(10);
         HWND hFGWnd = GetForegroundWindow();
         if (!result && hFGWnd != hWnd) {
             // Failed to bring an elevated window to the top from a non-elevated process.
@@ -300,7 +305,6 @@ void ActivateWindow(HWND hWnd) {
 
             ShowWindow(hWnd, SW_SHOW);
             result = BringWindowToTop(hWnd);
-            Sleep(10);
             HWND hFGWnd = GetForegroundWindow();
             if (!result && hFGWnd != hWnd) {
                 AT_LOG_ERROR("BringWindowToTop(hWnd) failed!");
@@ -316,6 +320,13 @@ void ActivateWindow(HWND hWnd) {
 void DestoryAltTabWindow(bool activate) {
     AT_LOG_TRACE;
 
+    // Wait for AltTab thread to finish
+    if (WaitForSingleObject(g_hAltTabThread, 0) != WAIT_OBJECT_0) {
+        CloseHandle(g_hAltTabThread);
+        g_hAltTabThread = nullptr;
+    }
+
+    // Kill timer
     KillTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP);
 
     if (activate) {
@@ -326,6 +337,7 @@ void DestoryAltTabWindow(bool activate) {
             AT_LOG_INFO("hWnd = %#x", hWnd);
         }
         DestroyWindow(g_hAltTabWnd);
+        PostMessage(g_hAltTabWnd, WM_CLOSE, 0, 0);
         ActivateWindow(hWnd);
     } else {
         DestroyWindow(g_hAltTabWnd);
@@ -398,14 +410,14 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
                     g_IsAltTab = true;
                     g_IsAltBacktick = false;
-                    if (isShiftPressed) {
-                        // Alt+Shift+Tab is pressed
-                        AT_LOG_INFO("--------- Alt+Shift+Tab Pressed! ---------");
-                        ShowAltTabWindow(g_hAltTabWnd, -1);
-                    } else {
+                    if (!isShiftPressed) {
                         // Alt+Tab is pressed
                         AT_LOG_INFO("--------- Alt+Tab Pressed! ---------");
                         ShowAltTabWindow(g_hAltTabWnd, 1);
+                    } else {
+                        // Alt+Shift+Tab is pressed
+                        AT_LOG_INFO("--------- Alt+Shift+Tab Pressed! ---------");
+                        ShowAltTabWindow(g_hAltTabWnd, -1);
                     }
                 }
                 // ----------------------------------------------------------------------------
@@ -414,14 +426,14 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 else if (vkCode == VK_OEM_3) { // 0xC0
                     g_IsAltTab = false;
                     g_IsAltBacktick = true;
-                    if (isShiftPressed) {
-                        // Alt+Shift+Backtick is pressed
-                        AT_LOG_INFO("--------- Alt+Shift+Backtick Pressed! ---------");
-                        ShowAltTabWindow(g_hAltTabWnd, -1);
-                    } else {
+                    if (!isShiftPressed) {
                         // Alt+Backtick is pressed
                         AT_LOG_INFO("--------- Alt+Backtick Pressed! ---------");
                         ShowAltTabWindow(g_hAltTabWnd, 1);
+                    } else {
+                        // Alt+Shift+Backtick is pressed
+                        AT_LOG_INFO("--------- Alt+Shift+Backtick Pressed! ---------");
+                        ShowAltTabWindow(g_hAltTabWnd, -1);
                     }
                 }
 
@@ -451,9 +463,9 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 if (vkCode == VK_F4) {
                     // DO NOT DESTROY ALT TAB
                     return TRUE;
-                }
+                } 
 
-                AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x", wParam, vkCode);
+                //AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x", wParam, vkCode);
             }
         }
     } // if (isAltPressed && !isCtrlPressed)

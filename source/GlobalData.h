@@ -13,6 +13,7 @@ struct AltTabWindowData;
 extern HINSTANCE                            g_hInstance;
 extern HWND                                 g_hMainWnd;              // AltTab main window handle
 extern HWND                                 g_hAltTabWnd;            // AltTab window handle
+extern HANDLE                               g_hAltTabThread;
 
 extern AltTabSettings                       g_Settings;
 
