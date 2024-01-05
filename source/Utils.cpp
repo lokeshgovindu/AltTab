@@ -58,3 +58,21 @@ std::wstring ToUpper(const std::wstring& s) {
     std::transform(result.begin(), result.end(), result.begin(), towupper);
     return result;
 }
+
+std::string GetWindowTitleExA(HWND hWnd) {
+    const int bufferSize = GetWindowTextLengthA(hWnd) + 1;
+    char* windowTitle = new char[bufferSize];
+    GetWindowTextA(hWnd, windowTitle, bufferSize);
+    std::string ret = windowTitle;
+    delete[] windowTitle;
+    return ret;
+}
+
+std::wstring GetWindowTitleExW(HWND hWnd) {
+    const int bufferSize = GetWindowTextLengthW(hWnd) + 1;
+    wchar_t* windowTitle = new wchar_t[bufferSize];
+    GetWindowTextW(hWnd, windowTitle, bufferSize);
+    std::wstring ret = windowTitle;
+    delete[] windowTitle;
+    return ret;
+}

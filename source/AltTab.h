@@ -35,3 +35,5 @@ BOOL CALLBACK EnumWindowsProcNAT(HWND hwnd, LPARAM lParam);
 bool IsNativeATWDisplayed();
 
 void ActivateWindow(HWND hWnd);
+
+BOOL IsHungAppWindowEx(HWND hwnd);

@@ -9,13 +9,16 @@
 
 struct AltTabSettings;
 struct AltTabWindowData;
+typedef BOOL(WINAPI* IsHungAppWindowFunc)(HWND);
 
 extern HINSTANCE                            g_hInstance;
 extern HWND                                 g_hMainWnd;              // AltTab main window handle
 extern HWND                                 g_hAltTabWnd;            // AltTab window handle
+extern HWND                                 g_hFGWnd;                // Foreground window handle
 extern HANDLE                               g_hAltTabThread;
-
+extern DWORD                                g_idThreadAttachTo;
 extern AltTabSettings                       g_Settings;
+extern IsHungAppWindowFunc                  g_pfnIsHungAppWindow;
 
 extern std::shared_ptr<log4cpp::Category>   gLogger;
 

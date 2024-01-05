@@ -20,13 +20,18 @@
 #define MAX_LOADSTRING 100
 
 // Global Variables:
-HINSTANCE   g_hInstance;                              // Current instance
-HHOOK       g_KeyboardHook;                           // Keyboard Hook
-HWND        g_hAltTabWnd      = nullptr;              // AltTab window handle
-HWND        g_hMainWnd        = nullptr;              // AltTab main window handle
-bool        g_IsAltTab        = false;                // Is Alt+Tab pressed
-bool        g_IsAltBacktick   = false;                // Is Alt+Backtick pressed
-DWORD       g_MainThreadID    = GetCurrentThreadId(); // Main thread ID
+HINSTANCE   g_hInstance;                                 // Current instance
+HHOOK       g_KeyboardHook;                              // Keyboard Hook
+HWND        g_hAltTabWnd         = nullptr;              // AltTab window handle
+HWND        g_hFGWnd             = nullptr;              // Foreground window handle
+HWND        g_hMainWnd           = nullptr;              // AltTab main window handle
+bool        g_IsAltTab           = false;                // Is Alt+Tab pressed
+bool        g_IsAltBacktick      = false;                // Is Alt+Backtick pressed
+DWORD       g_MainThreadID       = GetCurrentThreadId(); // Main thread ID
+DWORD       g_idThreadAttachTo   = 0;
+
+IsHungAppWindowFunc g_pfnIsHungAppWindow = nullptr;
+
 UINT const  WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 
 HWND CreateMainWindow(HINSTANCE hInstance);
@@ -77,6 +82,12 @@ int APIENTRY wWinMain(
     // https://stackoverflow.com/questions/22422708/popup-window-unable-to-receive-focus-when-top-level-window-is-minimized
     //g_hAltTabWnd = CreateAltTabWindow();
     //DestoryAltTabWindow();
+
+	 HINSTANCE hinstUser32 = LoadLibrary(L"user32.dll");
+    if (hinstUser32) {
+       g_pfnIsHungAppWindow = (IsHungAppWindowFunc)GetProcAddress(hinstUser32, "IsHungAppWindow");
+    }
+
 
     // Add the tray icon
     if (!AddNotificationIcon(g_hMainWnd)) {
@@ -287,7 +298,6 @@ void ActivateWindow(HWND hWnd) {
 
 	HWND hwndFrgnd = GetForegroundWindow();
     if (hWnd == hwndFrgnd) {
-        SetFocus(hWnd);
         return;
     }
 
@@ -320,25 +330,32 @@ void ActivateWindow(HWND hWnd) {
 void DestoryAltTabWindow(bool activate) {
     AT_LOG_TRACE;
 
-    // Wait for AltTab thread to finish
-    if (WaitForSingleObject(g_hAltTabThread, 0) != WAIT_OBJECT_0) {
-        CloseHandle(g_hAltTabThread);
-        g_hAltTabThread = nullptr;
-    }
+    //// Wait for AltTab thread to finish
+    //if (WaitForSingleObject(g_hAltTabThread, 0) != WAIT_OBJECT_0) {
+    //    CloseHandle(g_hAltTabThread);
+    //    g_hAltTabThread = nullptr;
+    //}
 
     // Kill timer
     KillTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP);
+
+    if (g_idThreadAttachTo) {
+        AttachThreadInput(GetCurrentThreadId(), g_idThreadAttachTo, FALSE);
+        g_idThreadAttachTo = 0;
+    }
 
     if (activate) {
         int selectedInd = ATWListViewGetSelectedItem();
         HWND hWnd = nullptr;
         if (selectedInd != -1) {
             hWnd = g_AltTabWindows[selectedInd].hWnd;
-            AT_LOG_INFO("hWnd = %#x", hWnd);
+            AT_LOG_INFO("hWnd = %#x, title = %s", hWnd, GetWindowTitleExA(hWnd).c_str());
         }
         DestroyWindow(g_hAltTabWnd);
         PostMessage(g_hAltTabWnd, WM_CLOSE, 0, 0);
-        ActivateWindow(hWnd);
+        if (!IsHungAppWindowEx(hWnd)) {
+            ActivateWindow(hWnd);
+        }
     } else {
         DestroyWindow(g_hAltTabWnd);
     }
@@ -777,3 +794,21 @@ bool IsNativeATWDisplayed() {
        strcmp(className, "TaskSwitcherWnd") == 0 ||
        strcmp(className, "MultitaskingViewFrame") == 0;
 }
+
+BOOL IsHungAppWindowEx(HWND hwnd) {
+    if (g_pfnIsHungAppWindow && g_pfnIsHungAppWindow(hwnd)) {
+#if 1
+        std::string title = GetWindowTitleExA(hwnd);
+        AT_LOG_INFO("IsHungWnd: [%s]", title.c_str());
+#endif
+        return (TRUE);
+   }
+
+    LRESULT lResult = SendMessageTimeoutW(hwnd, WM_NULL, 0, 0, SMTO_ABORTIFHUNG, 249, nullptr);
+    if (lResult)
+        return (FALSE);
+
+    DWORD dwErr = GetLastError();
+    return (dwErr == 0 || dwErr == 1460);
+}
+

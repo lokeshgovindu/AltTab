@@ -223,7 +223,19 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     return hAltTabWnd;
 #else
     if (hAltTabWnd == nullptr) {
+        // We need this to set the AltTab window active when it is brought to the foreground
+        g_hFGWnd = GetForegroundWindow();
+        if (!IsHungAppWindowEx(g_hFGWnd)) {
+            g_idThreadAttachTo = g_hFGWnd ? GetWindowThreadProcessId(g_hFGWnd, nullptr) : 0;
+            if (g_idThreadAttachTo) {
+                AttachThreadInput(GetCurrentThreadId(), g_idThreadAttachTo, TRUE);
+            }
+        }
+
         hAltTabWnd = CreateAltTabWindow();
+
+        //SetWindowPos(hAltTabWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        SetForegroundWindow(hAltTabWnd);
     }
 
     // Move to next / previous item based on the direction
@@ -232,18 +244,6 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     int nextInd     = (selectedInd + N + direction) % N;
 
     ATWListViewSelectItem(nextInd);
-
-    HWND hWnd = GetForegroundWindow();
-    if (hAltTabWnd != hWnd) {
-        AT_LOG_ERROR("hAltTabWnd is NOT a foreground window!");
-        ActivateWindow(hAltTabWnd);
-        //SetForegroundWindow(hAltTabWnd);
-        //BringWindowToTop(hAltTabWnd);
-        //SetWindowPos(hAltTabWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-        //if (!SetActiveWindow(hAltTabWnd)) {
-        //    AT_LOG_ERROR("SetActiveWindow failed!");
-        //}
-    }
 
     return hAltTabWnd;
 #endif // 0
@@ -380,7 +380,7 @@ HWND CreateAltTabWindow() {
     RegisterClass(&wc);
 
     DWORD exStyle = WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
-    DWORD style   = WS_POPUP | WS_BORDER | CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+    DWORD style   = WS_POPUP | WS_BORDER;
 
     // Create the window
     HWND hWnd = CreateWindowExW(
@@ -576,17 +576,17 @@ LRESULT CALLBACK ListViewSubclassProc(
         }
         break;
 
-    case WM_KILLFOCUS:
-        AT_LOG_INFO("WM_KILLFOCUS");
+    //case WM_KILLFOCUS:
+    //    AT_LOG_INFO("WM_KILLFOCUS");
 
-        ActivateWindow(g_hAltTabWnd);
+    //    ActivateWindow(g_hAltTabWnd);
 
-        // Handle WM_KILLFOCUS to prevent losing selection when the window loses focus
-        LVITEM lvItem;
-        lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
-        lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
-        SendMessage(hListView, LVM_SETITEMSTATE, -1, (LPARAM)&lvItem);
-        break;
+    //    // Handle WM_KILLFOCUS to prevent losing selection when the window loses focus
+    //    LVITEM lvItem;
+    //    lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
+    //    lvItem.state = LVIS_FOCUSED | LVIS_SELECTED;
+    //    SendMessage(hListView, LVM_SETITEMSTATE, -1, (LPARAM)&lvItem);
+    //    break;
     }
 
     return DefSubclassProc(hListView, uMsg, wParam, lParam);
@@ -602,7 +602,7 @@ void WindowResizeAndPosition(HWND hWnd, int wndWidth, int wndHeight) {
     int yPos = (screenHeight - wndHeight) / 2;
 
     // Set the window position
-    SetWindowPos(hWnd, HWND_TOPMOST, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE);
+    SetWindowPos(hWnd, HWND_TOP, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE | SWP_SHOWWINDOW);
 }
 
 INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -697,7 +697,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         int requiredHeight = itemHeight * itemCount + headerHeight;
 
         if (requiredHeight <= g_Settings.WindowHeight) {
-            SetWindowPos(hWnd, nullptr, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
+            SetWindowPos(hWnd, HWND_TOPMOST, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
             WindowResizeAndPosition(hWnd, wndWidth, requiredHeight);
         } else {
             int scrollBarWidth = GetSystemMetrics(SM_CXVSCROLL);
@@ -794,7 +794,6 @@ bool IsInvisibleWin10BackgroundAppWindow(HWND hWnd) {
 }
 
 bool IsAltTabWindow(HWND hWnd) {
-    //return sws_WindowHelpers_IsAltTabWindow(hWnd);
     if (!IsWindowVisible(hWnd))
         return false;
 
