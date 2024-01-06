@@ -8,7 +8,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
 
-void ShowContextMenu(HWND hWnd, POINT pt);
+void ShowTrayContextMenu(HWND hWnd, POINT pt);
 
 void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId);
 

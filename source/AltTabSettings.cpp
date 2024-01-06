@@ -9,6 +9,8 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include "GlobalData.h"
+#include "AltTabWindow.h"
 
 #define WM_SETTEXTCOLOR (WM_USER + 1)
 
@@ -16,20 +18,24 @@
 // Default settings
 // ----------------------------------------------------------------------------
 AltTabSettings g_Settings = { 
-    L"Lucida Handwriting",    // FontName
-    45,                       // WidthPercentage
-    45,                       // HeightPercentage
-    0,                        // WindowWidth
-    0,                        // WindowHeight
-    RGB(0xFF, 0xFF, 0xFF),    // FontColor
-    RGB(0x00, 0x00, 0x00),    // BackgroundColor
-    222,                      // WindowTransparency
-    L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe",
-    {},                       // ProcessGroupsList
-    L"Startup",               // CheckForUpdates
-    true,                     // PromptTerminateAll
-    false,                    // DisableAltTab
+    DEFAULT_FONT_NAME,              // FontName
+    DEFAULT_WIDTH,                  // WidthPercentage
+    DEFAULT_HEIGHT,                 // HeightPercentage
+    0,                              // WindowWidth
+    0,                              // WindowHeight
+    DEFAULT_FONT_COLOR,             // FontColor
+    DEFAULT_BG_COLOR,               // BackgroundColor
+    DEFAULT_TRANSPARENCY,           // WindowTransparency
+    DEFAULT_SIMILARPROCESSGROUPS,   // SimilarProcessGroups
+    {},                             // ProcessGroupsList
+    DEFAULT_CHECKFORUPDATES,        // CheckForUpdates
+    DEFAULT_PROMPTTERMINATEALL,     // PromptTerminateAll
+    false,                          // DisableAltTab
+    DEFAULT_SHOW_COL_HEADER,        // ShowColHeader
+    DEFAULT_SHOW_COL_PROCESSNAME,   // ShowColProcessName
 };
+
+AltTabWindowData g_AltBacktickWndInfo;
 
 // ----------------------------------------------------------------------------
 // Settings dialog procedure
@@ -42,15 +48,21 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         SetDlgItemText    (hDlg, IDC_EDIT_SETTINGS_FILEPATH       , ATSettingsFilePath().c_str());
         SetDlgItemText    (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS  , g_Settings.SimilarProcessGroups.c_str());
 
-        HFONT hFont = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-            DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console");
+        HFONT    hFont     = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console");
         COLORREF fontColor = RGB(0, 0, 255); // Change RGB values as needed
-        HWND hEditBox = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
-        SendMessage(hEditBox, WM_SETFONT, (WPARAM)hFont, TRUE);
-        SendMessage(hEditBox, WM_SETTEXTCOLOR, (WPARAM)fontColor, 0);
+        HWND     hEditBox  = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
 
-        CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , g_Settings.PromptTerminateAll? BST_CHECKED : BST_UNCHECKED);
+        SendMessage(hEditBox, WM_SETFONT     , (WPARAM)hFont    , TRUE);
+        SendMessage(hEditBox, WM_SETTEXTCOLOR, (WPARAM)fontColor, FALSE);
+
+        CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , g_Settings.PromptTerminateAll ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , g_Settings.ShowColHeader      ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , g_Settings.ShowColProcessName ? BST_CHECKED : BST_UNCHECKED);
+
+        EnableWindow(GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
+        EnableWindow(GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), FALSE);
 
         SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , g_Settings.Transparency     , FALSE);
         SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
@@ -254,6 +266,8 @@ void ATSettingsCreateDefault(const std::wstring& settingsFilePath) {
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColHeader"         , g_Settings.ShowColHeader);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColProcessName"    , g_Settings.ShowColProcessName);
 }
 
 void ATLoadSettings() {
@@ -266,10 +280,12 @@ void ATLoadSettings() {
     GetPrivateProfileStringW(L"Backtick", L"SimilarProcessGroups", g_Settings.SimilarProcessGroups.c_str(), buffer, bufferSize, iniFile.c_str());
     g_Settings.SimilarProcessGroups = buffer;
 
-    g_Settings.PromptTerminateAll = GetPrivateProfileInt(L"General", L"PromptTerminateAll"    ,   1, iniFile.c_str());
-    g_Settings.Transparency       = GetPrivateProfileInt(L"General", L"WindowTransparency"    , 222, iniFile.c_str());
-    g_Settings.WidthPercentage    = GetPrivateProfileInt(L"General", L"WindowWidthPercentage" ,  45, iniFile.c_str());
-    g_Settings.HeightPercentage   = GetPrivateProfileInt(L"General", L"WindowHeightPercentage",  45, iniFile.c_str());
+    g_Settings.PromptTerminateAll = GetPrivateProfileInt(L"General", L"PromptTerminateAll"    , DEFAULT_PROMPTTERMINATEALL  , iniFile.c_str());
+    g_Settings.Transparency       = GetPrivateProfileInt(L"General", L"WindowTransparency"    , DEFAULT_TRANSPARENCY        , iniFile.c_str());
+    g_Settings.WidthPercentage    = GetPrivateProfileInt(L"General", L"WindowWidthPercentage" , DEFAULT_WIDTH               , iniFile.c_str());
+    g_Settings.HeightPercentage   = GetPrivateProfileInt(L"General", L"WindowHeightPercentage", DEFAULT_HEIGHT              , iniFile.c_str());
+    g_Settings.ShowColHeader      = GetPrivateProfileInt(L"General", L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER     , iniFile.c_str());
+    g_Settings.ShowColProcessName = GetPrivateProfileInt(L"General", L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME, iniFile.c_str());
 
     GetPrivateProfileStringW(L"General", L"CheckForUpdates", L"Startup", buffer, bufferSize, iniFile.c_str());
     g_Settings.CheckForUpdates = buffer;
@@ -284,6 +300,10 @@ void ATLoadSettings() {
             processName = ToLower(processName);
         g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
     }
+
+    // Initialize additional settings
+    g_AltBacktickWndInfo.hWnd   = nullptr;
+    g_AltBacktickWndInfo.hOwner = nullptr;
 }
 
 void ATSaveSettings() {
@@ -295,6 +315,8 @@ void ATSaveSettings() {
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColHeader"         , g_Settings.ShowColHeader);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColProcessName"    , g_Settings.ShowColProcessName);
 }
 
 void ATApplySettings(HWND hDlg) {
@@ -306,6 +328,8 @@ void ATApplySettings(HWND hDlg) {
 
     g_Settings.SimilarProcessGroups = buffer;
     g_Settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
+    g_Settings.ShowColHeader        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER)      == BST_CHECKED;
+    g_Settings.ShowColProcessName   = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME) == BST_CHECKED;
     g_Settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
     g_Settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
     g_Settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
@@ -323,8 +347,6 @@ void ATApplySettings(HWND hDlg) {
 }
 
 bool AreSettingsModified(HWND hDlg) {
-    AT_LOG_TRACE;
-
     int textLength                  = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
     wchar_t* buffer                 = new wchar_t[textLength + 1];
     GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
@@ -332,6 +354,8 @@ bool AreSettingsModified(HWND hDlg) {
     AltTabSettings settings;
     settings.SimilarProcessGroups = buffer;
     settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
+    settings.ShowColHeader        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER)      == BST_CHECKED;
+    settings.ShowColProcessName   = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME) == BST_CHECKED;
     settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
     settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
     settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
@@ -343,6 +367,8 @@ bool AreSettingsModified(HWND hDlg) {
         settings.WidthPercentage      != g_Settings.WidthPercentage      ||
         settings.HeightPercentage     != g_Settings.HeightPercentage     ||
         settings.SimilarProcessGroups != g_Settings.SimilarProcessGroups ||
+        settings.ShowColHeader        != g_Settings.ShowColHeader        ||
+        settings.ShowColProcessName   != g_Settings.ShowColProcessName   ||
         settings.PromptTerminateAll   != g_Settings.PromptTerminateAll;
 
     return modified;

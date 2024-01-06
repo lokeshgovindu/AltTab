@@ -46,11 +46,13 @@ const int COL_ICON_WIDTH     = 36;
 const int COL_PROCNAME_WIDTH = 180;
 
 // Forward declarations of functions included in this code module:
-INT_PTR CALLBACK ATAboutDlgProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK AltTabWindowProc(HWND, UINT, WPARAM, LPARAM);
-bool             IsAltTabWindow(HWND hWnd);
-HWND             GetOwnerWindowHwnd(HWND hWnd);
-static void      AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowData);
+INT_PTR CALLBACK ATAboutDlgProc        (HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK AltTabWindowProc      (HWND, UINT, WPARAM, LPARAM);
+bool             IsAltTabWindow        (HWND hWnd);
+HWND             GetOwnerWindowHwnd    (HWND hWnd);
+static void      AddListViewItem       (HWND hListView, int index, const AltTabWindowData& windowData);
+static void      ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId);
+static BOOL      TerminateProcessEx    (DWORD pid);
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 
@@ -111,14 +113,20 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     auto vItems = (std::vector<AltTabWindowData>*)lParam;
                     bool insert = false;
 
-                    if (vItems->empty() || g_IsAltTab) {
+                    if (g_IsAltTab) {
                         insert = true;
-                    }
-                    else if (g_IsAltBacktick) {
-                        insert = IsSimilarProcess(vItems->at(0).ProcessName, item.ProcessName);
+                    } else if (g_IsAltBacktick) {
+                        if (g_AltBacktickWndInfo.hWnd == nullptr) {
+                            g_AltBacktickWndInfo = item;
+                            AT_LOG_INFO("g_AltBacktickWndInfo: %s", WStrToUTF8(g_AltBacktickWndInfo.ProcessName).c_str());
+                        }
+                        insert = IsSimilarProcess(g_AltBacktickWndInfo.ProcessName, item.ProcessName);
                     }
 
-                    if (insert) { vItems->push_back(std::move(item)); }
+                    if (insert) {
+                        //AT_LOG_INFO("Inserting hWnd: %#x, title: %s", item.hWnd, WStrToUTF8(item.Title).c_str());
+                        vItems->push_back(std::move(item));
+                    }
                 }
 
                 CloseHandle(hProcess);
@@ -179,7 +187,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
 
 DWORD WINAPI AltTabThread(LPVOID pvParam) {
     AT_LOG_TRACE;
-    int direction = (int)pvParam;
+    int direction = *((int*)pvParam);
     CreateAltTabWindow();
     //ShowAltTabWindow(g_hAltTabWnd, direction);
 
@@ -240,6 +248,7 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
 
     // Move to next / previous item based on the direction
     int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    if (selectedInd == -1) return hAltTabWnd;
     int N           = (int)g_AltTabWindows.size();
     int nextInd     = (selectedInd + N + direction) % N;
 
@@ -250,6 +259,8 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
 }
 
 void RefreshAltTabWindow() {
+    AT_LOG_TRACE;
+
     // Clear the list
     ListView_DeleteAllItems(g_hListView);
     g_AltTabWindows.clear();
@@ -278,12 +289,11 @@ void RefreshAltTabWindow() {
 
 void ATWListViewSelectItem(int rowNumber) {
     // Move to next / previous item based on the direction
-    int selectedRow = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
-
+    int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
     LVITEM lvItem;
     lvItem.stateMask = LVIS_FOCUSED | LVIS_SELECTED;
     lvItem.state = 0;
-    SendMessageW(g_hListView, LVM_SETITEMSTATE, selectedRow, (LPARAM)&lvItem);
+    SendMessageW(g_hListView, LVM_SETITEMSTATE, selectedInd, (LPARAM)&lvItem);
 
     rowNumber = max(0, min(rowNumber, (int)g_AltTabWindows.size() - 1));
 
@@ -297,6 +307,7 @@ void ATWListViewSelectItem(int rowNumber) {
 void ATWListViewSelectPrevItem() {
     // Move to next / previous item based on the direction
     int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    if (selectedInd == -1) return;
     int N           = (int)g_AltTabWindows.size();
     int prevInd     = (selectedInd + N - 1) % N;
 
@@ -317,6 +328,7 @@ void ATWListViewSelectPrevItem() {
 void ATWListViewSelectNextItem() {
     // Move to next / previous item based on the direction
     int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
+    if (selectedInd == -1) return;
     int N           = (int)g_AltTabWindows.size();
     int nextInd     = (selectedInd + N + 1) % N;
 
@@ -332,7 +344,6 @@ void ATWListViewSelectNextItem() {
     SendMessageW(g_hListView, LVM_ENSUREVISIBLE , nextInd, (LPARAM)&lvItem);
 
     g_SelectedIndex = nextInd;
-
 }
 
 void ATWListViewDeleteItem(int rowNumber) {
@@ -432,7 +443,8 @@ static void CustomizeListView(HWND hListView) {
     DWORD dwExStyle = LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER;
     ListView_SetExtendedListViewStyle(hListView, dwExStyle);
 
-    const int colTitleWidth = g_Settings.WindowWidth - COL_ICON_WIDTH - COL_PROCNAME_WIDTH;
+
+    const int colTitleWidth = g_Settings.WindowWidth - COL_ICON_WIDTH;
 
     // Add columns to the List View
     LVCOLUMN lvCol   = {0};
@@ -441,13 +453,20 @@ static void CustomizeListView(HWND hListView) {
     lvCol.cx         = COL_ICON_WIDTH;
     ListView_InsertColumn(hListView, 0, &lvCol);
 
-    lvCol.pszText    = (LPWSTR)L"Window Title";
-    lvCol.cx         = colTitleWidth;
-    ListView_InsertColumn(hListView, 1, &lvCol);
+    if (g_Settings.ShowColProcessName) {
+        lvCol.pszText = (LPWSTR)L"Window Title";
+        lvCol.cx      = colTitleWidth - COL_PROCNAME_WIDTH;
+        ListView_InsertColumn(hListView, 1, &lvCol);
 
-    lvCol.pszText    = (LPWSTR)L"Process Name";
-    lvCol.cx         = COL_PROCNAME_WIDTH;
-    ListView_InsertColumn(hListView, 2, &lvCol);
+        lvCol.pszText = (LPWSTR)L"Process Name";
+        lvCol.cx      = COL_PROCNAME_WIDTH;
+        ListView_InsertColumn(hListView, 2, &lvCol);
+    } else {
+        lvCol.pszText = (LPWSTR)L"Window Title";
+        lvCol.cx      = colTitleWidth;
+        ListView_InsertColumn(hListView, 1, &lvCol);
+
+    }
 }
 
 static void SetCustomFont(HWND hListView, int fontSize) {
@@ -516,33 +535,31 @@ LRESULT CALLBACK ListViewSubclassProc(
 
             if (isShiftPressed) {
                 AT_LOG_INFO("Shift+Delete Pressed!");
-                // Send the SC_CLOSE command to the window
                 int ind = ATWListViewGetSelectedItem();
-                DWORD pid = g_AltTabWindows[ind].PID;
-                g_AltTabWindows.erase(g_AltTabWindows.begin() + ind);
-                std::string killCmd = std::format("TASKKILL /PID {} /T /F", pid);
-                AT_LOG_INFO(killCmd.c_str());
-                int result = system(killCmd.c_str());
-                if (result == 0) {
-                    ATWListViewDeleteItem(ind);
-                } else {
-                    AT_LOG_ERROR("Failed to kill");
-                }
+                if (ind == -1) return TRUE;
+                TerminateProcessEx(g_AltTabWindows[ind].PID);
             } else {
                 AT_LOG_INFO("Delete Pressed!");
+
                 // Send the SC_CLOSE command to the window
                 int ind = ATWListViewGetSelectedItem();
+                if (ind == -1) return TRUE;
+                AT_LOG_INFO("Ind: %d, Title: %s", ind, WStrToUTF8(g_AltTabWindows[ind].Title).c_str());
                 HWND hWnd = g_AltTabWindows[ind].hWnd;
                 PostMessage(hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
             }
+            Sleep(100);
+            RefreshAltTabWindow();
             return TRUE;
         }
         else if (vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
             AT_LOG_INFO("Backtick Pressed!");
-            int  direction      = isShiftPressed ? -1 : 1;
+            const int  direction    = isShiftPressed ? -1 : 1;
 
             // Move to next / previous same item based on the direction
             const int   selectedInd = ATWListViewGetSelectedItem();
+            if (selectedInd == -1) return TRUE;
+
             const int   N           = (int)g_AltTabWindows.size();
             const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
             const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
@@ -625,6 +642,9 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         int windowX = (screenWidth  - windowWidth) / 2;
         int windowY = (screenHeight - windowHeight) / 2;
         DWORD style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS;
+        if (!g_Settings.ShowColHeader) {
+            style |= LVS_NOCOLUMNHEADER;
+        }
 
         // Create ListView control
         HWND hListView = CreateWindowExW(
@@ -717,7 +737,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         SendMessage(hListView, LVM_SETITEMSTATE, 0, (LPARAM)&lvItem);
 
         // Create a timer to refresh the ListView when there is a change in windows
-        SetTimer(hWnd, TIMER_WINDOW_COUNT, 100, nullptr);
+        SetTimer(hWnd, TIMER_WINDOW_COUNT, TIMER_WINDOW_COUNT_ELAPSE, nullptr);
         break;
     }
 
@@ -730,6 +750,25 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
             PostQuitMessage(0);
             return (INT_PTR)TRUE;
+        }
+        break;
+
+    case WM_CONTEXTMENU: {
+        POINT pt;
+        GetCursorPos(&pt);
+        ShowContextMenu(hWnd, pt);
+    }
+    break;
+
+    case WM_SYSCOMMAND:
+        AT_LOG_INFO("WM_SYSCOMMAND");
+        // Handle Alt+Space (system menu)
+        if (wParam == SC_KEYMENU && (lParam & 0xFFFF) == VK_APPS) {
+            // Alt+Space pressed, handle it here
+            POINT cursorPos;
+            GetCursorPos(&cursorPos);
+            TrackPopupMenu(GetSystemMenu(hWnd, FALSE), 0, cursorPos.x, cursorPos.y, 0, hWnd, NULL);
+            return 0;
         }
         break;
 
@@ -760,9 +799,10 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     //    break;
 
     case WM_TIMER: {
-        //AT_LOG_INFO("WM_TIMER");
+        AT_LOG_INFO("WM_TIMER");
         std::vector<AltTabWindowData> altTabWindows;
         EnumWindows(EnumWindowsProc, (LPARAM)(&altTabWindows));
+        AT_LOG_INFO("altTabWindows.size(): %d, g_AltTabWindows.size(): %d", altTabWindows.size(), g_AltTabWindows.size());
         if (altTabWindows.size() != g_AltTabWindows.size()) {
             RefreshAltTabWindow();
             //g_AltTabWindows = altTabWindows;
@@ -834,4 +874,161 @@ HWND GetOwnerWindowHwnd(HWND hWnd) {
     } while (GetWindow(hOwner, GW_OWNER));
     hOwner = hOwner ? hOwner : hWnd;
     return hOwner;
+}
+
+void ShowContextMenuAtItemCenter()
+{
+    // Get the position of the selected item
+    // Get the bounding rectangle of the selected item
+    RECT itemRect;
+    ListView_GetItemRect(g_hListView, g_SelectedIndex, &itemRect, LVIR_BOUNDS);
+
+    // Calculate the center of the entire row
+    POINT center;
+    center.x = (itemRect.left + itemRect.right) / 2;
+    center.y = (itemRect.top + itemRect.bottom) / 2;
+
+    // Convert to screen coordinates if needed
+    ClientToScreen(g_hListView, &center);
+
+    ShowContextMenu(g_hAltTabWnd, center);
+}
+
+// ----------------------------------------------------------------------------
+// Show AltTab context menu
+// ----------------------------------------------------------------------------
+void ShowContextMenu(HWND hWnd, POINT pt) {
+    HMENU hMenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDR_CONTEXTMENU));
+    if (hMenu) {
+        HMENU hSubMenu = GetSubMenu(hMenu, 0);
+        if (hSubMenu) {
+            // respect menu drop alignment
+            UINT uFlags = TPM_RIGHTBUTTON;
+            if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
+                uFlags |= TPM_RIGHTALIGN;
+            } else {
+                uFlags |= TPM_LEFTALIGN;
+            }
+
+            // Use TPM_RETURNCMD flag let TrackPopupMenuEx function return the
+            // menu item identifier of the user's selection in the return value.
+            uFlags |= TPM_RETURNCMD;
+            UINT menuItemId = TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWnd, nullptr);
+
+            ContextMenuItemHandler(hWnd, hSubMenu, menuItemId);
+        }
+        DestroyMenu(hMenu);
+    }
+}
+
+void SetAltTabActiveWindow() {
+    SetForegroundWindow(g_hAltTabWnd);
+    SetActiveWindow(g_hAltTabWnd);
+    SetFocus(g_hListView);
+}
+
+void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
+    switch (menuItemId) {
+    case ID_CONTEXTMENU_CLOSE_WINDOW: {
+        // Send the SC_CLOSE command to the window
+        int ind = ATWListViewGetSelectedItem();
+        if (ind != -1) {
+            PostMessage(g_AltTabWindows[ind].hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+        }
+    }
+    break;
+
+    case ID_CONTEXTMENU_KILL_PROCESS: {
+        int ind = ATWListViewGetSelectedItem();
+        if (ind != -1) {
+            TerminateProcessEx(g_AltTabWindows[ind].PID);
+        }
+    }
+    break;
+
+    case ID_CONTEXTMENU_CLOSEALLWINDOWS: {
+        AT_LOG_INFO("ID_CONTEXTMENU_CLOSEALLWINDOWS");
+
+        // Here, this MessageBox is also displayed in AltTab windows list. Did
+        // not find a way to avoid this. So, turning off the timer.
+        KillTimer(hWnd, TIMER_WINDOW_COUNT);
+
+        int result = MessageBoxW(
+            hWnd,
+            L"Are you sure you want to close all windows?",
+            AT_PRODUCT_NAMEW L": Close All Windows",
+            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+        if (result == IDYES) {
+            for (auto& g_AltTabWindow : g_AltTabWindows) {
+                PostMessage(g_AltTabWindow.hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+            }
+        } else {
+            SetAltTabActiveWindow();
+        }
+
+        SetTimer(hWnd, TIMER_WINDOW_COUNT, TIMER_WINDOW_COUNT_ELAPSE, nullptr);
+    }
+    break;
+
+    case ID_CONTEXTMENU_KILLALLPROCESSES: {
+        AT_LOG_INFO("ID_CONTEXTMENU_KILLALLPROCESSES");
+
+        // Here, this MessageBox is also displayed in AltTab windows list. Did
+        // not find a way to avoid this. So, turning off the timer.
+        KillTimer(hWnd, TIMER_WINDOW_COUNT);
+
+        int result = MessageBoxW(
+            hWnd,
+            L"Are you sure you want to terminate all windows?",
+            AT_PRODUCT_NAMEW L": Close All Windows",
+            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+        if (result == IDYES) {
+            for (auto& g_AltTabWindow : g_AltTabWindows) {
+                TerminateProcessEx(g_AltTabWindow.PID);
+            }
+        } else {
+            SetAltTabActiveWindow();
+        }
+
+        SetTimer(hWnd, TIMER_WINDOW_COUNT, TIMER_WINDOW_COUNT_ELAPSE, nullptr);
+    }
+    break;
+
+    case ID_CONTEXTMENU_ABOUTALTTAB: {
+        AT_LOG_INFO("ID_CONTEXTMENU_ABOUTALTTAB");
+        DestoryAltTabWindow();
+        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hMainWnd, ATAboutDlgProc);
+    }
+    break;
+
+    case ID_CONTEXTMENU_SETTINGS: {
+        AT_LOG_INFO("ID_CONTEXTMENU_SETTINGS");
+        DestoryAltTabWindow();
+        DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
+    }
+    break;
+
+    case ID_CONTEXTMENU_EXIT:
+        AT_LOG_INFO("ID_CONTEXTMENU_EXIT");
+        PostQuitMessage(0);
+        //int result = MessageBoxW(
+        //    hWnd,
+        //    L"Are you sure you want to exit?",
+        //    AT_PRODUCT_NAMEW,
+        //    MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
+        //if (result == IDOK) {
+        //    PostQuitMessage(0);
+        //}
+        break;
+    }
+}
+
+BOOL TerminateProcessEx(DWORD pid) {
+    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    if (hProcess) {
+        TerminateProcess(hProcess, 0);
+        CloseHandle(hProcess);
+        return TRUE;
+    }
+    return FALSE;
 }

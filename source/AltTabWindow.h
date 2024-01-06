@@ -14,18 +14,25 @@ struct AltTabWindowData {
     DWORD         PID;
 };
 
-HWND  CreateAltTabWindow();
+HWND CreateAltTabWindow();
 
-HWND  ShowAltTabWindow(HWND& hAltTabWnd, int direction);
+HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction);
 
-void  RefreshAltTabWindow();
+void RefreshAltTabWindow();
 
-void  ATWListViewSelectItem(int rowNumber);
-void  ATWListViewSelectNextItem();
-void  ATWListViewSelectPrevItem();
+void ATWListViewSelectItem(int rowNumber);
+void ATWListViewSelectNextItem();
+void ATWListViewSelectPrevItem();
 
-void  ATWListViewDeleteItem(int rowNumber);
+void ATWListViewDeleteItem(int rowNumber);
 
-int   ATWListViewGetSelectedItem();
+int  ATWListViewGetSelectedItem();
 
-void  ATWListViewPageDown();
+void ATWListViewPageDown();
+
+void ShowContextMenuAtItemCenter();
+
+void ShowContextMenu(HWND hWnd, POINT pt);
+
+void SetAltTabActiveWindow();
+

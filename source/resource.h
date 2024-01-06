@@ -2,6 +2,9 @@
 // Microsoft Visual C++ generated include file.
 // Used by AltTab.rc
 //
+
+#include "version.h"
+
 #define IDD_ALTTAB_DIALOG               102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
@@ -17,6 +20,7 @@
 #define IDC_SYSLINK1                    1002
 #define IDC_EDIT_SETTINGS_FILEPATH      1005
 #define IDC_EDIT_SIMILAR_PROCESS_GROUPS 1006
+#define IDC_EDIT_PROCESS_EXCLUSIONS     1007
 #define IDC_CHECK_PROMPT_TERMINATE_ALL  1008
 #define IDC_EDIT_STRING_MATCH_PERCENT   1010
 #define IDC_SPIN_STRING_MATCH_PERCENT   1011
@@ -31,6 +35,10 @@
 #define IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE 1020
 #define IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE 1021
 #define IDC_BUTTON_RESET                1022
+#define IDC_CHECK_SHOW_COL_HEADER       1023
+#define IDC_CHECK2                      1024
+#define IDC_CHECK_SHOW_COL_PROCESSNAME  1024
+#define IDC_CHECK_SHOW_PREVIEW          1025
 #define ID_TRAYCONTEXTMENU_ABOUTALTTAB  32771
 #define ID_TRAYCONTEXTMENU_README       32772
 #define ID_TRAYCONTEXTMENU_HELP         32773
@@ -61,7 +69,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32792
-#define _APS_NEXT_CONTROL_VALUE         1023
+#define _APS_NEXT_CONTROL_VALUE         1024
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

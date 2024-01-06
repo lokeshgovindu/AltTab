@@ -6,7 +6,19 @@
 
 using ProcessGroupsList = std::vector<std::unordered_set<std::wstring>>;
 
-#define SETTINGS_INI_FILENAME   L"AltTabSettings.ini"
+#define SETTINGS_INI_FILENAME          L"AltTabSettings.ini"
+
+#define DEFAULT_FONT_NAME              L"Lucida Handwriting"
+#define DEFAULT_FONT_COLOR             RGB(0xFF, 0xFF, 0xFF)
+#define DEFAULT_BG_COLOR               RGB(0x00, 0x00, 0x00)
+#define DEFAULT_WIDTH                  45
+#define DEFAULT_HEIGHT                 45
+#define DEFAULT_TRANSPARENCY           222
+#define DEFAULT_SIMILARPROCESSGROUPS   L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe"
+#define DEFAULT_CHECKFORUPDATES        L"Startup"
+#define DEFAULT_PROMPTTERMINATEALL     true
+#define DEFAULT_SHOW_COL_HEADER        false
+#define DEFAULT_SHOW_COL_PROCESSNAME   false
 
 /*!
  * AltTab application settings
@@ -31,7 +43,8 @@ struct AltTabSettings {
     std::wstring        CheckForUpdates;        // Check for updates
     bool                PromptTerminateAll;     // Ask before terminating all processes
     bool                DisableAltTab;          // Disable AltTab hotkeys
-
+    bool                ShowColHeader;          // Show column header
+    bool                ShowColProcessName;     // Show column - Process Name
 };
 
 INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);

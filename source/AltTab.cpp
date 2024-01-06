@@ -184,7 +184,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             case WM_RBUTTONDOWN: {
                 POINT pt;
                 GetCursorPos(&pt);
-                ShowContextMenu(hWnd, pt);
+                ShowTrayContextMenu(hWnd, pt);
             }
             break;
         }
@@ -349,7 +349,7 @@ void DestoryAltTabWindow(bool activate) {
         HWND hWnd = nullptr;
         if (selectedInd != -1) {
             hWnd = g_AltTabWindows[selectedInd].hWnd;
-            AT_LOG_INFO("hWnd = %#x, title = %s", hWnd, GetWindowTitleExA(hWnd).c_str());
+            AT_LOG_INFO("hWnd = [%#x], title = [%s]", hWnd, GetWindowTitleExA(hWnd).c_str());
         }
         DestroyWindow(g_hAltTabWnd);
         PostMessage(g_hAltTabWnd, WM_CLOSE, 0, 0);
@@ -366,6 +366,7 @@ void DestoryAltTabWindow(bool activate) {
     g_IsAltBacktick = false;
     g_SelectedIndex = -1;
     g_AltTabWindows.clear();
+    g_AltBacktickWndInfo = {};
     AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
 
@@ -474,6 +475,12 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 if (vkCode == VK_ESCAPE) {
                     AT_LOG_INFO("Escape Pressed!");
                     DestoryAltTabWindow();
+                    return TRUE;
+                }
+
+                if (vkCode == VK_APPS) {
+                    AT_LOG_INFO("Apps Pressed!");
+                    ShowContextMenuAtItemCenter();
                     return TRUE;
                 }
                 
@@ -637,7 +644,7 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 // ----------------------------------------------------------------------------
 // Show AltTab system tray context menu
 // ----------------------------------------------------------------------------
-void ShowContextMenu(HWND hWnd, POINT pt) {
+void ShowTrayContextMenu(HWND hWnd, POINT pt) {
     HMENU hMenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDC_TRAY_CONTEXTMENU));
     if (hMenu) {
         HMENU hSubMenu = GetSubMenu(hMenu, 0);
