@@ -25,3 +25,13 @@ std::wstring UTF8ToWStr(const std::string& utf8str);
 std::string GetWindowTitleExA(HWND hWnd);
 
 std::wstring GetWindowTitleExW(HWND hWnd);
+
+bool InStr(const std::wstring& str, const std::wstring& substr);
+
+double GetRatioA(const char* s1, const char* s2);
+
+double GetPartialRatioA(const char* s1, const char* s2);
+
+double GetRatioW(const wchar_t* s1, const wchar_t* s2);
+
+double GetPartialRatioW(const wchar_t* s1, const wchar_t* s2);

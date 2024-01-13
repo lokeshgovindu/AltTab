@@ -36,3 +36,4 @@ void ShowContextMenu(HWND hWnd, POINT pt);
 
 void SetAltTabActiveWindow();
 
+bool ATMapVirtualKey(UINT uCode, wchar_t& ch);

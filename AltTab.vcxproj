@@ -199,6 +199,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="fuzzywuzzy.cpp" />
     <ClCompile Include="source\AltTab.cpp" />
     <ClCompile Include="source\AltTabSettings.cpp" />
     <ClCompile Include="source\AltTabWindow.cpp" />
@@ -213,6 +214,7 @@
     <None Include="Tasks.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="fuzzywuzzy.h" />
     <ClInclude Include="source\AltTab.h" />
     <ClInclude Include="source\AltTabSettings.h" />
     <ClInclude Include="source\AltTabWindow.h" />

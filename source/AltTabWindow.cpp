@@ -37,13 +37,14 @@
             "language='*' "                                                                                            \
             "\"")
 
-HWND    g_hListView         = nullptr;
-HFONT   g_hFont             = nullptr;
-int     g_SelectedIndex     = 0;
-HANDLE  g_hAltTabThread     = nullptr;
-
-const int COL_ICON_WIDTH     = 36;
-const int COL_PROCNAME_WIDTH = 180;
+HWND           g_hStaticText       = nullptr;
+HWND           g_hListView         = nullptr;
+HFONT          g_hFont             = nullptr;
+int            g_SelectedIndex     = 0;
+HANDLE         g_hAltTabThread     = nullptr;
+std::wstring   g_SearchString;
+const int      COL_ICON_WIDTH      = 36;
+const int      COL_PROCNAME_WIDTH  = 180;
 
 // Forward declarations of functions included in this code module:
 INT_PTR CALLBACK ATAboutDlgProc        (HWND, UINT, WPARAM, LPARAM);
@@ -73,19 +74,20 @@ HICON GetWindowIcon(HWND hWnd) {
         hIcon = (HICON)SendMessage(hWnd, WM_GETICON, ICON_SMALL, 0);
         if (hIcon)
             return hIcon;
+    }
 
-        // Get the class long value that contains the icon handle
-        hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICON);
-        if (!hIcon) {
-            // If the class does not have an icon, try to get the small icon
-            hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICONSM);
-        }
+    // Get the class long value that contains the icon handle
+    hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICON);
+    if (!hIcon) {
+        // If the class does not have an icon, try to get the small icon
+        hIcon = (HICON)GetClassLongPtr(hWnd, GCLP_HICONSM);
     }
 
     if (!hIcon) {
         hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         return hIcon;
     }
+
     return hIcon;
 }
 
@@ -113,14 +115,29 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     auto vItems = (std::vector<AltTabWindowData>*)lParam;
                     bool insert = false;
 
+                    // If Alt+Tab is pressed, show all windows
                     if (g_IsAltTab) {
                         insert = true;
-                    } else if (g_IsAltBacktick) {
+                    }
+                    // If Alt+Backtick is pressed, show the process of similar process groups
+                    else if (g_IsAltBacktick) {
                         if (g_AltBacktickWndInfo.hWnd == nullptr) {
                             g_AltBacktickWndInfo = item;
                             AT_LOG_INFO("g_AltBacktickWndInfo: %s", WStrToUTF8(g_AltBacktickWndInfo.ProcessName).c_str());
                         }
                         insert = IsSimilarProcess(g_AltBacktickWndInfo.ProcessName, item.ProcessName);
+                    }
+
+                    // If the window is to be inserted, now apply the search string
+                    if (insert && !g_SearchString.empty()) {
+                        insert = InStr(item.ProcessName, g_SearchString) || InStr(item.Title, g_SearchString);
+
+                        //if (!insert && g_Settings.FuzzyMatchPercent != 100) {
+                        //    double matchRatio = GetPartialRatioW(g_SearchString.c_str(), item.Title.c_str());
+                        //    if (matchRatio >= g_Settings.FuzzyMatchPercent) {
+                        //        insert = true;
+                        //    }
+                        //}
                     }
 
                     if (insert) {
@@ -288,6 +305,11 @@ void RefreshAltTabWindow() {
 }
 
 void ATWListViewSelectItem(int rowNumber) {
+    if (g_AltTabWindows.empty()) {
+        g_SelectedIndex = -1;
+        return;
+    }
+
     // Move to next / previous item based on the direction
     int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
     LVITEM lvItem;
@@ -399,11 +421,11 @@ HWND CreateAltTabWindow() {
         CLASS_NAME,         // Window class
         WINDOW_NAME,        // Window title
         style,              // Styles
-        100,                // X
-        100,                // Y
-        900,                // Width
-        700,                // Height
-        g_hMainWnd,            // Parent window
+        0,                  // X
+        0,                  // Y
+        0,                  // Width
+        0,                  // Height
+        g_hMainWnd,         // Parent window
         nullptr,            // Menu
         g_hInstance,        // Instance handle
         nullptr             // Additional application data
@@ -443,7 +465,6 @@ static void CustomizeListView(HWND hListView) {
     DWORD dwExStyle = LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER;
     ListView_SetExtendedListViewStyle(hListView, dwExStyle);
 
-
     const int colTitleWidth = g_Settings.WindowWidth - COL_ICON_WIDTH;
 
     // Add columns to the List View
@@ -459,17 +480,38 @@ static void CustomizeListView(HWND hListView) {
         ListView_InsertColumn(hListView, 1, &lvCol);
 
         lvCol.pszText = (LPWSTR)L"Process Name";
-        lvCol.cx      = COL_PROCNAME_WIDTH;
+        lvCol.cx      = COL_PROCNAME_WIDTH - 2;
         ListView_InsertColumn(hListView, 2, &lvCol);
     } else {
         lvCol.pszText = (LPWSTR)L"Window Title";
-        lvCol.cx      = colTitleWidth;
+        lvCol.cx      = colTitleWidth - 2;
         ListView_InsertColumn(hListView, 1, &lvCol);
-
     }
 }
 
-static void SetCustomFont(HWND hListView, int fontSize) {
+#define FONT_POINT(hdc, p) (-MulDiv(p, GetDeviceCaps(hdc, LOGPIXELSY), 72))
+
+HFONT CreateFontEx(HDC hdc, std::wstring fontName, int fontSize) {
+    // Create a font for the static text control
+    return CreateFontW(
+        FONT_POINT(hdc, fontSize), // Font height
+        0,                         // Width of each character in the font
+        0,                         // Angle of escapement
+        0,                         // Orientation angle
+        FW_NORMAL,                 // Font weight
+        FALSE,                     // Italic
+        FALSE,                     // Underline
+        FALSE,                     // Strikeout
+        DEFAULT_CHARSET,           // Character set identifier
+        OUT_DEFAULT_PRECIS,        // Output precision
+        CLIP_DEFAULT_PRECIS,       // Clipping precision
+        DEFAULT_QUALITY,           // Output quality
+        DEFAULT_PITCH | FF_SWISS,  // Pitch and family
+        fontName.c_str()           // Font face name
+    );
+}
+
+static void SetListViewCustomFont(HWND hListView, int fontSize) {
     LOGFONT lf;
     GetObject(GetStockObject(DEFAULT_GUI_FONT), sizeof(LOGFONT), &lf);
     wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Lucida Handwriting");
@@ -482,7 +524,7 @@ static void SetCustomFont(HWND hListView, int fontSize) {
     SendMessage(hListView, WM_SETFONT, reinterpret_cast<WPARAM>(g_hFont), MAKELPARAM(TRUE, 0));
 }
 
-static void SetCustomColors(HWND hListView, COLORREF backgroundColor, COLORREF textColor) {
+static void SetListViewCustomColors(HWND hListView, COLORREF backgroundColor, COLORREF textColor) {
     // Set the background color
     SendMessage(hListView, LVM_SETBKCOLOR,     0, (LPARAM)backgroundColor);
     SendMessage(hListView, LVM_SETTEXTBKCOLOR, 0, (LPARAM)backgroundColor);
@@ -553,7 +595,7 @@ LRESULT CALLBACK ListViewSubclassProc(
             return TRUE;
         }
         else if (vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
-            AT_LOG_INFO("Backtick Pressed!");
+            AT_LOG_INFO("Backtick Pressed!, g_IsAltBacktick = %d", g_IsAltBacktick);
             const int  direction    = isShiftPressed ? -1 : 1;
 
             // Move to next / previous same item based on the direction
@@ -563,8 +605,17 @@ LRESULT CALLBACK ListViewSubclassProc(
             const int   N           = (int)g_AltTabWindows.size();
             const auto& processName = g_AltTabWindows[selectedInd].ProcessName; // Selected process name
             const int   pgInd       = GetProcessGroupIndex(processName);        // Index in ProcessGroupList
-            int         nextInd     = -1;                                       // Next index to select
+            int         nextInd     = (selectedInd + N + direction) % N;        // Next index to select
 
+            // If the AltTab window is invoked with Alt + Backtick, then we should
+            // move to the next item in the list without checking the process name.
+            if (g_IsAltBacktick) {
+                ATWListViewSelectItem(nextInd);
+                return TRUE;
+            }
+
+            // If the control comes to here, AltTab window is invoked with Alt + Tab
+            // Check if the next item is similar to the selected item
             for (int i = 1; i < N; ++i) {
                 nextInd = (selectedInd + N + i * direction) % N;
                 if (IsSimilarProcess(pgInd, g_AltTabWindows[nextInd].ProcessName)) {
@@ -588,9 +639,25 @@ LRESULT CALLBACK ListViewSubclassProc(
             DestoryAltTabWindow();
             DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
             return TRUE;
-        } else {
-            //AT_LOG_INFO("Not handled: wParam: %u", wParam);
         }
+        // WM_CHAR won't be sent when ALT is pressed, this is the alternative to handle when a key is pressed.
+        // And collect the chars and form a search string.
+        // Ignore Backtick (`), Tab, Backspace, and non-printable characters while forming search string.
+        else {
+            wchar_t ch = '\0';
+            bool isChar = ATMapVirtualKey((UINT)wParam, ch);
+            bool update = false;
+            if (!(wParam == '`' || wParam == VK_TAB || wParam == VK_BACK || ch == '\0') && isChar) {
+                g_SearchString += ch;
+                update = true;
+            } else if (wParam == VK_BACK && !g_SearchString.empty()) {
+                g_SearchString.pop_back();
+                update = true;
+            }
+            AT_LOG_INFO("Char: %#4x, SearchString: [%s]", ch, WStrToUTF8(g_SearchString).c_str());
+            update && SendMessage(g_hStaticText, WM_SETTEXT, 0, (LPARAM)(L"Search String: " + g_SearchString).c_str());
+        }
+        //AT_LOG_INFO("Not handled: wParam: %0#4x, iswprint: %d", wParam, iswprint((wint_t)wParam));
         break;
 
     //case WM_KILLFOCUS:
@@ -622,6 +689,13 @@ void WindowResizeAndPosition(HWND hWnd, int wndWidth, int wndHeight) {
     SetWindowPos(hWnd, HWND_TOP, xPos, yPos, wndWidth, wndHeight, SWP_NOSIZE | SWP_SHOWWINDOW);
 }
 
+int GetColProcessNameWidth() {
+    if (g_Settings.ShowColProcessName) {
+        return COL_PROCNAME_WIDTH;
+    }
+    return 0;
+}
+
 INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     //AT_LOG_TRACE;
     //AT_LOG_INFO(std::format("uMsg: {:4}, wParam: {}, lParam: {}", uMsg, wParam, lParam).c_str());
@@ -646,22 +720,54 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             style |= LVS_NOCOLUMNHEADER;
         }
 
-        // Create ListView control
-        HWND hListView = CreateWindowExW(
-            0,                                  // Optional window styles
-            WC_LISTVIEW,                        // Predefined class
-            L"",                                // No window title
-            style,                              // Styles
+        // Create  Static control
+        int staticTextHeight = 24;
+
+        // Calculate the required height based on font size
+        HDC hdc = GetDC(hWnd);
+        g_hFont = CreateFontEx(hdc, g_Settings.FontName, g_Settings.FontSize);
+        SelectObject(hdc, g_hFont);
+
+        TEXTMETRIC tm;
+        GetTextMetrics(hdc, &tm);
+        staticTextHeight = (int)(tm.tmHeight + tm.tmExternalLeading + 1);
+        ReleaseDC(hWnd, hdc);
+
+        // Create a static text control
+        HWND hStaticText = CreateWindowW(
+            L"Static",                          // Static text control class
+            L"Search String: empty",            // Text content
+            WS_CHILD | WS_VISIBLE | SS_CENTER,  // Styles
             0,                                  // X
             0,                                  // Y
-            windowWidth,
-            windowHeight,                       // Position and size
+            windowWidth,                        // Width
+            staticTextHeight,                   // Height
             hWnd,                               // Parent window
-            (HMENU)IDC_LISTVIEW,                // Control identifier
-            GetModuleHandle(nullptr),           // Instance handle
+            (HMENU)NULL,                        // Menu or control ID (set to NULL for static text)
+            g_hInstance,                        // Instance handle
             nullptr                             // No window creation data
         );
 
+        SendMessage(hStaticText, WM_SETFONT, (WPARAM)g_hFont, 0);
+        g_hStaticText = hStaticText;
+
+        // Create ListView control
+        HWND hListView = CreateWindowExW(
+            0,                                     // Optional window styles
+            WC_LISTVIEW,                           // Predefined class
+            L"",                                   // No window title
+            style,                                 // Styles
+            0,                                     // X
+            staticTextHeight + 1,                  // Y
+            windowWidth - 1,                           // Width
+            windowHeight - staticTextHeight - 3,   // Height
+            hWnd,                                  // Parent window
+            (HMENU)IDC_LISTVIEW,                   // Control identifier
+            g_hInstance,                           // Instance handle
+            nullptr                                // No window creation data
+        );
+
+        SendMessage(hListView, WM_SETFONT, (WPARAM)g_hFont, MAKELPARAM(TRUE, 0));
         g_hListView = hListView;
 
         // Subclass the ListView control
@@ -673,9 +779,11 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         g_Settings.WindowWidth  = wndWidth;
         g_Settings.WindowHeight = wndHeight;
 
+        // Add header / columns
         CustomizeListView(hListView);
-        SetCustomFont    (hListView, 11);
-        SetCustomColors  (hListView, g_Settings.BackgroundColor, g_Settings.FontColor);
+
+        // Set ListView background and font colors
+        SetListViewCustomColors(hListView, g_Settings.BackgroundColor, g_Settings.FontColor);
 
         // Set window transparency
         SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
@@ -711,20 +819,23 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         }
         RECT rcListView;
         GetClientRect(g_hListView, &rcListView);
-        int itemHeight =
-            ListView_GetItemRect(g_hListView, 0, &rcListView, LVIR_BOUNDS) ? rcListView.bottom - rcListView.top : 0;
-        int itemCount = ListView_GetItemCount(g_hListView);
-        int requiredHeight = itemHeight * itemCount + headerHeight;
+        int itemHeight     = ListView_GetItemRect(g_hListView, 0, &rcListView, LVIR_BOUNDS) ? rcListView.bottom - rcListView.top : 0;
+        int itemCount      = ListView_GetItemCount(g_hListView);
+        int requiredHeight = itemHeight * itemCount + headerHeight + staticTextHeight + 3;
 
         if (requiredHeight <= g_Settings.WindowHeight) {
             SetWindowPos(hWnd, HWND_TOPMOST, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
             WindowResizeAndPosition(hWnd, wndWidth, requiredHeight);
         } else {
-            int scrollBarWidth = GetSystemMetrics(SM_CXVSCROLL);
-            int colTitleWidth = g_Settings.WindowWidth - (COL_ICON_WIDTH + COL_PROCNAME_WIDTH) - scrollBarWidth;
+            int scrollBarWidth   = GetSystemMetrics(SM_CXVSCROLL);
+            int processNameWidth = GetColProcessNameWidth();
+            int colTitleWidth    = g_Settings.WindowWidth - (COL_ICON_WIDTH + GetColProcessNameWidth()) - scrollBarWidth + 2;
+            int lvHeight         = (g_Settings.WindowHeight - itemHeight + 1) / itemHeight * itemHeight;
+            int requiredHeight   = lvHeight + headerHeight + staticTextHeight + 3;
             ListView_SetColumnWidth(hListView, 1, colTitleWidth);
-            SetWindowPos(hWnd, nullptr, windowX, windowY, windowWidth, windowHeight, SWP_NOZORDER);
-            WindowResizeAndPosition(hWnd, wndWidth, g_Settings.WindowHeight);
+            SetWindowPos(hListView, nullptr, 0, 0, windowWidth, lvHeight, SWP_NOMOVE | SWP_NOZORDER);
+            SetWindowPos(hWnd, HWND_TOPMOST, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
+            WindowResizeAndPosition(hWnd, wndWidth, requiredHeight);
         }
 
         SetForegroundWindow(hWnd);
@@ -738,13 +849,17 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         // Create a timer to refresh the ListView when there is a change in windows
         SetTimer(hWnd, TIMER_WINDOW_COUNT, TIMER_WINDOW_COUNT_ELAPSE, nullptr);
-        break;
     }
+    break;
 
-    //case WM_PAINT:
-    //    AT_LOG_INFO("WM_PAINT");
-    //    SetForegroundWindow(hWnd);
-    //    break;
+    case WM_CTLCOLORSTATIC: {
+        HDC hdcStatic   = (HDC)wParam;
+        HWND hwndStatic = (HWND)lParam;
+
+        // Set the text color
+        SetTextColor(hdcStatic, RGB(255, 0, 0)); // Red color
+    }
+    break;
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
@@ -781,14 +896,15 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         PostQuitMessage(0);
         return TRUE;
 
-    case WM_KEYDOWN:
+    case WM_KEYDOWN: {
         AT_LOG_INFO("WM_KEYDOWN");
         if (wParam == VK_ESCAPE) {
             // Close the window when Escape key is pressed
             PostQuitMessage(0);
             return TRUE;
         }
-        break;
+    }
+    break;
 
     case WM_KILLFOCUS:
         AT_LOG_INFO("WM_KILLFOCUS");
@@ -799,17 +915,12 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     //    break;
 
     case WM_TIMER: {
-        AT_LOG_INFO("WM_TIMER");
+        //AT_LOG_INFO("WM_TIMER");
         std::vector<AltTabWindowData> altTabWindows;
         EnumWindows(EnumWindowsProc, (LPARAM)(&altTabWindows));
-        AT_LOG_INFO("altTabWindows.size(): %d, g_AltTabWindows.size(): %d", altTabWindows.size(), g_AltTabWindows.size());
+        //AT_LOG_INFO("altTabWindows.size(): %d, g_AltTabWindows.size(): %d", altTabWindows.size(), g_AltTabWindows.size());
         if (altTabWindows.size() != g_AltTabWindows.size()) {
             RefreshAltTabWindow();
-            //g_AltTabWindows = altTabWindows;
-            //ListView_DeleteAllItems(g_hListView);
-            //for (int i = 0; i < g_AltTabWindows.size(); ++i) {
-            //    AddListViewItem(g_hListView, i, g_AltTabWindows[i]);
-            //}
         }
 
     }
@@ -1031,4 +1142,51 @@ BOOL TerminateProcessEx(DWORD pid) {
         return TRUE;
     }
     return FALSE;
+}
+
+bool ATMapVirtualKey(UINT uCode, wchar_t& vkCode) {
+    wchar_t ch = static_cast<wchar_t>(uCode);
+    //AT_LOG_INFO("uCode: %c, ch: %c", uCode, ch);
+
+    if (!iswprint(uCode)) {
+        vkCode = '\0';
+        return false;
+    }
+
+    bool isShiftPressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+
+    // Check for alphabetic and digit keys
+    if ((uCode >= 'A' && uCode <= 'Z') || (uCode >= '0' && uCode <= '9')) {
+        ch = MapVirtualKey(uCode, MAPVK_VK_TO_CHAR);
+
+        // Adjust the case based on the Shift key state for alphabets
+        if (!isShiftPressed && ch >= L'A' && ch <= L'Z') {
+            ch = ch - L'A' + L'a';
+        }
+
+        if (isShiftPressed && ch >= L'0' && ch <= L'9') {
+            ch = L")!@#$%^&*("[ch - L'0'];
+        }
+
+        vkCode = ch;
+        return true;
+    }
+
+    // Handle other special characters
+    switch (uCode) {
+        case VK_SPACE:        vkCode = L' ';                          return true;
+        case VK_OEM_MINUS:    vkCode = isShiftPressed ? L'_' : L'-';  return true;
+        case VK_OEM_PLUS:     vkCode = isShiftPressed ? L'=' : L'+';  return true;
+        case VK_OEM_1:        vkCode = isShiftPressed ? L':' : L';';  return true;
+        case VK_OEM_2:        vkCode = isShiftPressed ? L'?' : L'/';  return true;
+        case VK_OEM_3:        vkCode = isShiftPressed ? L'~' : L'`';  return true;
+        case VK_OEM_4:        vkCode = isShiftPressed ? L'{' : L'[';  return true;
+        case VK_OEM_5:        vkCode = isShiftPressed ? L'|' : L'\\'; return true;
+        case VK_OEM_6:        vkCode = isShiftPressed ? L'}' : L']';  return true;
+        case VK_OEM_7:        vkCode = isShiftPressed ? L'"' : L'\''; return true;
+        case VK_OEM_COMMA:    vkCode = isShiftPressed ? L'<' : L',';  return true;
+        case VK_OEM_PERIOD:   vkCode = isShiftPressed ? L'>' : L'.';  return true;
+        case VK_OEM_102:      vkCode = isShiftPressed ? L'>' : L'<';  return true;
+    }
+    return false;
 }

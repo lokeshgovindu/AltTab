@@ -9,10 +9,12 @@ using ProcessGroupsList = std::vector<std::unordered_set<std::wstring>>;
 #define SETTINGS_INI_FILENAME          L"AltTabSettings.ini"
 
 #define DEFAULT_FONT_NAME              L"Lucida Handwriting"
+#define DEFAULT_FONT_SIZE              11
 #define DEFAULT_FONT_COLOR             RGB(0xFF, 0xFF, 0xFF)
 #define DEFAULT_BG_COLOR               RGB(0x00, 0x00, 0x00)
 #define DEFAULT_WIDTH                  45
 #define DEFAULT_HEIGHT                 45
+#define DEFAULT_FUZZYMATCHPERCENT      75
 #define DEFAULT_TRANSPARENCY           222
 #define DEFAULT_SIMILARPROCESSGROUPS   L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe"
 #define DEFAULT_CHECKFORUPDATES        L"Startup"
@@ -31,12 +33,14 @@ using ProcessGroupsList = std::vector<std::unordered_set<std::wstring>>;
  */
 struct AltTabSettings {
     std::wstring        FontName;               // Font Name
+    int                 FontSize;               // Font Size
     int                 WidthPercentage;        // Window width in percentage of the actual screen width
     int                 HeightPercentage;       // Window height in percentage of the actual screen height
     int                 WindowWidth;            // Window width, will be calculated at runtime
     int                 WindowHeight;           // Window height, will be calculated at runtime
     COLORREF            FontColor;              // Font color
     COLORREF            BackgroundColor;        // Background color
+    int                 FuzzyMatchPercent;      // Fuzzy match percent
     int                 Transparency;           // Window transparency
     std::wstring        SimilarProcessGroups;   // Similar process groups
     ProcessGroupsList   ProcessGroupsList;      // Process groups, will be constructed at runtime from SimilarProcessGroups

@@ -19,7 +19,9 @@
 
 #define MAX_LOADSTRING 100
 
+// ----------------------------------------------------------------------------
 // Global Variables:
+// ----------------------------------------------------------------------------
 HINSTANCE   g_hInstance;                                 // Current instance
 HHOOK       g_KeyboardHook;                              // Keyboard Hook
 HWND        g_hAltTabWnd         = nullptr;              // AltTab window handle
@@ -38,6 +40,9 @@ HWND CreateMainWindow(HINSTANCE hInstance);
 BOOL AddNotificationIcon(HWND hWndTrayIcon);
 void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
+// ----------------------------------------------------------------------------
+// Main
+// ----------------------------------------------------------------------------
 int APIENTRY wWinMain(
     _In_        HINSTANCE   hInstance,
     _In_opt_    HINSTANCE   hPrevInstance,
@@ -296,7 +301,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 void ActivateWindow(HWND hWnd) {
     AT_LOG_TRACE;
 
-	HWND hwndFrgnd = GetForegroundWindow();
+	 HWND hwndFrgnd = GetForegroundWindow();
     if (hWnd == hwndFrgnd) {
         return;
     }
@@ -366,6 +371,7 @@ void DestoryAltTabWindow(bool activate) {
     g_IsAltBacktick = false;
     g_SelectedIndex = -1;
     g_AltTabWindows.clear();
+    g_SearchString.clear();
     g_AltBacktickWndInfo = {};
     AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
@@ -422,7 +428,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // ----------------------------------------------------------------------------
                 if (vkCode == VK_TAB) {
                     if (isNativeATWDisplayed) {
-                        AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
+                        //AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
                         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
                     }
 
@@ -478,9 +484,21 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     return TRUE;
                 }
 
-                if (vkCode == VK_APPS) {
+                if (vkCode == VK_APPS && g_SelectedIndex != -1) {
                     AT_LOG_INFO("Apps Pressed!");
                     ShowContextMenuAtItemCenter();
+                    return TRUE;
+                }
+
+                // If any other application define the HotKey Alt + ~, we need
+                // to stop sending WM_KEYDOWN on ~ to that application.
+                // For example. If AltTabAlternative is running, ATA's window
+                // gets opened.
+                //
+                // Now, send WM_KEYDOWN to g_hAltTabWnd, there handle.
+                if (vkCode == VK_OEM_3) { // 0xC0
+                    //AT_LOG_INFO("Backtick Pressed!");
+                    PostMessage(g_hListView, WM_KEYDOWN, vkCode, 0);
                     return TRUE;
                 }
                 
@@ -489,7 +507,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     return TRUE;
                 } 
 
-                //AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x", wParam, vkCode);
+                //AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x, isprint: %d", wParam, vkCode, iswprint(vkCode));
             }
         }
     } // if (isAltPressed && !isCtrlPressed)
@@ -818,4 +836,3 @@ BOOL IsHungAppWindowEx(HWND hwnd) {
     DWORD dwErr = GetLastError();
     return (dwErr == 0 || dwErr == 1460);
 }
-

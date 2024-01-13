@@ -22,6 +22,7 @@ extern HINSTANCE                            g_hInstance;
 extern HWND                                 g_hMainWnd;              // AltTab main window handle
 extern HWND                                 g_hAltTabWnd;            // AltTab window handle
 extern HWND                                 g_hFGWnd;                // Foreground window handle
+extern HWND                                 g_hStaticText;
 extern HWND                                 g_hListView;
 extern HANDLE                               g_hAltTabThread;
 extern DWORD                                g_idThreadAttachTo;
@@ -37,4 +38,4 @@ extern bool                                 g_IsAltTab;
 extern bool                                 g_IsAltBacktick;
 extern int                                  g_SelectedIndex;
 extern DWORD                                g_MainThreadID;
-
+extern std::wstring                         g_SearchString;

@@ -22,7 +22,7 @@ std::string FormatString(const char* fmt, const Args&... args) {
     return message;
 }
 
-#define AT_LOG(level, fmt, ...) gLogger->log(level, "[%-24s | %3d] %s", __FUNCTION__, __LINE__, FormatString(fmt, ##__VA_ARGS__).c_str())
+#define AT_LOG(level, fmt, ...) gLogger->log(level, "[%-24s | %4d] %s", __FUNCTION__, __LINE__, FormatString(fmt, ##__VA_ARGS__).c_str())
 
 #define AT_LOG_DEBUG(fmt, ...)    AT_LOG(log4cpp::Priority::DEBUG, fmt, ##__VA_ARGS__)
 #define AT_LOG_INFO(fmt, ...)     AT_LOG(log4cpp::Priority::INFO,  fmt, ##__VA_ARGS__)

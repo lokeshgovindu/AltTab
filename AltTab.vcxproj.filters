@@ -30,6 +30,9 @@
     <ClCompile Include="source\Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="fuzzywuzzy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
@@ -67,6 +70,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\GlobalData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fuzzywuzzy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

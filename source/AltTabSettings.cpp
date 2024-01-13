@@ -19,12 +19,14 @@
 // ----------------------------------------------------------------------------
 AltTabSettings g_Settings = { 
     DEFAULT_FONT_NAME,              // FontName
+    DEFAULT_FONT_SIZE,              // FontSize
     DEFAULT_WIDTH,                  // WidthPercentage
     DEFAULT_HEIGHT,                 // HeightPercentage
     0,                              // WindowWidth
     0,                              // WindowHeight
     DEFAULT_FONT_COLOR,             // FontColor
     DEFAULT_BG_COLOR,               // BackgroundColor
+    DEFAULT_FUZZYMATCHPERCENT,      // FuzzyMatchPercent
     DEFAULT_TRANSPARENCY,           // WindowTransparency
     DEFAULT_SIMILARPROCESSGROUPS,   // SimilarProcessGroups
     {},                             // ProcessGroupsList
@@ -63,6 +65,10 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
 
         EnableWindow(GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
         EnableWindow(GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), FALSE);
+
+        SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , g_Settings.FuzzyMatchPercent, FALSE);
+        SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
+        SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETPOS                  , 0, MAKELPARAM(g_Settings.FuzzyMatchPercent, 0));
 
         SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , g_Settings.Transparency     , FALSE);
         SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
@@ -262,6 +268,7 @@ void WriteSetting(LPCTSTR iniFile, LPCTSTR section, LPCTSTR keyName, const std::
 void ATSettingsCreateDefault(const std::wstring& settingsFilePath) {
     WriteSetting(settingsFilePath.c_str(), L"Backtick", L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"FuzzyMatchPercent"     , g_Settings.FuzzyMatchPercent);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowTransparency"    , g_Settings.Transparency);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
@@ -281,6 +288,7 @@ void ATLoadSettings() {
     g_Settings.SimilarProcessGroups = buffer;
 
     g_Settings.PromptTerminateAll = GetPrivateProfileInt(L"General", L"PromptTerminateAll"    , DEFAULT_PROMPTTERMINATEALL  , iniFile.c_str());
+    g_Settings.FuzzyMatchPercent  = GetPrivateProfileInt(L"General", L"FuzzyMatchPercent"     , DEFAULT_FUZZYMATCHPERCENT   , iniFile.c_str());
     g_Settings.Transparency       = GetPrivateProfileInt(L"General", L"WindowTransparency"    , DEFAULT_TRANSPARENCY        , iniFile.c_str());
     g_Settings.WidthPercentage    = GetPrivateProfileInt(L"General", L"WindowWidthPercentage" , DEFAULT_WIDTH               , iniFile.c_str());
     g_Settings.HeightPercentage   = GetPrivateProfileInt(L"General", L"WindowHeightPercentage", DEFAULT_HEIGHT              , iniFile.c_str());
@@ -311,6 +319,7 @@ void ATSaveSettings() {
     std::wstring settingsFilePath = ATSettingsFilePath();
     WriteSetting(settingsFilePath.c_str(), L"Backtick", L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll);
+    WriteSetting(settingsFilePath.c_str(), L"General" , L"FuzzyMatchPercent"     , g_Settings.FuzzyMatchPercent);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowTransparency"    , g_Settings.Transparency);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
     WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
@@ -330,6 +339,7 @@ void ATApplySettings(HWND hDlg) {
     g_Settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
     g_Settings.ShowColHeader        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER)      == BST_CHECKED;
     g_Settings.ShowColProcessName   = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME) == BST_CHECKED;
+    g_Settings.FuzzyMatchPercent    = GetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , nullptr, FALSE);
     g_Settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
     g_Settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
     g_Settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
@@ -347,8 +357,8 @@ void ATApplySettings(HWND hDlg) {
 }
 
 bool AreSettingsModified(HWND hDlg) {
-    int textLength                  = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
-    wchar_t* buffer                 = new wchar_t[textLength + 1];
+    int      textLength           = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
+    wchar_t* buffer               = new wchar_t[textLength + 1];
     GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
 
     AltTabSettings settings;
@@ -356,6 +366,7 @@ bool AreSettingsModified(HWND hDlg) {
     settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
     settings.ShowColHeader        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER)      == BST_CHECKED;
     settings.ShowColProcessName   = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME) == BST_CHECKED;
+    settings.FuzzyMatchPercent    = GetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , nullptr, FALSE);
     settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
     settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
     settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
@@ -363,6 +374,7 @@ bool AreSettingsModified(HWND hDlg) {
     delete[] buffer;
 
     bool modified =
+        settings.FuzzyMatchPercent    != g_Settings.FuzzyMatchPercent    ||
         settings.Transparency         != g_Settings.Transparency         ||
         settings.WidthPercentage      != g_Settings.WidthPercentage      ||
         settings.HeightPercentage     != g_Settings.HeightPercentage     ||
