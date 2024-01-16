@@ -24,6 +24,8 @@
 #include "Utils.h"
 #include "AltTab.h"
 #include "GlobalData.h"
+#include <unordered_map>
+#include "version.h"
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -54,6 +56,7 @@ HWND             GetOwnerWindowHwnd    (HWND hWnd);
 static void      AddListViewItem       (HWND hListView, int index, const AltTabWindowData& windowData);
 static void      ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId);
 static BOOL      TerminateProcessEx    (DWORD pid);
+static bool      IsExcludedProcess     (const std::wstring& processName);
 
 std::vector<AltTabWindowData> g_AltTabWindows;
 
@@ -93,8 +96,8 @@ HICON GetWindowIcon(HWND hWnd) {
 
 BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
     if (IsAltTabWindow(hWnd)) {
-        HWND hOwner = GetOwnerWindowHwnd(hWnd);
-        DWORD processId;
+        HWND   hOwner = GetOwnerWindowHwnd(hWnd);
+        DWORD  processId;
         GetWindowThreadProcessId(hWnd, &processId);
 
         if (processId != 0) {
@@ -105,19 +108,19 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                 if (GetModuleFileNameEx(hProcess, nullptr, szProcessPath, MAX_PATH)) {
                     std::filesystem::path filePath = szProcessPath;
 
+                    // Always get the title of owner window, otherwise popup window title will be displayed.
                     const int bufferSize = 256;
                     wchar_t windowTitle[bufferSize];
-                    int length = GetWindowTextW(hOwner, windowTitle, bufferSize);
-                    if (length == 0)
-                        return TRUE;
+                    GetWindowTextW(hOwner, windowTitle, bufferSize);
 
                     AltTabWindowData item = { hWnd, hOwner, GetWindowIcon(hOwner), windowTitle, filePath.filename().wstring(), processId };
-                    auto vItems = (std::vector<AltTabWindowData>*)lParam;
-                    bool insert = false;
+                    auto vItems   = (std::vector<AltTabWindowData>*)lParam;
+                    bool insert   = false;
+                    bool excluded = IsExcludedProcess(ToLower(item.ProcessName));
 
                     // If Alt+Tab is pressed, show all windows
                     if (g_IsAltTab) {
-                        insert = true;
+                        insert = excluded ? false : true;
                     }
                     // If Alt+Backtick is pressed, show the process of similar process groups
                     else if (g_IsAltBacktick) {
@@ -132,16 +135,26 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     if (insert && !g_SearchString.empty()) {
                         insert = InStr(item.ProcessName, g_SearchString) || InStr(item.Title, g_SearchString);
 
-                        //if (!insert && g_Settings.FuzzyMatchPercent != 100) {
-                        //    double matchRatio = GetPartialRatioW(g_SearchString.c_str(), item.Title.c_str());
-                        //    if (matchRatio >= g_Settings.FuzzyMatchPercent) {
-                        //        insert = true;
-                        //    }
-                        //}
+                        double matchRatio = insert ? 100 : 0;
+                        // Search in process name
+                        if (!insert && g_Settings.FuzzyMatchPercent != 100) {
+                            matchRatio = GetPartialRatioW(g_SearchString, item.ProcessName);
+                            if (matchRatio >= g_Settings.FuzzyMatchPercent) {
+                                insert = true;
+                            }
+                        }
+                        // Search in window title
+                        if (!insert && g_Settings.FuzzyMatchPercent != 100) {
+                            matchRatio = GetPartialRatioW(g_SearchString, item.Title);
+                            if (matchRatio >= g_Settings.FuzzyMatchPercent) {
+                                insert = true;
+                            }
+                        }
+                        //AT_LOG_INFO("matchRatio = %5.1f, title = [%s]", matchRatio, WStrToUTF8(item.Title).c_str());
                     }
 
                     if (insert) {
-                        //AT_LOG_INFO("Inserting hWnd: %#x, title: %s", item.hWnd, WStrToUTF8(item.Title).c_str());
+                        //AT_LOG_INFO("Inserting hWnd: %0#9x, title: %s", item.hWnd, WStrToUTF8(item.Title).c_str());
                         vItems->push_back(std::move(item));
                     }
                 }
@@ -282,6 +295,7 @@ void RefreshAltTabWindow() {
     ListView_DeleteAllItems(g_hListView);
     g_AltTabWindows.clear();
 
+    // Enumerate windows
     EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));
 
     // Create ImageList and add icons
@@ -491,15 +505,25 @@ static void CustomizeListView(HWND hListView) {
 
 #define FONT_POINT(hdc, p) (-MulDiv(p, GetDeviceCaps(hdc, LOGPIXELSY), 72))
 
-HFONT CreateFontEx(HDC hdc, std::wstring fontName, int fontSize) {
+HFONT CreateFontEx(HDC hdc, const std::wstring& fontName, int fontSize, const std::wstring& fontStyle) {
+    std::unordered_map<std::wstring, int> fontStyleMap = {
+        { L"normal"     , FW_NORMAL },
+        { L"italic"     , FW_NORMAL },
+        { L"bold"       , FW_BOLD   },
+        { L"bold italic", FW_BOLD   },
+    };
+
+    int  fStyle  = fontStyleMap[fontStyle];
+    BOOL bItalic = fontStyle.find(L"italic") != -1;
+
     // Create a font for the static text control
     return CreateFontW(
         FONT_POINT(hdc, fontSize), // Font height
         0,                         // Width of each character in the font
         0,                         // Angle of escapement
         0,                         // Orientation angle
-        FW_NORMAL,                 // Font weight
-        FALSE,                     // Italic
+        fStyle,                    // Font weight
+        bItalic,                   // Italic
         FALSE,                     // Underline
         FALSE,                     // Strikeout
         DEFAULT_CHARSET,           // Character set identifier
@@ -511,10 +535,10 @@ HFONT CreateFontEx(HDC hdc, std::wstring fontName, int fontSize) {
     );
 }
 
-static void SetListViewCustomFont(HWND hListView, int fontSize) {
+static void SetListViewCustomFont(HWND hListView, const std::wstring& fontName, int fontSize) {
     LOGFONT lf;
     GetObject(GetStockObject(DEFAULT_GUI_FONT), sizeof(LOGFONT), &lf);
-    wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Lucida Handwriting");
+    wcscpy_s(lf.lfFaceName, LF_FACESIZE, fontName.c_str());
 
     // Modify the font size
     lf.lfHeight = -MulDiv(fontSize, GetDeviceCaps(GetDC(hListView), LOGPIXELSY), 72);
@@ -632,12 +656,14 @@ LRESULT CALLBACK ListViewSubclassProc(
         }
         else if (isShiftPressed && vkCode == VK_F1) {
             DestoryAltTabWindow();
-            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), g_hMainWnd, ATAboutDlgProc);
+            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), nullptr, ATAboutDlgProc);
             return TRUE;
         }
         else if (vkCode == VK_F2) {
             DestoryAltTabWindow();
-            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), g_hMainWnd, ATSettingsDlgProc);
+            // Do NOT assign owner for this, if owner is assigned and the settings
+            // dialog is not active, then it won't be displayed in alt tab windows list.
+            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), nullptr, ATSettingsDlgProc);
             return TRUE;
         }
         // WM_CHAR won't be sent when ALT is pressed, this is the alternative to handle when a key is pressed.
@@ -725,7 +751,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         // Calculate the required height based on font size
         HDC hdc = GetDC(hWnd);
-        g_hFont = CreateFontEx(hdc, g_Settings.FontName, g_Settings.FontSize);
+        g_hFont = CreateFontEx(hdc, g_Settings.FontName, g_Settings.FontSize, g_Settings.FontStyle);
         SelectObject(hdc, g_hFont);
 
         TEXTMETRIC tm;
@@ -944,6 +970,12 @@ bool IsInvisibleWin10BackgroundAppWindow(HWND hWnd) {
     return isCloaked;
 }
 
+/**
+ * Check if the given window handle's window is a AltTab window.
+ * 
+ * \param hWnd Window handle
+ * \return True if the given hWnd is a AltTab window otherwise false.
+ */
 bool IsAltTabWindow(HWND hWnd) {
     if (!IsWindowVisible(hWnd))
         return false;
@@ -973,11 +1005,12 @@ bool IsAltTabWindow(HWND hWnd) {
     return false;
 }
 
-std::vector<AltTabWindowData> GetAltTabWindowsList() {
-    EnumWindows(EnumWindowsProc, 0);
-    return {};
-}
-
+/**
+ * Get owner window handle for the given hWnd.
+ * 
+ * \param hWnd Window handle
+ * \return The owner window handle for the given hWnd.
+ */
 HWND GetOwnerWindowHwnd(HWND hWnd) {
     HWND hOwner = hWnd;
     do {
@@ -987,6 +1020,9 @@ HWND GetOwnerWindowHwnd(HWND hWnd) {
     return hOwner;
 }
 
+/*!
+ * \brief Show AltTab window's context menu at the center of the selected item.
+ */
 void ShowContextMenuAtItemCenter()
 {
     // Get the position of the selected item
@@ -1038,6 +1074,9 @@ void SetAltTabActiveWindow() {
     SetFocus(g_hListView);
 }
 
+// ----------------------------------------------------------------------------
+// AltTab window context menu handler
+// ----------------------------------------------------------------------------
 void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
     switch (menuItemId) {
     case ID_CONTEXTMENU_CLOSE_WINDOW: {
@@ -1064,12 +1103,17 @@ void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         // not find a way to avoid this. So, turning off the timer.
         KillTimer(hWnd, TIMER_WINDOW_COUNT);
 
-        int result = MessageBoxW(
-            hWnd,
-            L"Are you sure you want to close all windows?",
-            AT_PRODUCT_NAMEW L": Close All Windows",
-            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
-        if (result == IDYES) {
+        bool closeAllWindows = true;
+        if (g_Settings.PromptTerminateAll) {
+            int result = MessageBoxW(
+                hWnd,
+                L"Are you sure you want to close all windows?",
+                AT_PRODUCT_NAMEW L": Close All Windows",
+                MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+            closeAllWindows = (result == IDYES);
+        }
+
+        if (closeAllWindows) {
             for (auto& g_AltTabWindow : g_AltTabWindows) {
                 PostMessage(g_AltTabWindow.hWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
             }
@@ -1088,12 +1132,16 @@ void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         // not find a way to avoid this. So, turning off the timer.
         KillTimer(hWnd, TIMER_WINDOW_COUNT);
 
-        int result = MessageBoxW(
-            hWnd,
-            L"Are you sure you want to terminate all windows?",
-            AT_PRODUCT_NAMEW L": Close All Windows",
-            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
-        if (result == IDYES) {
+        bool terminateAllWindows = true;
+        if (g_Settings.PromptTerminateAll) {
+            int result = MessageBoxW(
+                hWnd,
+                L"Are you sure you want to terminate all windows?",
+                AT_PRODUCT_NAMEW L": Close All Windows",
+                MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+            terminateAllWindows = (result == IDYES);
+        }
+        if (terminateAllWindows) {
             for (auto& g_AltTabWindow : g_AltTabWindows) {
                 TerminateProcessEx(g_AltTabWindow.PID);
             }
@@ -1134,6 +1182,12 @@ void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
     }
 }
 
+/*!
+ * Terminate the given process id
+ * 
+ * \param pid  ProcessID
+ * \return True if terminated successfully otherwise false.
+ */
 BOOL TerminateProcessEx(DWORD pid) {
     HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
     if (hProcess) {
@@ -1189,4 +1243,21 @@ bool ATMapVirtualKey(UINT uCode, wchar_t& vkCode) {
         case VK_OEM_102:      vkCode = isShiftPressed ? L'>' : L'<';  return true;
     }
     return false;
+}
+
+/*!
+ * Check if the process name is in the exclusion list
+ * 
+ * \param processName Process name, should be in lower case
+ * \return True if the processName is in the exclusion list otherwise false
+ */
+bool IsExcludedProcess(const std::wstring& processName) {
+    bool excluded = false;
+    if (g_Settings.ProcessExclusionsEnabled) {
+        excluded = std::find(
+           g_Settings.ProcessExclusionList.begin(),
+           g_Settings.ProcessExclusionList.end(),
+           processName) != g_Settings.ProcessExclusionList.end();
+    }
+    return excluded;
 }

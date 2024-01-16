@@ -75,6 +75,9 @@
     <ClInclude Include="fuzzywuzzy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\Tooltips.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="source\AltTab.ico">

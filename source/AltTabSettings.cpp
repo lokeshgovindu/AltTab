@@ -11,33 +11,65 @@
 #include <filesystem>
 #include "GlobalData.h"
 #include "AltTabWindow.h"
+#include "Tooltips.h"
 
 #define WM_SETTEXTCOLOR (WM_USER + 1)
 
-// ----------------------------------------------------------------------------
-// Default settings
-// ----------------------------------------------------------------------------
-AltTabSettings g_Settings = { 
-    DEFAULT_FONT_NAME,              // FontName
-    DEFAULT_FONT_SIZE,              // FontSize
-    DEFAULT_WIDTH,                  // WidthPercentage
-    DEFAULT_HEIGHT,                 // HeightPercentage
-    0,                              // WindowWidth
-    0,                              // WindowHeight
-    DEFAULT_FONT_COLOR,             // FontColor
-    DEFAULT_BG_COLOR,               // BackgroundColor
-    DEFAULT_FUZZYMATCHPERCENT,      // FuzzyMatchPercent
-    DEFAULT_TRANSPARENCY,           // WindowTransparency
-    DEFAULT_SIMILARPROCESSGROUPS,   // SimilarProcessGroups
-    {},                             // ProcessGroupsList
-    DEFAULT_CHECKFORUPDATES,        // CheckForUpdates
-    DEFAULT_PROMPTTERMINATEALL,     // PromptTerminateAll
-    false,                          // DisableAltTab
-    DEFAULT_SHOW_COL_HEADER,        // ShowColHeader
-    DEFAULT_SHOW_COL_PROCESSNAME,   // ShowColProcessName
-};
+AltTabSettings    g_Settings;
+AltTabWindowData  g_AltBacktickWndInfo;
+HWND              g_hTooltip           = nullptr;
 
-AltTabWindowData g_AltBacktickWndInfo;
+
+#define ADD_TOOLTIP(id, text)                                                    \
+    toolInfo.hwnd = GetDlgItem(hDlg, id);                                        \
+    toolInfo.lpszText = (LPWSTR)text;                                            \
+    GetClientRect(toolInfo.hwnd, &toolInfo.rect);                                \
+    SendMessage(g_hTooltip, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(&toolInfo));
+
+
+void ReadSettingsFromUI(HWND hDlg, AltTabSettings& settings);
+void AddTooltips       (HWND hDlg);
+
+void AddTooltips(HWND hDlg) {
+    g_hTooltip = CreateWindowEx(
+        0,
+        TOOLTIPS_CLASS,
+        nullptr,
+        WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        hDlg,
+        nullptr,
+        g_hInstance,
+        nullptr);
+
+    TOOLINFO toolInfo = { 0 };
+    toolInfo.cbSize   = sizeof(toolInfo);
+    toolInfo.hwnd     = hDlg;
+    toolInfo.uFlags   = TTF_SUBCLASS;
+
+    SendMessage(g_hTooltip, TTM_SETMAXTIPWIDTH, 0, MAXINT);
+
+    ADD_TOOLTIP(IDC_EDIT_SETTINGS_FILEPATH       , TT_SETTINGS_FILEPATH       );
+    ADD_TOOLTIP(IDC_EDIT_SIMILAR_PROCESS_GROUPS  , TT_SIMILAR_PROCESS_GROUPS  );
+    ADD_TOOLTIP(IDC_EDIT_FUZZY_MATCH_PERCENT     , TT_FUZZY_MATCH_PERCENT     );
+    ADD_TOOLTIP(IDC_STATIC_FUZZY_MATCH_PERCENT   , TT_FUZZY_MATCH_PERCENT     ); // TODO: Not working for static controls
+    ADD_TOOLTIP(IDC_EDIT_WINDOW_TRANSPARENCY     , TT_WINDOW_TRANSPARENCY     );
+    ADD_TOOLTIP(IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , TT_WINDOW_WIDTH_PERCENT    );
+    ADD_TOOLTIP(IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, TT_WINDOW_HEIGHT_PERCENT   );
+    ADD_TOOLTIP(IDC_CHECK_PROMPT_TERMINATE_ALL   , TT_PROMPT_TERMINATE_ALL    );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_COL_HEADER        , TT_SHOW_COLUMN_HEADER      );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_COL_PROCESSNAME   , TT_SHOW_COLUMN_PROCESS_NAME);
+    ADD_TOOLTIP(IDC_CHECK_FOR_UPDATES            , TT_CHECK_FOR_UPDATES       );
+    ADD_TOOLTIP(IDC_CHECK_PROCESS_EXCLUSIONS     , TT_CHECK_PROCESS_EXCLUSIONS);
+    ADD_TOOLTIP(IDC_EDIT_PROCESS_EXCLUSIONS      , TT_EDIT_PROCESS_EXCLUSIONS );
+    ADD_TOOLTIP(IDC_BUTTON_APPLY                 , TT_APPLY_SETTINGS          );
+    ADD_TOOLTIP(IDOK                             , TT_OK_SETTINGS             );
+    ADD_TOOLTIP(IDCANCEL                         , TT_CANCEL_SETTINGS         );
+    ADD_TOOLTIP(IDC_BUTTON_RESET                 , TT_RESET_SETTINGS          );
+}
 
 // ----------------------------------------------------------------------------
 // Settings dialog procedure
@@ -47,24 +79,30 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     switch (message)
     {
     case WM_INITDIALOG: {
+        HICON hIcon        = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+
+        SendMessage       (hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage       (hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+
         SetDlgItemText    (hDlg, IDC_EDIT_SETTINGS_FILEPATH       , ATSettingsFilePath().c_str());
         SetDlgItemText    (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS  , g_Settings.SimilarProcessGroups.c_str());
 
         HFONT    hFont     = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                          DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console");
-        COLORREF fontColor = RGB(0, 0, 255); // Change RGB values as needed
-        HWND     hEditBox  = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
+        HWND     hEditBox1 = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
+        HWND     hEditBox2 = GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS);
 
-        SendMessage(hEditBox, WM_SETFONT     , (WPARAM)hFont    , TRUE);
-        SendMessage(hEditBox, WM_SETTEXTCOLOR, (WPARAM)fontColor, FALSE);
+        SendMessage(hEditBox1, WM_SETFONT     , (WPARAM)hFont    , TRUE);
+        SendMessage(hEditBox2, WM_SETFONT     , (WPARAM)hFont    , TRUE);
 
         CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , g_Settings.PromptTerminateAll ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , g_Settings.ShowColHeader      ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , g_Settings.ShowColProcessName ? BST_CHECKED : BST_UNCHECKED);
 
-        EnableWindow(GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
-        EnableWindow(GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), FALSE);
+        CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , g_Settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
+        EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), g_Settings.ProcessExclusionsEnabled);
+        EnableWindow      (GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
 
         SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , g_Settings.FuzzyMatchPercent, FALSE);
         SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
@@ -82,12 +120,17 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
         SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETPOS                  , 0, MAKELPARAM(g_Settings.HeightPercentage, 0));
 
+        SetDlgItemText    (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS      , g_Settings.ProcessExclusions.c_str());
+
         HWND hComboBox = GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES);
         ComboBox_AddString(hComboBox, L"Startup");
         ComboBox_AddString(hComboBox, L"Daily");
         ComboBox_AddString(hComboBox, L"Weekly");
         ComboBox_AddString(hComboBox, L"Never");
         ComboBox_SetCurSel(hComboBox, 0);
+
+        // Tooltip
+        AddTooltips(hDlg);
 
         // Center the dialog on the screen
         int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
@@ -101,15 +144,22 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         int posX = (screenWidth  - dlgWidth ) / 2;
         int posY = (screenHeight - dlgHeight) / 2;
 
-        SetWindowPos(hDlg, HWND_TOPMOST, posX, posY, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
+
+        // Set the dialog as an app window, otherwise not displayed in task bar
+        SetWindowLong(hDlg, GWL_EXSTYLE, GetWindowLong(hDlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
+
+        // Needs to be called after the dialog is shown
+        bool settingsModified = AreSettingsModified(hDlg);
+        EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), settingsModified);
     }
     return (INT_PTR)TRUE;
 
-    case WM_CTLCOLOREDIT:
-    {
+    case WM_CTLCOLOREDIT: {
         HDC  hdcEdit = (HDC)wParam;
         HWND hEdit   = (HWND)lParam;
-        if (GetDlgCtrlID(hEdit) == IDC_EDIT_SIMILAR_PROCESS_GROUPS) {
+        int  id      = GetDlgCtrlID(hEdit);
+        if (id == IDC_EDIT_SIMILAR_PROCESS_GROUPS || id == IDC_EDIT_PROCESS_EXCLUSIONS) {
             SetTextColor(hdcEdit, RGB(0, 0, 255));   // Blue text color
         }
         return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
@@ -127,19 +177,24 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
 
     //case WM_CTLCOLORSTATIC: {
     //    // Handle WM_CTLCOLORSTATIC to customize the text color of the group box
-    //    HDC hdcStatic = (HDC)wParam;
-    //    HWND hStatic = (HWND)lParam;
+    //    HDC  hdcStatic = (HDC)wParam;
+    //    HWND hStatic   = (HWND)lParam;
 
     //    // Check if the control is a group box (BS_GROUPBOX style)
     //    if (GetWindowLong(hStatic, GWL_STYLE) & BS_GROUPBOX) {
+    //        AT_LOG_INFO("BS_GROUPBOX: Group Box Found");
     //        // Set the text color for the group box
-    //        SetTextColor(hdcStatic, RGB(255, 0, 0));           // Red text color
-    //        SetBkColor(hdcStatic, GetSysColor(COLOR_BTNFACE)); // Use the default system background color
+    //        SetTextColor(hdcStatic, RGB(0, 0, 255));
+    //        SetBkColor(hdcStatic, TRANSPARENT);
 
     //        // Return a handle to the brush for the background
     //        return (LRESULT)GetSysColorBrush(COLOR_BTNFACE);
     //    }
     //} break;
+
+    case WM_DRAWITEM: {
+        AT_LOG_INFO("WM_DRAWITEM: Draw Item");
+    } break;
 
     case WM_COMMAND:
         {
@@ -170,10 +225,30 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         if (LOWORD(wParam) == IDC_BUTTON_RESET)
         {
             AT_LOG_INFO("IDC_BUTTON_RESET Pressed!");
+            //ATResetSettings(hDlg);
+            return (INT_PTR)TRUE;
+        }
+
+        if (LOWORD(wParam) == IDC_CHECK_PROCESS_EXCLUSIONS) {
+            AT_LOG_INFO("IDC_CHECK_PROCESS_EXCLUSIONS Clicked!");
+            bool isChecked = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS) == BST_CHECKED;
+            EnableWindow(GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), isChecked);
             return (INT_PTR)TRUE;
         }
 
         break;
+
+    //case WM_NOTIFY: {
+    //    AT_LOG_INFO("WM_NOTIFY: Notify");
+    //    LPNMHDR pnmh = (LPNMHDR)lParam;
+    //    if (pnmh->code == TTN_NEEDTEXT) {
+    //        LPNMTTDISPINFO pDispInfo = (LPNMTTDISPINFO)lParam;
+    //        if (pDispInfo->hdr.idFrom == IDC_STATIC_FUZZY_MATCH_PERCENT) {
+    //            // Set the tooltip text for the static control
+    //            pDispInfo->lpszText = (LPWSTR)L"Tooltip for Static Control";
+    //        }
+    //    }
+    //} break;
 
     case WM_DESTROY: {
         HWND  hEditBox = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
@@ -181,6 +256,8 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         if (hFont) {
             DeleteObject(hFont);
         }
+        DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_SMALL, 0));
+        DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_BIG, 0));
     }
     break;
 
@@ -232,10 +309,11 @@ std::wstring ATSettingsDirPath() {
 // ----------------------------------------------------------------------------
 // AltTab settings file path
 // ----------------------------------------------------------------------------
-std::wstring ATSettingsFilePath() {
+std::wstring ATSettingsFilePath(bool overwrite) {
+    AT_LOG_INFO("overwrite = %d", overwrite);
     std::filesystem::path settingsFilePath = ATSettingsDirPath();
     settingsFilePath.append(SETTINGS_INI_FILENAME);
-    if (!std::filesystem::exists(settingsFilePath)) {
+    if (!std::filesystem::exists(settingsFilePath) || overwrite) {
         std::ofstream fs(settingsFilePath);
         if (!fs.is_open()) {
             throw std::exception("Failed to create AltTab.ini file in APPDATA/AltTab");
@@ -248,55 +326,78 @@ std::wstring ATSettingsFilePath() {
         fs << ";      0xAA : Red component" << std::endl;
         fs << ";      0xBB : Green component" << std::endl;
         fs << ";      0xCC : Blue component" << std::endl;
+        fs << ";   3. FontStyle: normal / italic / bold / bold italic" << std::endl;
+        fs << ";   4. Please delete this file to create a new settings file when AltTab opens." << std::endl;
         fs << "; -----------------------------------------------------------------------------" << std::endl;
         fs.close();
-        ATSettingsCreateDefault(settingsFilePath.wstring());
+        ATSettingsToFile(settingsFilePath.wstring());
     }
     return settingsFilePath.wstring();
 }
 
 template<typename T>
-void WriteSetting(LPCTSTR iniFile, LPCTSTR section, LPCTSTR keyName, const T& value) {
-    WritePrivateProfileStringW(section, keyName, std::to_wstring(value).c_str(), iniFile);
+void WriteSetting(const std::wstring& iniFile, LPCTSTR section, LPCTSTR keyName, const T& value) {
+    WritePrivateProfileStringW(section, keyName, std::to_wstring(value).c_str(), iniFile.c_str());
 }
 
 template<>
-void WriteSetting(LPCTSTR iniFile, LPCTSTR section, LPCTSTR keyName, const std::wstring& value) {
-    WritePrivateProfileStringW(section, keyName, value.c_str(), iniFile);
+void WriteSetting(const std::wstring& iniFile, LPCTSTR section, LPCTSTR keyName, const std::wstring& value) {
+    WritePrivateProfileStringW(section, keyName, value.c_str(), iniFile.c_str());
 }
 
-void ATSettingsCreateDefault(const std::wstring& settingsFilePath) {
-    WriteSetting(settingsFilePath.c_str(), L"Backtick", L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"FuzzyMatchPercent"     , g_Settings.FuzzyMatchPercent);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowTransparency"    , g_Settings.Transparency);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColHeader"         , g_Settings.ShowColHeader);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColProcessName"    , g_Settings.ShowColProcessName);
+template<typename T, typename DefaultType>
+void ReadSetting(const std::wstring& iniFile, LPCTSTR section, LPCTSTR keyName, DefaultType defaultValue, T& value) {
+    value = GetPrivateProfileIntW(section, keyName, defaultValue, iniFile.c_str());
+}
+
+template<>
+void ReadSetting(const std::wstring& iniFile, LPCTSTR section, LPCTSTR keyName, LPCTSTR defaultValue, std::wstring& value) {
+    const int bufferSize = 4096; // Initial buffer size
+    wchar_t buffer[bufferSize];  // Buffer to store the retrieved string
+    GetPrivateProfileStringW(section, keyName, defaultValue, buffer, bufferSize, iniFile.c_str());
+    value = buffer;
+}
+
+void ATSettingsToFile(const std::wstring& iniFile) {
+    WriteSetting(iniFile, L"ListView"         , L"FontName"              , g_Settings.FontName                );
+    WriteSetting(iniFile, L"ListView"         , L"FontSize"              , g_Settings.FontSize                );
+    WriteSetting(iniFile, L"ListView"         , L"FontStyle"             , g_Settings.FontStyle               );
+    WriteSetting(iniFile, L"ListView"         , L"FontColor"             , g_Settings.FontColor               );
+    WriteSetting(iniFile, L"ListView"         , L"BackgroundColor"       , g_Settings.BackgroundColor         );
+    WriteSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups    );
+    WriteSetting(iniFile, L"General"          , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll      );
+    WriteSetting(iniFile, L"General"          , L"FuzzyMatchPercent"     , g_Settings.FuzzyMatchPercent       );
+    WriteSetting(iniFile, L"General"          , L"WindowTransparency"    , g_Settings.Transparency            );
+    WriteSetting(iniFile, L"General"          , L"WindowWidthPercentage" , g_Settings.WidthPercentage         );
+    WriteSetting(iniFile, L"General"          , L"WindowHeightPercentage", g_Settings.HeightPercentage        );
+    WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdates         );
+    WriteSetting(iniFile, L"General"          , L"ShowColHeader"         , g_Settings.ShowColHeader           );
+    WriteSetting(iniFile, L"General"          , L"ShowColProcessName"    , g_Settings.ShowColProcessName      );
+    WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdates         );
+    WriteSetting(iniFile, L"ProcessExclusions", L"Enabled"               , g_Settings.ProcessExclusionsEnabled);
+    WriteSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , g_Settings.ProcessExclusions       );
 }
 
 void ATLoadSettings() {
     AT_LOG_TRACE;
     std::wstring iniFile = ATSettingsFilePath();
 
-    const int bufferSize = 4096;    // Initial buffer size
-    wchar_t buffer[bufferSize];     // Buffer to store the retrieved string
-
-    GetPrivateProfileStringW(L"Backtick", L"SimilarProcessGroups", g_Settings.SimilarProcessGroups.c_str(), buffer, bufferSize, iniFile.c_str());
-    g_Settings.SimilarProcessGroups = buffer;
-
-    g_Settings.PromptTerminateAll = GetPrivateProfileInt(L"General", L"PromptTerminateAll"    , DEFAULT_PROMPTTERMINATEALL  , iniFile.c_str());
-    g_Settings.FuzzyMatchPercent  = GetPrivateProfileInt(L"General", L"FuzzyMatchPercent"     , DEFAULT_FUZZYMATCHPERCENT   , iniFile.c_str());
-    g_Settings.Transparency       = GetPrivateProfileInt(L"General", L"WindowTransparency"    , DEFAULT_TRANSPARENCY        , iniFile.c_str());
-    g_Settings.WidthPercentage    = GetPrivateProfileInt(L"General", L"WindowWidthPercentage" , DEFAULT_WIDTH               , iniFile.c_str());
-    g_Settings.HeightPercentage   = GetPrivateProfileInt(L"General", L"WindowHeightPercentage", DEFAULT_HEIGHT              , iniFile.c_str());
-    g_Settings.ShowColHeader      = GetPrivateProfileInt(L"General", L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER     , iniFile.c_str());
-    g_Settings.ShowColProcessName = GetPrivateProfileInt(L"General", L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME, iniFile.c_str());
-
-    GetPrivateProfileStringW(L"General", L"CheckForUpdates", L"Startup", buffer, bufferSize, iniFile.c_str());
-    g_Settings.CheckForUpdates = buffer;
+    ReadSetting(iniFile, L"ListView"         , L"FontName"              , DEFAULT_FONT_NAME                 , g_Settings.FontName                );
+    ReadSetting(iniFile, L"ListView"         , L"FontSize"              , DEFAULT_FONT_SIZE                 , g_Settings.FontSize                );
+    ReadSetting(iniFile, L"ListView"         , L"FontStyle"             , DEFAULT_FONT_STYLE                , g_Settings.FontStyle               );
+    ReadSetting(iniFile, L"ListView"         , L"FontColor"             , DEFAULT_FONT_COLOR                , g_Settings.FontColor               );
+    ReadSetting(iniFile, L"ListView"         , L"BackgroundColor"       , DEFAULT_BG_COLOR                  , g_Settings.BackgroundColor         );
+    ReadSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , DEFAULT_SIMILARPROCESSGROUPS      , g_Settings.SimilarProcessGroups    );
+    ReadSetting(iniFile, L"General"          , L"PromptTerminateAll"    , DEFAULT_PROMPTTERMINATEALL        , g_Settings.PromptTerminateAll      );
+    ReadSetting(iniFile, L"General"          , L"FuzzyMatchPercent"     , DEFAULT_FUZZYMATCHPERCENT         , g_Settings.FuzzyMatchPercent       );
+    ReadSetting(iniFile, L"General"          , L"WindowTransparency"    , DEFAULT_TRANSPARENCY              , g_Settings.Transparency            );
+    ReadSetting(iniFile, L"General"          , L"WindowWidthPercentage" , DEFAULT_WIDTH                     , g_Settings.WidthPercentage         );
+    ReadSetting(iniFile, L"General"          , L"WindowHeightPercentage", DEFAULT_HEIGHT                    , g_Settings.HeightPercentage        );
+    ReadSetting(iniFile, L"General"          , L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER           , g_Settings.ShowColHeader           );
+    ReadSetting(iniFile, L"General"          , L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME      , g_Settings.ShowColProcessName      );
+    ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdates         );
+    ReadSetting(iniFile, L"ProcessExclusions", L"Enabled"               , DEFAULT_PROCESS_EXCLUSIONS_ENABLED, g_Settings.ProcessExclusionsEnabled);
+    ReadSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , DEFAULT_PROCESS_EXCLUSIONS        , g_Settings.ProcessExclusions       );
 
     // Clear the previous ProcessGroupsList
     g_Settings.ProcessGroupsList.clear();
@@ -309,6 +410,11 @@ void ATLoadSettings() {
         g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
     }
 
+    // Process ProcessExclusions
+    // Always split and convert to lower case, then it is easy while checking
+    g_Settings.ProcessExclusionList.clear();
+    g_Settings.ProcessExclusionList = Split(ToLower(g_Settings.ProcessExclusions), L"/");
+
     // Initialize additional settings
     g_AltBacktickWndInfo.hWnd   = nullptr;
     g_AltBacktickWndInfo.hOwner = nullptr;
@@ -316,35 +422,23 @@ void ATLoadSettings() {
 
 void ATSaveSettings() {
     AT_LOG_TRACE;
-    std::wstring settingsFilePath = ATSettingsFilePath();
-    WriteSetting(settingsFilePath.c_str(), L"Backtick", L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"FuzzyMatchPercent"     , g_Settings.FuzzyMatchPercent);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowTransparency"    , g_Settings.Transparency);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowWidthPercentage" , g_Settings.WidthPercentage);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"WindowHeightPercentage", g_Settings.HeightPercentage);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"CheckForUpdates"       , g_Settings.CheckForUpdates);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColHeader"         , g_Settings.ShowColHeader);
-    WriteSetting(settingsFilePath.c_str(), L"General" , L"ShowColProcessName"    , g_Settings.ShowColProcessName);
+    ATSettingsToFile(ATSettingsFilePath(true));
+}
+
+std::wstring GetDlgItemTextEx(HWND hDlg, int nIDDlgItem) {
+    int      textLength             = GetWindowTextLength(GetDlgItem(hDlg, nIDDlgItem));
+    wchar_t* buffer                 = new wchar_t[textLength + 1];
+    GetDlgItemTextW(hDlg, nIDDlgItem, buffer, textLength + 1);
+    std::wstring result = buffer;
+    delete[] buffer;
+    return result;
 }
 
 void ATApplySettings(HWND hDlg) {
     AT_LOG_TRACE;
 
-    int textLength                  = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
-    wchar_t* buffer                 = new wchar_t[textLength + 1];
-    GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
-
-    g_Settings.SimilarProcessGroups = buffer;
-    g_Settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
-    g_Settings.ShowColHeader        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER)      == BST_CHECKED;
-    g_Settings.ShowColProcessName   = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME) == BST_CHECKED;
-    g_Settings.FuzzyMatchPercent    = GetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , nullptr, FALSE);
-    g_Settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
-    g_Settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
-    g_Settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
-
-    delete[] buffer;
+    // Read settings from UI
+    ReadSettingsFromUI(hDlg, g_Settings);
 
     // Save settings
     ATSaveSettings();
@@ -356,32 +450,74 @@ void ATApplySettings(HWND hDlg) {
     EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), false);
 }
 
+void ReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
+    settings.SimilarProcessGroups      = GetDlgItemTextEx  (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
+    settings.FuzzyMatchPercent         = GetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , nullptr, FALSE);
+    settings.Transparency              = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
+    settings.WidthPercentage           = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
+    settings.HeightPercentage          = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
+    settings.PromptTerminateAll        = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL ) == BST_CHECKED;
+    settings.ShowColHeader             = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER      ) == BST_CHECKED;
+    settings.ShowColProcessName        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME ) == BST_CHECKED;
+    settings.ProcessExclusionsEnabled  = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS   ) == BST_CHECKED;
+    settings.ProcessExclusions         = GetDlgItemTextEx  (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS    );
+}
+
+void ATLogSettings(const AltTabSettings& settings) {
+    AT_LOG_TRACE;
+    AT_LOG_DEBUG("=== AltTab Settings Begin ===");
+    AT_LOG_DEBUG("SimilarProcessGroups    : [%s]", WStrToUTF8(settings.SimilarProcessGroups).c_str());
+    AT_LOG_DEBUG("FuzzyMatchPercent       : [%d]", settings.FuzzyMatchPercent);
+    AT_LOG_DEBUG("Transparency            : [%d]", settings.Transparency);
+    AT_LOG_DEBUG("WidthPercentage         : [%d]", settings.WidthPercentage);
+    AT_LOG_DEBUG("HeightPercentage        : [%d]", settings.HeightPercentage);
+    AT_LOG_DEBUG("PromptTerminateAll      : [%d]", settings.PromptTerminateAll);
+    AT_LOG_DEBUG("ShowColHeader           : [%d]", settings.ShowColHeader);
+    AT_LOG_DEBUG("ShowColProcessName      : [%d]", settings.ShowColProcessName);
+    AT_LOG_DEBUG("ProcessExclusionsEnabled: [%d]", settings.ProcessExclusionsEnabled);
+    AT_LOG_DEBUG("ProcessExclusions       : [%s]", WStrToUTF8(settings.ProcessExclusions).c_str());
+    AT_LOG_DEBUG("=== AltTab Settings End ===");
+}
+
 bool AreSettingsModified(HWND hDlg) {
-    int      textLength           = GetWindowTextLength(GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS));
-    wchar_t* buffer               = new wchar_t[textLength + 1];
-    GetDlgItemTextW(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS, buffer, textLength + 1);
-
     AltTabSettings settings;
-    settings.SimilarProcessGroups = buffer;
-    settings.PromptTerminateAll   = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL) == BST_CHECKED;
-    settings.ShowColHeader        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER)      == BST_CHECKED;
-    settings.ShowColProcessName   = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME) == BST_CHECKED;
-    settings.FuzzyMatchPercent    = GetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , nullptr, FALSE);
-    settings.Transparency         = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
-    settings.WidthPercentage      = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
-    settings.HeightPercentage     = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
+    ReadSettingsFromUI(hDlg, settings);
 
-    delete[] buffer;
+    //ATLogSettings(settings);
 
     bool modified =
-        settings.FuzzyMatchPercent    != g_Settings.FuzzyMatchPercent    ||
-        settings.Transparency         != g_Settings.Transparency         ||
-        settings.WidthPercentage      != g_Settings.WidthPercentage      ||
-        settings.HeightPercentage     != g_Settings.HeightPercentage     ||
-        settings.SimilarProcessGroups != g_Settings.SimilarProcessGroups ||
-        settings.ShowColHeader        != g_Settings.ShowColHeader        ||
-        settings.ShowColProcessName   != g_Settings.ShowColProcessName   ||
-        settings.PromptTerminateAll   != g_Settings.PromptTerminateAll;
+        settings.FuzzyMatchPercent        != g_Settings.FuzzyMatchPercent        ||
+        settings.Transparency             != g_Settings.Transparency             ||
+        settings.WidthPercentage          != g_Settings.WidthPercentage          ||
+        settings.HeightPercentage         != g_Settings.HeightPercentage         ||
+        settings.SimilarProcessGroups     != g_Settings.SimilarProcessGroups     ||
+        settings.ShowColHeader            != g_Settings.ShowColHeader            ||
+        settings.ShowColProcessName       != g_Settings.ShowColProcessName       ||
+        settings.PromptTerminateAll       != g_Settings.PromptTerminateAll       ||
+        settings.CheckForUpdates          != g_Settings.CheckForUpdates          ||
+        settings.ProcessExclusionsEnabled != g_Settings.ProcessExclusionsEnabled ||
+        settings.ProcessExclusions        != g_Settings.ProcessExclusions        ||
+        false;
 
     return modified;
+}
+
+AltTabSettings::AltTabSettings() {
+    FontName                 = DEFAULT_FONT_NAME;
+    FontSize                 = DEFAULT_FONT_SIZE;
+    FontStyle                = DEFAULT_FONT_STYLE;
+    FontColor                = DEFAULT_FONT_COLOR;
+    BackgroundColor          = DEFAULT_BG_COLOR;
+    WidthPercentage          = DEFAULT_WIDTH;
+    HeightPercentage         = DEFAULT_HEIGHT;
+    FuzzyMatchPercent        = DEFAULT_FUZZYMATCHPERCENT;
+    Transparency             = DEFAULT_TRANSPARENCY;
+    SimilarProcessGroups     = DEFAULT_SIMILARPROCESSGROUPS;
+    CheckForUpdates          = DEFAULT_CHECKFORUPDATES;
+    PromptTerminateAll       = DEFAULT_PROMPTTERMINATEALL;
+    DisableAltTab            = false;
+    ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
+    ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
+    ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
+    ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
 }

@@ -24,6 +24,7 @@ extern HWND                                 g_hAltTabWnd;            // AltTab w
 extern HWND                                 g_hFGWnd;                // Foreground window handle
 extern HWND                                 g_hStaticText;
 extern HWND                                 g_hListView;
+extern HWND                                 g_hTooltip;
 extern HANDLE                               g_hAltTabThread;
 extern DWORD                                g_idThreadAttachTo;
 extern AltTabSettings                       g_Settings;

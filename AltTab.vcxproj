@@ -223,6 +223,7 @@
     <ClInclude Include="source\Logger.h" />
     <ClInclude Include="source\resource.h" />
     <ClInclude Include="source\targetver.h" />
+    <ClInclude Include="source\Tooltips.h" />
     <ClInclude Include="source\Utils.h" />
     <ClInclude Include="source\version.h" />
   </ItemGroup>

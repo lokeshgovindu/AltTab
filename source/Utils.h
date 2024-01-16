@@ -35,3 +35,5 @@ double GetPartialRatioA(const char* s1, const char* s2);
 double GetRatioW(const wchar_t* s1, const wchar_t* s2);
 
 double GetPartialRatioW(const wchar_t* s1, const wchar_t* s2);
+
+double GetPartialRatioW(const std::wstring& s1, const std::wstring& s2);

@@ -129,20 +129,20 @@ std::string ToNarrow(const wchar_t* szBufW) {
     return ::ToLower(szBuf);
 }
 
-double GetRatioA(const char* s1, const char* s2) {
-    //printf("s1 = [%s], s2 = [%s]\n", s1, s2);
-    return ::ratio(ToLower(s1), ToLower(s2));
-}
-
-double GetPartialRatioA(const char* s1, const char* s2) {
-    //printf("s1 = [%s], s2 = [%s]\n", s1, s2);
-    return ::partial_ratio(ToLower(s1), ToLower(s2));
-}
+//double GetRatioA(const char* s1, const char* s2) {
+//    //printf("s1 = [%s], s2 = [%s]\n", s1, s2);
+//    return ::ratio(ToLower(s1), ToLower(s2));
+//}
+//
+//double GetPartialRatioA(const char* s1, const char* s2) {
+//    //printf("s1 = [%s], s2 = [%s]\n", s1, s2);
+//    return ::partial_ratio(ToLower(s1), ToLower(s2));
+//}
 
 double GetRatioW(const wchar_t* s1, const wchar_t* s2) {
     try {
         //wprintf(L"s1 = [%s], s2 = [%s]\n", s1, s2);
-        return ::ratio(ToNarrow(s1), ToNarrow(s2));
+        return ::ratio(s1, s2);
     } catch (...) {
         return 0.0;
     }
@@ -165,16 +165,25 @@ private:
     LARGE_INTEGER m_tStartTime;
     LARGE_INTEGER m_tStopTime;
     LARGE_INTEGER m_tFrequency;
-    std::string m_Started;
-    std::string m_Ended;
-    double m_Elapsed;
-    std::string m_Name;
+    std::string   m_Started;
+    std::string   m_Ended;
+    double        m_Elapsed;
+    std::string   m_Name;
 };
 
 double GetPartialRatioW(const wchar_t* s1, const wchar_t* s2) {
     //ScopedTimer st;
     try {
-        return partial_ratio(ToNarrow(s1), ToNarrow(s2));
+        return partial_ratio(s1, s2);
+    } catch (...) {
+        return 0.0;
+    }
+}
+
+double GetPartialRatioW(const std::wstring& s1, const std::wstring& s2) {
+    //ScopedTimer st;
+    try {
+        return partial_ratio(ToLower(s1), ToLower(s2));
     } catch (...) {
         return 0.0;
     }

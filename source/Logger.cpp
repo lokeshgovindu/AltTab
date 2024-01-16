@@ -2,6 +2,7 @@
 #include "log4cpp/Appender.hh"
 #include "Utils.h"
 #include <filesystem>
+#include <wingdi.h>
 #include "AltTabSettings.h"
 #include "GlobalData.h"
 

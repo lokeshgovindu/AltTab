@@ -252,6 +252,10 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
     switch (message)
     {
     case WM_INITDIALOG: {
+        HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+        SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+
         // Center the dialog on the screen
         int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
         int screenHeight = GetSystemMetrics(SM_CYSCREEN);
@@ -265,12 +269,14 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         int posY = (screenHeight - dlgHeight) / 2;
 
         SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
+        // Set the dialog as an app window, otherwise not displayed in task bar
+        SetWindowLong(hDlg, GWL_EXSTYLE, GetWindowLong(hDlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
+
         // Initialize the SysLink control
         HWND hSysLink = GetDlgItem(hDlg, IDC_SYSLINK1);
 
         // Set the link text and URL
         SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://lokeshgovindu.github.io/AltTabAlternative/\">Visit AltTab's website</a>");
-   
     }
     return (INT_PTR)TRUE;
 
@@ -290,6 +296,11 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
                 ShellExecute(NULL, L"open", L"https://lokeshgovindu.github.io/AltTabAlternative/", NULL, NULL, SW_SHOWNORMAL);
             }
         }
+        break;
+
+    case WM_DESTROY:
+        DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_SMALL, 0));
+        DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_BIG, 0));
         break;
     }
     return (INT_PTR)FALSE;

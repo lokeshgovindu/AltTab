@@ -2,7 +2,7 @@
 #include <vector>
 #include <map>
 
-size_t lev_edit_distance(size_t len1, const char* string1, size_t len2, const char* string2, int xcost) {
+size_t lev_edit_distance(size_t len1, const wchar_t* string1, size_t len2, const wchar_t* string2, int xcost) {
     size_t i;
     size_t* row; /* we only need to keep one row of costs */
     size_t* end;
@@ -31,7 +31,7 @@ size_t lev_edit_distance(size_t len1, const char* string1, size_t len2, const ch
     /* make the inner cycle (i.e. string2) the longer one */
     if (len1 > len2) {
         size_t nx = len1;
-        const char* sx = string1;
+        const wchar_t* sx = string1;
         len1 = len2;
         len2 = nx;
         string1 = string2;
@@ -48,7 +48,7 @@ size_t lev_edit_distance(size_t len1, const char* string1, size_t len2, const ch
     len2++;
     half = len1 >> 1;
 
-    /* initalize first row */
+    /* initialize first row */
     row = (size_t*)malloc(len2 * sizeof(size_t));
     if (!row)
         return (size_t)(-1);
@@ -62,8 +62,8 @@ size_t lev_edit_distance(size_t len1, const char* string1, size_t len2, const ch
     if (xcost) {
         for (i = 1; i < len1; i++) {
             size_t* p = row + 1;
-            const char char1 = string1[i - 1];
-            const char* char2p = string2;
+            const wchar_t char1 = string1[i - 1];
+            const wchar_t* char2p = string2;
             size_t D = i;
             size_t x = i;
             while (p <= end) {
@@ -80,14 +80,14 @@ size_t lev_edit_distance(size_t len1, const char* string1, size_t len2, const ch
         }
     } else {
         /* in this case we don't have to scan two corner triangles (of size len1/2)
-		* in the matrix because no best path can go throught them. note this
+		* in the matrix because no best path can go through them. note this
 		* breaks when len1 == len2 == 2 so the memchr() special case above is
 		* necessary */
         row[0] = len1 - half - 1;
         for (i = 1; i < len1; i++) {
             size_t* p;
-            const char char1 = string1[i - 1];
-            const char* char2p;
+            const wchar_t char1 = string1[i - 1];
+            const wchar_t* char2p;
             size_t D, x;
             /* skip the upper triangle */
             if (i >= len1 - half) {
@@ -174,7 +174,7 @@ public:
 
 class SequenceMatcher {
 private:
-    std::string _str1, _str2;
+    std::wstring _str1, _str2;
     double _ratio, _distance;
     std::vector<Triple> _matching_blocks;
     std::map<std::pair<int, int>, int> _matchingBlocks;
@@ -183,12 +183,12 @@ private:
         _ratio = _distance = -1;
     }
 
-    static int Levenshtein(const std::string& s1, const std::string& s2, int cost) {
-        return lev_edit_distance(s1.length(), s1.c_str(), s2.length(), s2.c_str(), cost);
+    static int Levenshtein(const std::wstring& s1, const std::wstring& s2, int cost) {
+        return (int)lev_edit_distance(s1.length(), s1.c_str(), s2.length(), s2.c_str(), cost);
     }
 
 public:
-    SequenceMatcher(const std::string& str1, const std::string& str2) {
+    SequenceMatcher(const std::wstring& str1, const std::wstring& str2) {
         _str1 = str1;
         _str2 = str2;
         _reset_cache();
@@ -199,7 +199,7 @@ public:
 
     double ratio(void) {
         if (_ratio == -1) {
-            int lensum = _str1.length() + _str2.length();
+            int lensum = (int)(_str1.length() + _str2.length());
 
             if (lensum == 0) {
                 _ratio = 1.0;
@@ -215,8 +215,8 @@ public:
     std::vector<Triple> get_matching_blocks(void) {
         _matching_blocks.clear();
 
-        int str1_length = _str1.length();
-        int str2_length = _str2.length();
+        int str1_length = (int)_str1.length();
+        int str2_length = (int)_str2.length();
         int str1_idx = 0;
         int str2_idx = -1;
         int buffer_length = 1;
@@ -224,11 +224,11 @@ public:
         while (str1_idx + buffer_length - 1 < str1_length) {
             str2_idx = 0;
             while (str1_idx + buffer_length - 1 < str1_length) {
-                std::string buffer_1 = _str1.substr(str1_idx, buffer_length);
-                str2_idx = _str2.find(buffer_1, str2_idx);
+                std::wstring buffer_1 = _str1.substr(str1_idx, buffer_length);
+                str2_idx = (int)_str2.find(buffer_1, str2_idx);
 
-                if (str2_idx != std::string::npos) {
-                    _matching_blocks.push_back(Triple(str1_idx, str2_idx, buffer_length));
+                if (str2_idx != std::wstring::npos) {
+                    _matching_blocks.emplace_back(str1_idx, str2_idx, buffer_length);
                     ++buffer_length;
                 } else {
                     // Check & save last occurrence
@@ -248,8 +248,8 @@ public:
     std::map<std::pair<int, int>, int> GetMatchingBlocks(void) {
         _matchingBlocks.clear();
 
-        int str1_length = _str1.length();
-        int str2_length = _str2.length();
+        int str1_length = (int)_str1.length();
+        int str2_length = (int)_str2.length();
         int str1_idx = 0;
         int str2_idx = -1;
         int buffer_length = 1;
@@ -257,10 +257,10 @@ public:
         while (str1_idx + buffer_length - 1 < str1_length) {
             str2_idx = 0;
             while (str1_idx + buffer_length - 1 < str1_length) {
-                std::string buffer_1 = _str1.substr(str1_idx, buffer_length);
-                str2_idx = _str2.find(buffer_1, str2_idx);
+                std::wstring buffer_1 = _str1.substr(str1_idx, buffer_length);
+                str2_idx = (int)_str2.find(buffer_1, str2_idx);
 
-                if (str2_idx != std::string::npos) {
+                if (str2_idx != std::wstring::npos) {
                     _matchingBlocks[std::make_pair(str1_idx, str2_idx)] = buffer_length;
                     ++buffer_length;
                 } else {
@@ -279,13 +279,13 @@ public:
     }
 };
 
-double ratio(const std::string& s1, const std::string& s2) {
+double ratio(const std::wstring& s1, const std::wstring& s2) {
     SequenceMatcher m(s1, s2);
     return 100.0 * m.ratio();
 }
 
-double partial_ratio(const std::string& s1, const std::string& s2) {
-    std::string shorter, longer;
+double partial_ratio(const std::wstring& s1, const std::wstring& s2) {
+    std::wstring shorter, longer;
 
     if (s1.length() <= s2.length()) {
         shorter = s1;
@@ -321,8 +321,8 @@ double partial_ratio(const std::string& s1, const std::string& s2) {
         len = it.second;
 
         int long_start = (str2_idx - str1_idx > 0) ? str2_idx - str1_idx : 0;
-        int long_end = long_start + shorter.length();
-        std::string long_substr = longer.substr(long_start, long_end - long_start);
+        int long_end = (int)(long_start + shorter.length());
+        std::wstring long_substr = longer.substr(long_start, long_end - long_start);
 
         //printf_s("idx_1 = %2d, idx_2 = %3d, len = %d\n", str1_idx, str2_idx, len);
         // 		printf_s("long_substr = %s\n", long_substr.c_str());
