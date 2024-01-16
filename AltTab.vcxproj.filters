@@ -30,7 +30,7 @@
     <ClCompile Include="source\Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fuzzywuzzy.cpp">
+    <ClCompile Include="source\fuzzywuzzy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -72,10 +72,10 @@
     <ClInclude Include="source\GlobalData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fuzzywuzzy.h">
+    <ClInclude Include="source\Tooltips.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\Tooltips.h">
+    <ClInclude Include="source\fuzzywuzzy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
