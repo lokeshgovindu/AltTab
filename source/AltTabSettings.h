@@ -7,8 +7,10 @@
 
 using ProcessGroupsList    = std::vector<std::unordered_set<std::wstring>>;
 using ProcessExclusionList = std::vector<std::wstring>;
+using StringList           = std::vector<std::wstring>;
 
 #define SETTINGS_INI_FILENAME                L"AltTabSettings.ini"
+#define CHECK_FOR_UPDATES_FILENAME           L"CheckForUpdates.txt"
 
 #define DEFAULT_FONT_NAME                    L"Lucida Handwriting"
 #define DEFAULT_FONT_SIZE                    11
@@ -54,7 +56,7 @@ struct AltTabSettings {
     int                    Transparency;              // Window transparency
     std::wstring           SimilarProcessGroups;      // Similar process groups
     ProcessGroupsList      ProcessGroupsList;         // Process groups, will be constructed at runtime from SimilarProcessGroups
-    std::wstring           CheckForUpdates;           // Check for updates
+    std::wstring           CheckForUpdatesOpt;        // Check for updates
     bool                   PromptTerminateAll;        // Ask before terminating all processes
     bool                   DisableAltTab;             // Disable AltTab hotkeys
     bool                   ShowColHeader;             // Show column header
@@ -64,11 +66,17 @@ struct AltTabSettings {
     ProcessExclusionList   ProcessExclusionList;      // Process exclusions list, will be constructed at runtime from ProcessExclusions
 
     AltTabSettings();
+
+    void Reset();
+
+    int GetCheckForUpdatesIndex() const;
+
+    static StringList      CheckForUpdatesOptions;
 };
 
 INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
-int GetProcessGroupIndex(const std::wstring& processName);
+int  GetProcessGroupIndex(const std::wstring& processName);
 
 /*!
  * Check if the processName is similar process of ProcessGroup[i]

@@ -16,6 +16,10 @@
 #include <process.h>
 #include <CommCtrl.h>
 #include "GlobalData.h"
+#include "WebBrowser.h"
+#include <filesystem>
+#include "CheckForUpdates.h"
+#include <thread>
 
 #define MAX_LOADSTRING 100
 
@@ -27,6 +31,8 @@ HHOOK       g_KeyboardHook;                              // Keyboard Hook
 HWND        g_hAltTabWnd         = nullptr;              // AltTab window handle
 HWND        g_hFGWnd             = nullptr;              // Foreground window handle
 HWND        g_hMainWnd           = nullptr;              // AltTab main window handle
+HWND        g_hSetingsWnd        = nullptr;              // AltTab settings window handle
+HWND        g_hCustomToolTip     = nullptr;              // Custom tool tip
 bool        g_IsAltTab           = false;                // Is Alt+Tab pressed
 bool        g_IsAltBacktick      = false;                // Is Alt+Backtick pressed
 DWORD       g_MainThreadID       = GetCurrentThreadId(); // Main thread ID
@@ -39,6 +45,8 @@ UINT const  WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 HWND CreateMainWindow(HINSTANCE hInstance);
 BOOL AddNotificationIcon(HWND hWndTrayIcon);
 void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+void CALLBACK CheckForUpdatesTimerCB(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+int  GetCurrentYear();
 
 // ----------------------------------------------------------------------------
 // Main
@@ -51,6 +59,8 @@ int APIENTRY wWinMain(
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+    //ShowCustomToolTip(L"Initializing AltTab...");
 
     // Make sure only one instance is running
     HANDLE hMutex = CreateMutex(nullptr, TRUE, AT_PRODUCT_NAMEW);
@@ -67,8 +77,8 @@ int APIENTRY wWinMain(
 
 #ifdef _AT_LOGGER
     CreateLogger();
-    gLogger->info("-------------------------------------------------------------------------------");
-    gLogger->info("CreateLogger done.");
+    AT_LOG_INFO("-------------------------------------------------------------------------------");
+    AT_LOG_INFO("CreateLogger done.");
 #endif // _AT_LOGGER
 
     g_hInstance = hInstance; // Store instance handle in our global variable
@@ -102,6 +112,16 @@ int APIENTRY wWinMain(
     g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, hInstance, NULL);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_ALTTAB));
+
+    // Check for updates
+    if (g_Settings.CheckForUpdatesOpt == L"Startup") {
+        std::thread thr(CheckForUpdates, true);
+        thr.detach();
+    } else if (g_Settings.CheckForUpdatesOpt != L"Never") {
+        // Check for every 1 hour
+        UINT elapse = 3600000;
+        SetTimer(g_hMainWnd, TIMER_CHECK_FOR_UPDATES, elapse, CheckForUpdatesTimerCB);
+    }
 
     MSG msg;
 
@@ -195,6 +215,11 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         }
         break;
     
+    case WM_DESTROY:
+        AT_LOG_INFO("WM_DESTROY");
+        KillTimer(hWnd, TIMER_CHECK_FOR_UPDATES);
+        break;
+
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -272,11 +297,11 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         // Set the dialog as an app window, otherwise not displayed in task bar
         SetWindowLong(hDlg, GWL_EXSTYLE, GetWindowLong(hDlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
 
-        // Initialize the SysLink control
-        HWND hSysLink = GetDlgItem(hDlg, IDC_SYSLINK1);
+        std::wstring productInfo = std::format(L"<a href=\"{}\">{}</a> v{}", AT_PRODUCT_PAGE, AT_PRODUCT_NAMEW, AT_VERSION_TEXTW);
+        std::wstring copyright   = std::format(L"Copyright © {} <a href=\"{}\">{}</a>", GetCurrentYear(), AT_PRODUCT_PAGE, AT_AUTHOR_NAME);
 
-        // Set the link text and URL
-        SendMessage(hSysLink, LM_SETITEM, 0, (LPARAM)L"<a href=\"https://lokeshgovindu.github.io/AltTabAlternative/\">Visit AltTab's website</a>");
+        SetDlgItemTextW(hDlg, IDC_SYSLINK_ABOUT_PRODUCT_NAME, productInfo.c_str());
+        SetDlgItemTextW(hDlg, IDC_SYSLINK_ABOUT_COPYRIGHT   , copyright.c_str());
     }
     return (INT_PTR)TRUE;
 
@@ -289,11 +314,15 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         break;
 
     case WM_NOTIFY:
-        if (wParam == IDC_SYSLINK1) {
-            // Handle SysLink notifications
+        if (wParam == IDC_SYSLINK_ABOUT_PRODUCT_NAME) {
             NMHDR* pnmh = (NMHDR*)lParam;
             if (pnmh->code == NM_CLICK) {
-                ShellExecute(NULL, L"open", L"https://lokeshgovindu.github.io/AltTabAlternative/", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecute(nullptr, L"open", AT_PRODUCT_PAGE, nullptr, nullptr, SW_SHOWNORMAL);
+            }
+        } else if (wParam == IDC_SYSLINK_ABOUT_COPYRIGHT) {
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->code == NM_CLICK) {
+                ShellExecute(nullptr, L"open", AT_AUTHOR_PAGE, nullptr, nullptr, SW_SHOWNORMAL);
             }
         }
         break;
@@ -309,35 +338,64 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 // ----------------------------------------------------------------------------
 // Activate window of the given window handle
 // ----------------------------------------------------------------------------
-void ActivateWindow(HWND hWnd) {
+void ActivateWindow(HWND hTargetWnd) {
     AT_LOG_TRACE;
 
-	 HWND hwndFrgnd = GetForegroundWindow();
-    if (hWnd == hwndFrgnd) {
+	 HWND hForegroundWnd = GetForegroundWindow();
+    if (hTargetWnd == hForegroundWnd) {
         return;
     }
 
     // Bring the window to the foreground
     // Determines whether the specified window is minimized (iconic).
-    if (IsIconic(hWnd)) {
+    if (IsIconic(hTargetWnd)) {
         //ShowWindow(hWnd, SW_RESTORE);
-        PostMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+        PostMessage(hTargetWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
     } else {
-        BOOL result = SetForegroundWindow(hWnd);
-        HWND hFGWnd = GetForegroundWindow();
-        if (!result && hFGWnd != hWnd) {
+        BOOL result = SetForegroundWindow(hTargetWnd);
+        if (!result && hForegroundWnd != hTargetWnd) {
             // Failed to bring an elevated window to the top from a non-elevated process.
             AT_LOG_ERROR("SetForegroundWindow(hWnd) failed!");
 
-            ShowWindow(hWnd, SW_SHOW);
-            result = BringWindowToTop(hWnd);
+            ShowWindow(hTargetWnd, SW_SHOW);
+            result = BringWindowToTop(hTargetWnd);
             HWND hFGWnd = GetForegroundWindow();
-            if (!result && hFGWnd != hWnd) {
+            if (!result && hFGWnd != hTargetWnd) {
                 AT_LOG_ERROR("BringWindowToTop(hWnd) failed!");
+            } else {
+                SetActiveWindow(hTargetWnd);
+                AT_LOG_INFO("BringWindowToTop(hWnd) succeeded!");
+                //return;
             }
+
+            //AT_LOG_INFO("Going for final try using AttachThreadInput...");
+            
+            // It seems it is always better to use AttachThreadInput than 
+            // SetForegroundWindow even the BringWindowToTop succeeded. So not
+            // going to comment the below piece of code.
+            DWORD idForeground = GetWindowThreadProcessId(hForegroundWnd, nullptr);
+            DWORD idTarget     = GetWindowThreadProcessId(hTargetWnd    , nullptr);
+
+            if (hFGWnd && !IsHungAppWindowEx(hFGWnd))
+                AttachThreadInput(idForeground, idTarget, TRUE);
+            
+            if (!SetForegroundWindow(hTargetWnd)) {
+                INPUT inp[4];
+                ZeroMemory(&inp, sizeof(inp));
+                inp[0].type       = inp[1].type       = inp[2].type   = inp[3].type   = INPUT_KEYBOARD;
+                inp[0].ki.wVk     = inp[1].ki.wVk     = inp[2].ki.wVk = inp[3].ki.wVk = VK_MENU;
+                inp[0].ki.dwFlags = inp[2].ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
+                inp[1].ki.dwFlags = inp[3].ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
+                SendInput(4, inp, sizeof(INPUT));
+
+                SetForegroundWindow(hTargetWnd);
+            }
+
+            if (hFGWnd && !IsHungAppWindowEx(hFGWnd))
+                AttachThreadInput(idForeground, idTarget, FALSE);
         }
     }
-    SetActiveWindow(hWnd);
+    SetActiveWindow(hTargetWnd);
 }
 
 // ----------------------------------------------------------------------------
@@ -575,6 +633,25 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 // Timer callback function
+void CALLBACK CheckForUpdatesTimerCB(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+    AT_LOG_TRACE;
+    std::wstring frequency  = g_Settings.CheckForUpdatesOpt;
+    auto lastCheckTimestamp = ReadLastCheckForUpdatesTS();
+    auto currentTimeStamp   = std::chrono::system_clock::now();
+    auto timeDiff           = currentTimeStamp - lastCheckTimestamp;
+
+    if ((frequency == L"Daily" && timeDiff >= std::chrono::hours(24))
+        || (frequency == L"Weekly" && timeDiff >= std::chrono::hours(7 * 24))) {
+        // Perform the update check logic here
+        CheckForUpdates(true);
+
+        // Update the last check timestamp
+        WriteCheckForUpdatesTS(currentTimeStamp);
+    } else {
+        AT_LOG_INFO("Update check not required at this time.");
+    }
+}
+
 void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
     //AT_LOG_TRACE;
     bool isAltPressed = GetAsyncKeyState(VK_MENU) & 0x8000;
@@ -594,14 +671,17 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 
     case ID_TRAYCONTEXTMENU_README:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_README");
+        ShowReadMeWindow();
         break;
 
     case ID_TRAYCONTEXTMENU_HELP:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_HELP");
+        ShowHelpWindow();
         break;
 
     case ID_TRAYCONTEXTMENU_RELEASENOTES:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELEASENOTES");
+        ShowReleaseNotesWindow();
         break;
 
     case ID_TRAYCONTEXTMENU_SETTINGS:
@@ -625,6 +705,9 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 
     case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
+        ShowCustomToolTip(L"Checking for updates...");
+        CheckForUpdates();
+        //DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_CHECK_FOR_UPDATES), nullptr, ATCheckForUpdatesDlgProc);
         break;
 
     case ID_TRAYCONTEXTMENU_RUNATSTARTUP: {
@@ -838,7 +921,7 @@ BOOL IsHungAppWindowEx(HWND hwnd) {
         AT_LOG_INFO("IsHungWnd: [%s]", title.c_str());
 #endif
         return (TRUE);
-   }
+    }
 
     LRESULT lResult = SendMessageTimeoutW(hwnd, WM_NULL, 0, 0, SMTO_ABORTIFHUNG, 249, nullptr);
     if (lResult)
@@ -846,4 +929,153 @@ BOOL IsHungAppWindowEx(HWND hwnd) {
 
     DWORD dwErr = GetLastError();
     return (dwErr == 0 || dwErr == 1460);
+}
+
+LRESULT CALLBACK HelpWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+    case WM_CREATE: {
+    }
+
+    break;
+
+    default:
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
+
+    return 0;
+}
+
+void ShowInWebBrowser(const std::wstring& fileName) {
+    HRESULT hr = OleInitialize(nullptr);
+    if (FAILED(hr)) {
+        AT_LOG_ERROR("Failed to initialize OLE.");
+        return;
+    }
+
+    std::filesystem::path filePath = GetAppDirPath();
+    filePath.append(fileName);
+    const wchar_t CLASS_NAME[] = L"AltTab_HelperCls";
+
+    WNDCLASS wc      = {};
+    wc.hInstance     = g_hInstance;
+    wc.lpfnWndProc   = HelpWndProc;
+    wc.hIcon         = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
+    wc.lpszClassName = CLASS_NAME;
+
+    // Register the window class, return value is ignored from second time onwards
+    RegisterClass(&wc);
+
+    HWND hHelpWnd = CreateWindowExW(
+        0,
+        CLASS_NAME,
+        filePath.wstring().c_str(),
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        nullptr,
+        nullptr,
+        g_hInstance,
+        nullptr);
+
+    ShowWindow(hHelpWnd, SW_SHOWNORMAL);
+
+    RECT rc = {};
+    GetClientRect(hHelpWnd, &rc);
+
+    auto webBrowser = new WebBrowser(hHelpWnd);
+    webBrowser->SetRect(rc);
+    webBrowser->Navigate(filePath);
+
+    OleUninitialize();
+}
+
+void ShowHelpWindow() {
+    ShowInWebBrowser(L"Help.mht");
+}
+
+void ShowReadMeWindow() {
+    ShowInWebBrowser(L"ReadMe.mht");
+}
+
+void ShowReleaseNotesWindow() {
+    ShowInWebBrowser(L"ReleaseNotes.txt");
+}
+
+std::wstring GetAppDirPath() {
+    wchar_t szPath[MAX_PATH] = { 0 };
+    GetModuleFileNameW(g_hInstance, szPath, MAX_PATH);
+    std::filesystem::path dirPath = szPath;
+    return dirPath.parent_path().wstring();
+}
+
+void LogLastErrorInfo() {
+    // Get the last error code
+    DWORD errorCode = GetLastError();
+
+    // Get the error message
+    LPVOID errorMessage;
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+        nullptr,
+        errorCode,
+        0,
+        reinterpret_cast<LPWSTR>(&errorMessage),
+        0,
+        nullptr);
+    std::wstring ret = (errorMessage ? reinterpret_cast<LPCWSTR>(errorMessage) : L"");
+    AT_LOG_ERROR("  Error Code   : %d", errorCode);
+    AT_LOG_ERROR("  Error Message: %s", WStrToUTF8(ret).c_str());
+}
+
+// Function to create and show a custom tooltip at the mouse location
+void ShowCustomToolTip(LPCWSTR tooltipText) {
+    AT_LOG_TRACE;
+    // Create a tooltip window
+    g_hCustomToolTip = CreateWindowEx(
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,
+        L"STATIC",
+        tooltipText,
+        WS_POPUP | WS_BORDER | SS_CENTER | SS_CENTERIMAGE,
+        0,
+        0,
+        0,
+        0,
+        NULL,
+        NULL,
+        GetModuleHandle(NULL),
+        NULL);
+
+    if (!g_hCustomToolTip) {
+        AT_LOG_ERROR("Failed to create tooltip window.");
+        LogLastErrorInfo();
+        return;
+    }
+
+    // Set the tooltip window style to be transparent
+    SetLayeredWindowAttributes(g_hCustomToolTip, RGB(0, 0, 0), 0, LWA_COLORKEY);
+
+    // Get the mouse position
+    POINT mousePos;
+    GetCursorPos(&mousePos);
+
+    // Set the tooltip window position
+    SetWindowPos(g_hCustomToolTip, HWND_TOPMOST, mousePos.x + 15, mousePos.y + 15, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
+
+    // Show the tooltip
+    ShowWindow(g_hCustomToolTip, SW_SHOWNOACTIVATE);
+}
+
+int GetCurrentYear() {
+    // Get the current time
+    std::time_t currentTime = std::time(nullptr);
+
+    // Convert the current time to a std::tm structure
+    std::tm* localTime = std::localtime(&currentTime);
+
+    // Extract the year from the tm structure
+    int currentYear = localTime->tm_year + 1900;
+
+    return currentYear;
 }

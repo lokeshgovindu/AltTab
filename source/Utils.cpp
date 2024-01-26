@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <string>
 #include <algorithm>
-#include "../fuzzywuzzy.h"
+#include "fuzzywuzzy.h"
 
 bool EnableConsoleWindow() {
     if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -21,6 +21,28 @@ bool EnableConsoleWindow() {
     freopen_s(&stderrNew, "CONOUT$", "w+", stderr);
 
     return true;
+}
+
+std::string Trim(const std::string& str, const std::string& seps)
+{
+    if (str.empty()) return str;
+    size_t p = str.find_first_not_of(seps);
+    if (p == std::string::npos) return "";
+    size_t q = str.find_last_not_of(seps);
+    return str.substr(p, q - p + 1);
+}
+
+
+std::vector<std::string> Split(const std::string& s, const std::string& seps) {
+    std::vector<std::string> ret;
+    for (size_t p = 0, q; p != std::string::npos; p = q) {
+        p = s.find_first_not_of(seps, p);
+        if (p == std::string::npos)
+            break;
+        q = s.find_first_of(seps, p);
+        ret.push_back(s.substr(p, q - p));
+    }
+    return ret;
 }
 
 std::vector<std::wstring> Split(const std::wstring& s, const std::wstring& seps) {

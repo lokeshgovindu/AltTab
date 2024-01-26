@@ -1,14 +1,21 @@
+#ifdef _AT_LOGGER
 #include "Logger.h"
 #include "log4cpp/Appender.hh"
-#include "Utils.h"
+#include "log4cpp/RollingFileAppender.hh"
 #include <filesystem>
-#include <wingdi.h>
 #include "AltTabSettings.h"
-#include "GlobalData.h"
+#endif // _AT_LOGGER
+
+#ifdef _DEBUG
+#include "Utils.h"
+#endif // _DEBUG
+
 
 #ifdef _AT_LOGGER
 
-std::shared_ptr<log4cpp::Category> gLogger;
+#pragma comment(lib, "ws2_32.lib")
+
+std::shared_ptr<log4cpp::Category> g_Logger;
 
 void CreateLogger() {
     // Create an appender and a layout
@@ -19,23 +26,26 @@ void CreateLogger() {
     std::filesystem::path logFilePath = ATSettingsDirPath();
     logFilePath.append("AltTab.log");
 
-    log4cpp::Appender* appender = new log4cpp::FileAppender("FileAppender", logFilePath.string());
+    log4cpp::Appender* appender = new log4cpp::RollingFileAppender("FileAppender", logFilePath.string(), 5 * 1024 * 1024, 5);
 #endif
 
     //appender->setLayout(new log4cpp::BasicLayout());
     // Create a pattern layout
     // %d{%Y-%m-%d %H:%M:%S,%l}
+    // %t - threadID
     log4cpp::PatternLayout* layout = new log4cpp::PatternLayout();
-    layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] %m%n");
+    //layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] [ThreadID-%t] %m%n");
+    layout->setConversionPattern("%d{%Y-%m-%d %H:%M:%S,%l} [%-5p] %m%n");
+    //layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] %m%n");
 
     appender->setLayout(layout);
 
     // Create a category and add the appender to it
-    gLogger.reset(&log4cpp::Category::getRoot(), [](auto&) { log4cpp::Category::shutdown(); });
-    gLogger->setAppender(appender);
+    g_Logger.reset(&log4cpp::Category::getRoot(), [](auto&) { log4cpp::Category::shutdown(); });
+    g_Logger->setAppender(appender);
 
     // Set priority for root logger
-    gLogger->setPriority(log4cpp::Priority::DEBUG);
+    g_Logger->setPriority(log4cpp::Priority::DEBUG);
 }
 
 #endif // _AT_LOGGER

@@ -17,21 +17,22 @@
 
 AltTabSettings    g_Settings;
 AltTabWindowData  g_AltBacktickWndInfo;
-HWND              g_hTooltip           = nullptr;
+HWND              g_hToolTip           = nullptr;
 
 
 #define ADD_TOOLTIP(id, text)                                                    \
     toolInfo.hwnd = GetDlgItem(hDlg, id);                                        \
     toolInfo.lpszText = (LPWSTR)text;                                            \
     GetClientRect(toolInfo.hwnd, &toolInfo.rect);                                \
-    SendMessage(g_hTooltip, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(&toolInfo));
+    SendMessage(g_hToolTip, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(&toolInfo));
 
 
-void ReadSettingsFromUI(HWND hDlg, AltTabSettings& settings);
-void AddTooltips       (HWND hDlg);
+void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings);
+void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings);
+void AddTooltips         (HWND hDlg);
 
 void AddTooltips(HWND hDlg) {
-    g_hTooltip = CreateWindowEx(
+    g_hToolTip = CreateWindowEx(
         0,
         TOOLTIPS_CLASS,
         nullptr,
@@ -50,7 +51,7 @@ void AddTooltips(HWND hDlg) {
     toolInfo.hwnd     = hDlg;
     toolInfo.uFlags   = TTF_SUBCLASS;
 
-    SendMessage(g_hTooltip, TTM_SETMAXTIPWIDTH, 0, MAXINT);
+    SendMessage(g_hToolTip, TTM_SETMAXTIPWIDTH, 0, MAXINT);
 
     ADD_TOOLTIP(IDC_EDIT_SETTINGS_FILEPATH       , TT_SETTINGS_FILEPATH       );
     ADD_TOOLTIP(IDC_EDIT_SIMILAR_PROCESS_GROUPS  , TT_SIMILAR_PROCESS_GROUPS  );
@@ -79,79 +80,17 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     switch (message)
     {
     case WM_INITDIALOG: {
+        // Store the settings window handle in global variable
+        g_hSetingsWnd      = hDlg;
+
         HICON hIcon        = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
 
-        SendMessage       (hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        SendMessage       (hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 
-        SetDlgItemText    (hDlg, IDC_EDIT_SETTINGS_FILEPATH       , ATSettingsFilePath().c_str());
-        SetDlgItemText    (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS  , g_Settings.SimilarProcessGroups.c_str());
+        ATSettingsInitDialog(hDlg, g_Settings);
 
-        HFONT    hFont     = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console");
-        HWND     hEditBox1 = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
-        HWND     hEditBox2 = GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS);
-
-        SendMessage(hEditBox1, WM_SETFONT     , (WPARAM)hFont    , TRUE);
-        SendMessage(hEditBox2, WM_SETFONT     , (WPARAM)hFont    , TRUE);
-
-        CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , g_Settings.PromptTerminateAll ? BST_CHECKED : BST_UNCHECKED);
-        CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , g_Settings.ShowColHeader      ? BST_CHECKED : BST_UNCHECKED);
-        CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , g_Settings.ShowColProcessName ? BST_CHECKED : BST_UNCHECKED);
-
-        CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , g_Settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
-        EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), g_Settings.ProcessExclusionsEnabled);
-        EnableWindow      (GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
-
-        SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , g_Settings.FuzzyMatchPercent, FALSE);
-        SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
-        SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETPOS                  , 0, MAKELPARAM(g_Settings.FuzzyMatchPercent, 0));
-
-        SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , g_Settings.Transparency     , FALSE);
-        SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
-        SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETPOS                  , 0, MAKELPARAM(g_Settings.Transparency, 0));
-
-        SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , g_Settings.WidthPercentage  , FALSE);
-        SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
-        SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETPOS                  , 0, MAKELPARAM(g_Settings.WidthPercentage, 0));
-
-        SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, g_Settings.HeightPercentage , FALSE);
-        SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
-        SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETPOS                  , 0, MAKELPARAM(g_Settings.HeightPercentage, 0));
-
-        SetDlgItemText    (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS      , g_Settings.ProcessExclusions.c_str());
-
-        HWND hComboBox = GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES);
-        ComboBox_AddString(hComboBox, L"Startup");
-        ComboBox_AddString(hComboBox, L"Daily");
-        ComboBox_AddString(hComboBox, L"Weekly");
-        ComboBox_AddString(hComboBox, L"Never");
-        ComboBox_SetCurSel(hComboBox, 0);
-
-        // Tooltip
         AddTooltips(hDlg);
-
-        // Center the dialog on the screen
-        int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
-        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-        RECT dlgRect;
-        GetWindowRect(hDlg, &dlgRect);
-
-        int dlgWidth  = dlgRect.right - dlgRect.left;
-        int dlgHeight = dlgRect.bottom - dlgRect.top;
-
-        int posX = (screenWidth  - dlgWidth ) / 2;
-        int posY = (screenHeight - dlgHeight) / 2;
-
-        SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
-
-        // Set the dialog as an app window, otherwise not displayed in task bar
-        SetWindowLong(hDlg, GWL_EXSTYLE, GetWindowLong(hDlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
-
-        // Needs to be called after the dialog is shown
-        bool settingsModified = AreSettingsModified(hDlg);
-        EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), settingsModified);
     }
     return (INT_PTR)TRUE;
 
@@ -196,21 +135,22 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         AT_LOG_INFO("WM_DRAWITEM: Draw Item");
     } break;
 
-    case WM_COMMAND:
-        {
-            bool settingsModified = AreSettingsModified(hDlg);
+    case WM_COMMAND: {
+        bool settingsModified = false;
+        if (g_hSetingsWnd) {
+            settingsModified = AreSettingsModified(hDlg);
             EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), settingsModified);
         }
 
         if (LOWORD(wParam) == IDC_BUTTON_APPLY) {
             AT_LOG_INFO("IDC_BUTTON_APPLY: Apply Settings");
-            ATApplySettings(hDlg);
+            if (settingsModified) { ATApplySettings(hDlg); }
             return (INT_PTR)TRUE;
         }
 
         if (LOWORD(wParam) == IDOK)
         {
-            ATApplySettings(hDlg);
+            if (settingsModified) { ATApplySettings(hDlg); }
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
         }
@@ -225,7 +165,15 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         if (LOWORD(wParam) == IDC_BUTTON_RESET)
         {
             AT_LOG_INFO("IDC_BUTTON_RESET Pressed!");
-            //ATResetSettings(hDlg);
+            int result = MessageBoxW(
+                hDlg,
+                L"Are you sure you want to reset settings to defaults?",
+                AT_PRODUCT_NAMEW L": Reset Settings",
+                MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+            if (result == IDYES) {
+                g_Settings.Reset();
+                ATSettingsInitDialog(hDlg, g_Settings);
+            }
             return (INT_PTR)TRUE;
         }
 
@@ -235,8 +183,7 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
             EnableWindow(GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), isChecked);
             return (INT_PTR)TRUE;
         }
-
-        break;
+    } break;
 
     //case WM_NOTIFY: {
     //    AT_LOG_INFO("WM_NOTIFY: Notify");
@@ -251,6 +198,7 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     //} break;
 
     case WM_DESTROY: {
+        //  Clean up
         HWND  hEditBox = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
         HFONT hFont    = (HFONT)SendMessage(hEditBox, WM_GETFONT, 0, 0);
         if (hFont) {
@@ -258,6 +206,8 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
         }
         DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_SMALL, 0));
         DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_BIG, 0));
+
+        g_hSetingsWnd = nullptr;
     }
     break;
 
@@ -292,6 +242,11 @@ bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& proc
     return g_Settings.ProcessGroupsList[index].contains(ToLower(processNameB));
 }
 
+/*!
+ * \brief AltTab settings directory path
+ * 
+ * \return AltTab settings directory path
+ */
 std::wstring ATSettingsDirPath() {
     // Get the path to the Roaming AppData folder
     wchar_t szPath[MAX_PATH] = { 0 };
@@ -358,6 +313,11 @@ void ReadSetting(const std::wstring& iniFile, LPCTSTR section, LPCTSTR keyName, 
     value = buffer;
 }
 
+/*!
+ * \brief Write the current settings the given file path
+ * 
+ * \param iniFile    AltTab settings file path
+ */
 void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"ListView"         , L"FontName"              , g_Settings.FontName                );
     WriteSetting(iniFile, L"ListView"         , L"FontSize"              , g_Settings.FontSize                );
@@ -370,10 +330,9 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"General"          , L"WindowTransparency"    , g_Settings.Transparency            );
     WriteSetting(iniFile, L"General"          , L"WindowWidthPercentage" , g_Settings.WidthPercentage         );
     WriteSetting(iniFile, L"General"          , L"WindowHeightPercentage", g_Settings.HeightPercentage        );
-    WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdates         );
     WriteSetting(iniFile, L"General"          , L"ShowColHeader"         , g_Settings.ShowColHeader           );
     WriteSetting(iniFile, L"General"          , L"ShowColProcessName"    , g_Settings.ShowColProcessName      );
-    WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdates         );
+    WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdatesOpt      );
     WriteSetting(iniFile, L"ProcessExclusions", L"Enabled"               , g_Settings.ProcessExclusionsEnabled);
     WriteSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , g_Settings.ProcessExclusions       );
 }
@@ -395,7 +354,7 @@ void ATLoadSettings() {
     ReadSetting(iniFile, L"General"          , L"WindowHeightPercentage", DEFAULT_HEIGHT                    , g_Settings.HeightPercentage        );
     ReadSetting(iniFile, L"General"          , L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER           , g_Settings.ShowColHeader           );
     ReadSetting(iniFile, L"General"          , L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME      , g_Settings.ShowColProcessName      );
-    ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdates         );
+    ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdatesOpt      );
     ReadSetting(iniFile, L"ProcessExclusions", L"Enabled"               , DEFAULT_PROCESS_EXCLUSIONS_ENABLED, g_Settings.ProcessExclusionsEnabled);
     ReadSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , DEFAULT_PROCESS_EXCLUSIONS        , g_Settings.ProcessExclusions       );
 
@@ -434,11 +393,17 @@ std::wstring GetDlgItemTextEx(HWND hDlg, int nIDDlgItem) {
     return result;
 }
 
+/*!
+ * \brief Save the given settings to the AltTab settings ini file and load the
+ * modified settings to application (g_Settings)
+ * 
+ * \param[in] hDlg        AltTab settings dialog handle
+ */
 void ATApplySettings(HWND hDlg) {
     AT_LOG_TRACE;
 
     // Read settings from UI
-    ReadSettingsFromUI(hDlg, g_Settings);
+    ATReadSettingsFromUI(hDlg, g_Settings);
 
     // Save settings
     ATSaveSettings();
@@ -450,7 +415,13 @@ void ATApplySettings(HWND hDlg) {
     EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), false);
 }
 
-void ReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
+/**
+ * \brief Read settings from UI
+ * 
+ * \param[in]  hDlg        AltTab settings dialog handle
+ * \param[out] settings    AltTabSettings
+ */
+void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
     settings.SimilarProcessGroups      = GetDlgItemTextEx  (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
     settings.FuzzyMatchPercent         = GetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , nullptr, FALSE);
     settings.Transparency              = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
@@ -461,8 +432,15 @@ void ReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
     settings.ShowColProcessName        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME ) == BST_CHECKED;
     settings.ProcessExclusionsEnabled  = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS   ) == BST_CHECKED;
     settings.ProcessExclusions         = GetDlgItemTextEx  (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS    );
+    int selectedIndex                  = ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES));
+    settings.CheckForUpdatesOpt        = AltTabSettings::CheckForUpdatesOptions[max(selectedIndex, 0)];
 }
 
+/**
+ * \brief Log AltTab settings
+ * 
+ * \param[in] settings    AltTabSettings
+ */
 void ATLogSettings(const AltTabSettings& settings) {
     AT_LOG_TRACE;
     AT_LOG_DEBUG("=== AltTab Settings Begin ===");
@@ -479,9 +457,16 @@ void ATLogSettings(const AltTabSettings& settings) {
     AT_LOG_DEBUG("=== AltTab Settings End ===");
 }
 
+/*!
+ * \brief Check if the settings are modified.
+ * 
+ * \param[in]  hDlg  AltTab settings dialog handle
+ * 
+ * \return true if the settings are modified, false otherwise
+ */
 bool AreSettingsModified(HWND hDlg) {
     AltTabSettings settings;
-    ReadSettingsFromUI(hDlg, settings);
+    ATReadSettingsFromUI(hDlg, settings);
 
     //ATLogSettings(settings);
 
@@ -494,7 +479,7 @@ bool AreSettingsModified(HWND hDlg) {
         settings.ShowColHeader            != g_Settings.ShowColHeader            ||
         settings.ShowColProcessName       != g_Settings.ShowColProcessName       ||
         settings.PromptTerminateAll       != g_Settings.PromptTerminateAll       ||
-        settings.CheckForUpdates          != g_Settings.CheckForUpdates          ||
+        settings.CheckForUpdatesOpt       != g_Settings.CheckForUpdatesOpt          ||
         settings.ProcessExclusionsEnabled != g_Settings.ProcessExclusionsEnabled ||
         settings.ProcessExclusions        != g_Settings.ProcessExclusions        ||
         false;
@@ -502,7 +487,19 @@ bool AreSettingsModified(HWND hDlg) {
     return modified;
 }
 
+StringList AltTabSettings::CheckForUpdatesOptions = { L"Startup", L"Daily", L"Weekly", L"Never" };
+
+/*!
+ * \brief Constructor
+ */
 AltTabSettings::AltTabSettings() {
+    Reset();
+}
+
+/*!
+ * \brief Reset settings to default values.
+ */
+void AltTabSettings::Reset() {
     FontName                 = DEFAULT_FONT_NAME;
     FontSize                 = DEFAULT_FONT_SIZE;
     FontStyle                = DEFAULT_FONT_STYLE;
@@ -513,11 +510,112 @@ AltTabSettings::AltTabSettings() {
     FuzzyMatchPercent        = DEFAULT_FUZZYMATCHPERCENT;
     Transparency             = DEFAULT_TRANSPARENCY;
     SimilarProcessGroups     = DEFAULT_SIMILARPROCESSGROUPS;
-    CheckForUpdates          = DEFAULT_CHECKFORUPDATES;
+    CheckForUpdatesOpt       = DEFAULT_CHECKFORUPDATES;
     PromptTerminateAll       = DEFAULT_PROMPTTERMINATEALL;
     DisableAltTab            = false;
     ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
     ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
     ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
     ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
+
+    // Clear the previous ProcessGroupsList
+    g_Settings.ProcessGroupsList.clear();
+
+    auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
+    for (auto& item : vs) {
+        auto processes = Split(item, L"/");
+        for (auto& processName : processes)
+            processName = ToLower(processName);
+        g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
+    }
+
+    // Process ProcessExclusions
+    // Always split and convert to lower case, then it is easy while checking
+    g_Settings.ProcessExclusionList.clear();
+    g_Settings.ProcessExclusionList = Split(ToLower(g_Settings.ProcessExclusions), L"/");
+
+    // Initialize additional settings
+    g_AltBacktickWndInfo.hWnd   = nullptr;
+    g_AltBacktickWndInfo.hOwner = nullptr;
+}
+
+int AltTabSettings::GetCheckForUpdatesIndex() const {
+    auto it = std::find(CheckForUpdatesOptions.begin(), CheckForUpdatesOptions.end(), this->CheckForUpdatesOpt);
+    if (it == CheckForUpdatesOptions.end()) {
+        return 0;
+    }
+    return (int)std::distance(CheckForUpdatesOptions.begin(), it);
+}
+
+/*!
+ * \brief Initialize AltTab settings dialog controls with the given settings.
+ * 
+ * \param hDlg       AltTab settings dialog handle
+ * \param settings   AltTabSettings
+ */
+void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings) {
+    SetDlgItemText    (hDlg, IDC_EDIT_SETTINGS_FILEPATH       , ATSettingsFilePath().c_str());
+    SetDlgItemText    (hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS  , settings.SimilarProcessGroups.c_str());
+ 
+    HFONT    hFont     = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                     DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console");
+    HWND     hEditBox1 = GetDlgItem(hDlg, IDC_EDIT_SIMILAR_PROCESS_GROUPS);
+    HWND     hEditBox2 = GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS);
+ 
+    SendMessage(hEditBox1, WM_SETFONT     , (WPARAM)hFont    , TRUE);
+    SendMessage(hEditBox2, WM_SETFONT     , (WPARAM)hFont    , TRUE);
+ 
+    CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , settings.PromptTerminateAll ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , settings.ShowColHeader      ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , settings.ShowColProcessName ? BST_CHECKED : BST_UNCHECKED);
+ 
+    CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
+    EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), settings.ProcessExclusionsEnabled);
+    EnableWindow      (GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
+ 
+    SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , settings.FuzzyMatchPercent, FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
+    SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETPOS                  , 0, MAKELPARAM(settings.FuzzyMatchPercent, 0));
+ 
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , settings.Transparency     , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETPOS                  , 0, MAKELPARAM(settings.Transparency, 0));
+ 
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , settings.WidthPercentage  , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETPOS                  , 0, MAKELPARAM(settings.WidthPercentage, 0));
+ 
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, settings.HeightPercentage , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETPOS                  , 0, MAKELPARAM(settings.HeightPercentage, 0));
+ 
+    SetDlgItemText    (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS      , settings.ProcessExclusions.c_str());
+ 
+    HWND hComboBox = GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES);
+    for (auto& opt : AltTabSettings::CheckForUpdatesOptions) {
+        ComboBox_AddString(hComboBox, opt.c_str());
+    }
+    ComboBox_SetCurSel(hComboBox, settings.GetCheckForUpdatesIndex());
+ 
+    // Center the dialog on the screen
+    int screenWidth  = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    RECT dlgRect;
+    GetWindowRect(hDlg, &dlgRect);
+ 
+    int dlgWidth  = dlgRect.right  - dlgRect.left;
+    int dlgHeight = dlgRect.bottom - dlgRect.top;
+ 
+    int posX      = (screenWidth  - dlgWidth ) / 2;
+    int posY      = (screenHeight - dlgHeight) / 2;
+ 
+    SetWindowPos(hDlg, HWND_TOP, posX, posY, 0, 0, SWP_NOSIZE);
+ 
+    // Set the dialog as an app window, otherwise not displayed in task bar
+    SetWindowLong(hDlg, GWL_EXSTYLE, GetWindowLong(hDlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
+ 
+    // Needs to be called after the dialog is shown
+    bool settingsModified = AreSettingsModified(hDlg);
+    EnableWindow(GetDlgItem(hDlg, IDC_BUTTON_APPLY), settingsModified);
 }

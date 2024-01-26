@@ -1,0 +1,25 @@
+Release Notes
+=============
+
+Known Limitations
+-----------------
+- When running any application as an administrator (as elevated permissions), 
+  AltTab hotkeys does not work when the elevated applications are in focus.
+  This can be addressed by also running AltTab as an administrator.
+
+- Not handled Alt+Ctrl+Tab
+
+
+Known Issues
+------------
+- Available @ https://sourceforge.net/p/alttab/tickets/
+
+
+2024.1 new features and bug fixes
+---------------------------------
+Initial release.
+
+PS
+--
+'+' : indicates new feature
+'-' : indicates bug fixed

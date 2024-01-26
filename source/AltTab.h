@@ -1,6 +1,7 @@
 #pragma once
 
 #include "resource.h"
+#include <string>
 
 LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wp, LPARAM lp);
 
@@ -37,3 +38,15 @@ bool IsNativeATWDisplayed();
 void ActivateWindow(HWND hWnd);
 
 BOOL IsHungAppWindowEx(HWND hwnd);
+
+void ShowHelpWindow();
+
+void ShowReadMeWindow();
+
+void ShowReleaseNotesWindow();
+
+std::wstring GetAppDirPath();
+
+void LogLastErrorInfo();
+
+void ShowCustomToolTip(LPCWSTR tooltipText);

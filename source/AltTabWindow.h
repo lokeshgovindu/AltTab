@@ -11,6 +11,7 @@ struct AltTabWindowData {
     HICON         hIcon;
     std::wstring  Title;
     std::wstring  ProcessName;
+    std::wstring  FullPath;
     DWORD         PID;
 };
 

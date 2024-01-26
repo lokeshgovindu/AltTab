@@ -1,10 +1,10 @@
 // AltTabWindow.cpp : Defines the entry point for the application.
 //
 
+#include "framework.h"
 #include "AltTabWindow.h"
 
 #include "Logger.h"
-#include "framework.h"
 
 #include <CommCtrl.h>
 #include <Psapi.h>
@@ -113,7 +113,13 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     wchar_t windowTitle[bufferSize];
                     GetWindowTextW(hOwner, windowTitle, bufferSize);
 
-                    AltTabWindowData item = { hWnd, hOwner, GetWindowIcon(hOwner), windowTitle, filePath.filename().wstring(), processId };
+                    AltTabWindowData item = { hWnd,
+                                              hOwner,
+                                              GetWindowIcon(hOwner),
+                                              windowTitle,
+                                              filePath.filename().wstring(),
+                                              filePath.wstring(),
+                                              processId };
                     auto vItems   = (std::vector<AltTabWindowData>*)lParam;
                     bool insert   = false;
                     bool excluded = IsExcludedProcess(ToLower(item.ProcessName));
@@ -416,7 +422,7 @@ void ATWListViewPageDown() {
 HWND CreateAltTabWindow() {
     AT_LOG_TRACE;
     // Register the window class
-    const wchar_t CLASS_NAME[]  = L"AltTab";
+    const wchar_t CLASS_NAME[]  = L"__AltTab_WndCls__";
     const wchar_t WINDOW_NAME[] = L"AltTab Window";
 
     WNDCLASS wc      = {};
@@ -452,10 +458,10 @@ HWND CreateAltTabWindow() {
 
     // Show the window and bring to the top
     SetForegroundWindow(hWnd);
-    SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-    ShowWindow(hWnd, SW_SHOWNORMAL);
-    UpdateWindow(hWnd);
-    BringWindowToTop(hWnd);
+    SetWindowPos       (hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    ShowWindow         (hWnd, SW_SHOWNORMAL);
+    UpdateWindow       (hWnd);
+    BringWindowToTop   (hWnd);
 
     return hWnd;
 }
@@ -654,6 +660,15 @@ LRESULT CALLBACK ListViewSubclassProc(
             if (nextInd != -1) ATWListViewSelectItem(nextInd);
             return TRUE;
         }
+        else if (vkCode == VK_F1) {
+            DestoryAltTabWindow();
+            if (isShiftPressed) {
+                DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), nullptr, ATAboutDlgProc);
+            } else {
+                ShowHelpWindow();
+            }
+            return TRUE;
+        }
         else if (isShiftPressed && vkCode == VK_F1) {
             DestoryAltTabWindow();
             DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), nullptr, ATAboutDlgProc);
@@ -663,7 +678,11 @@ LRESULT CALLBACK ListViewSubclassProc(
             DestoryAltTabWindow();
             // Do NOT assign owner for this, if owner is assigned and the settings
             // dialog is not active, then it won't be displayed in alt tab windows list.
-            DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), nullptr, ATSettingsDlgProc);
+            if (g_hSetingsWnd == nullptr) {
+                DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_SETTINGS), nullptr, ATSettingsDlgProc);
+            } else {
+                SetForegroundWindow(g_hSetingsWnd);
+            }
             return TRUE;
         }
         // WM_CHAR won't be sent when ALT is pressed, this is the alternative to handle when a key is pressed.
@@ -749,7 +768,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         // Create  Static control
         int staticTextHeight = 24;
 
-        // Calculate the required height based on font size
+        // Calculate the required height for the static control based on font size
         HDC hdc = GetDC(hWnd);
         g_hFont = CreateFontEx(hdc, g_Settings.FontName, g_Settings.FontSize, g_Settings.FontStyle);
         SelectObject(hdc, g_hFont);
@@ -785,7 +804,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             style,                                 // Styles
             0,                                     // X
             staticTextHeight + 1,                  // Y
-            windowWidth - 1,                           // Width
+            windowWidth - 1,                       // Width
             windowHeight - staticTextHeight - 3,   // Height
             hWnd,                                  // Parent window
             (HMENU)IDC_LISTVIEW,                   // Control identifier
@@ -855,11 +874,12 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         } else {
             int scrollBarWidth   = GetSystemMetrics(SM_CXVSCROLL);
             int processNameWidth = GetColProcessNameWidth();
-            int colTitleWidth    = g_Settings.WindowWidth - (COL_ICON_WIDTH + GetColProcessNameWidth()) - scrollBarWidth + 2;
+            int colTitleWidth    = g_Settings.WindowWidth - (COL_ICON_WIDTH + GetColProcessNameWidth()) - scrollBarWidth - 1;
             int lvHeight         = (g_Settings.WindowHeight - itemHeight + 1) / itemHeight * itemHeight;
             int requiredHeight   = lvHeight + headerHeight + staticTextHeight + 3;
             ListView_SetColumnWidth(hListView, 1, colTitleWidth);
-            SetWindowPos(hListView, nullptr, 0, 0, windowWidth, lvHeight, SWP_NOMOVE | SWP_NOZORDER);
+            // Here, reducing the window width by 1 (-1) to fit the scrollbar properly in the window.
+            SetWindowPos(hListView, nullptr, 0, 0, windowWidth - 1, lvHeight, SWP_NOMOVE | SWP_NOZORDER);
             SetWindowPos(hWnd, HWND_TOPMOST, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);
             WindowResizeAndPosition(hWnd, wndWidth, requiredHeight);
         }
@@ -980,24 +1000,25 @@ bool IsAltTabWindow(HWND hWnd) {
     if (!IsWindowVisible(hWnd))
         return false;
 
-    HWND hOwner = hWnd;
-
-    do {
-        hOwner = GetWindow(hOwner, GW_OWNER);
-    } while (GetWindow(hOwner, GW_OWNER));
-
-    hOwner = hOwner ? hOwner : hWnd;
+    HWND hOwner = GetOwnerWindowHwnd(hWnd);
 
     if (GetLastActivePopup(hOwner) != hWnd)
         return false;
 
-    DWORD windowES = GetWindowLong(hWnd, GWL_EXSTYLE);
-    if (windowES && !((windowES & WS_EX_TOOLWINDOW) && !(windowES & WS_EX_APPWINDOW)) &&
-        !IsInvisibleWin10BackgroundAppWindow(hOwner)) {
+    // Even the owner window is hidden we are getting the window styles, so make
+    // sure that the owner window is visible before checking the window styles
+    DWORD ownerES = GetWindowLong(hOwner, GWL_EXSTYLE);
+    if (ownerES && IsWindowVisible(hOwner) && !((ownerES & WS_EX_TOOLWINDOW) && !(ownerES & WS_EX_APPWINDOW))
+        && !IsInvisibleWin10BackgroundAppWindow(hOwner)) {
         return true;
     }
 
-    DWORD ownerES = GetWindowLong(hOwner, GWL_EXSTYLE);
+    DWORD windowES = GetWindowLong(hWnd, GWL_EXSTYLE);
+    if (windowES && !((windowES & WS_EX_TOOLWINDOW) && !(windowES & WS_EX_APPWINDOW))
+        && !IsInvisibleWin10BackgroundAppWindow(hWnd)) {
+        return true;
+    }
+
     if (windowES == 0 && ownerES == 0) {
         return true;
     }
@@ -1072,6 +1093,34 @@ void SetAltTabActiveWindow() {
     SetForegroundWindow(g_hAltTabWnd);
     SetActiveWindow(g_hAltTabWnd);
     SetFocus(g_hListView);
+}
+
+void CopyToClipboard(const std::wstring& text) {
+    if (OpenClipboard(g_hAltTabWnd)) {
+        EmptyClipboard();
+        HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, (text.size() + 1) * sizeof(wchar_t));
+        if (hGlobal) {
+            wchar_t* pGlobal = (wchar_t*)GlobalLock(hGlobal);
+            if (pGlobal) {
+                wcscpy_s(pGlobal, text.size() + 1, text.c_str());
+                GlobalUnlock(hGlobal);
+                SetClipboardData(CF_UNICODETEXT, hGlobal);
+            }
+        }
+        CloseClipboard();
+    } else {
+        AT_LOG_ERROR("OpenClipboard failed");
+    }
+}
+
+void BrowseToFile(const std::wstring& filepath) {
+    if (!filepath.empty()) {
+        LPITEMIDLIST pidl = ILCreateFromPathW(filepath.c_str());
+        if (pidl) {
+            SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0);
+            ILFree(pidl);
+        }
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -1152,6 +1201,20 @@ void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         SetTimer(hWnd, TIMER_WINDOW_COUNT, TIMER_WINDOW_COUNT_ELAPSE, nullptr);
     }
     break;
+
+    case ID_CONTEXTMENU_OPEN_PATH: {
+        AT_LOG_INFO("ID_CONTEXTMENU_OPEN_PATH");
+        const auto filepath = g_AltTabWindows[ATWListViewGetSelectedItem()].FullPath;
+        DestoryAltTabWindow();
+        BrowseToFile(filepath);
+    } break;
+    
+    case ID_CONTEXTMENU_COPY_PATH: {
+        AT_LOG_INFO("ID_CONTEXTMENU_COPY_PATH");
+        const auto filepath = g_AltTabWindows[ATWListViewGetSelectedItem()].FullPath;
+        DestoryAltTabWindow();
+        CopyToClipboard(filepath);
+    } break;
 
     case ID_CONTEXTMENU_ABOUTALTTAB: {
         AT_LOG_INFO("ID_CONTEXTMENU_ABOUTALTTAB");

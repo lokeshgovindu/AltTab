@@ -4,7 +4,7 @@
 //
 #define AT_VERSION_PATCH                0
 #define AT_VERSION_BUILD                0
-#define AT_VERSION_MINOR                01
+#define AT_VERSION_MINOR                1
 #define IDD_ALTTAB_DIALOG               102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
@@ -16,8 +16,9 @@
 #define IDC_TRAY_CONTEXTMENU            129
 #define IDD_SETTINGS                    130
 #define IDR_CONTEXTMENU                 131
+#define IDD_CHECK_FOR_UPDATES           132
 #define IDC_LISTVIEW                    1001
-#define IDC_SYSLINK1                    1002
+#define IDC_SYSLINK_COPYRIGHT           1002
 #define IDC_EDIT_SETTINGS_FILEPATH      1005
 #define IDC_EDIT_SIMILAR_PROCESS_GROUPS 1006
 #define IDC_EDIT_PROCESS_EXCLUSIONS     1007
@@ -27,8 +28,8 @@
 #define IDC_SPIN_FUZZY_MATCH_PERCENT    1011
 #define IDC_CHECK_FOR_UPDATES           1012
 #define IDC_BUTTON_APPLY                1013
-#define IDC_STATIC_ABOUT_PRODUCTNAME    1014
-#define IDC_STATIC_ABOUT_COPYRIGHT      1015
+#define IDC_SYSLINK_ABOUT_PRODUCT_NAME  1014
+#define IDC_SYSLINK_ABOUT_COPYRIGHT     1015
 #define IDC_EDIT_WINDOW_TRANSPARENCY    1016
 #define IDC_SPIN_WINDOW_TRANSPARENCY    1017
 #define IDC_EDIT_WINDOW_WIDTH_PERCENTAGE 1018
@@ -42,7 +43,10 @@
 #define IDC_CHECK_SHOW_PREVIEW          1025
 #define IDC_STATIC_FUZZY_MATCH_PERCENT  1026
 #define IDC_GROUP_PROCESS_EXCLUSIONS    1027
-#define AT_VERSION_MAJOR                2024
+#define IDC_EDIT1                       1028
+#define IDC_EDIT_CFU_CHANGES            1028
+#define IDC_STATIC_CFU_CURRENT_VERSION  1029
+#define IDC_STATIC_CFU_UPDATE_VERSION   1030
 #define ID_TRAYCONTEXTMENU_ABOUTALTTAB  32771
 #define ID_TRAYCONTEXTMENU_README       32772
 #define ID_TRAYCONTEXTMENU_HELP         32773
@@ -64,6 +68,10 @@
 #define ID_CONTEXTMENU_KILL_PROCESS     32789
 #define ID_CONTEXTMENU_CLOSE_WINDOW     32790
 #define ID_CONTEXTMENU_ABOUTALTTAB      32791
+#define ID__OPENPATH                    32792
+#define ID_Menu                         32793
+#define ID_CONTEXTMENU_OPEN_PATH        32794
+#define ID_CONTEXTMENU_COPY_PATH        32795
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -71,9 +79,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        132
-#define _APS_NEXT_COMMAND_VALUE         32792
-#define _APS_NEXT_CONTROL_VALUE         1028
+#define _APS_NEXT_RESOURCE_VALUE        133
+#define _APS_NEXT_COMMAND_VALUE         32796
+#define _APS_NEXT_CONTROL_VALUE         1031
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

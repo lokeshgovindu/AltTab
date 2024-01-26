@@ -1,0 +1,10 @@
+2024.1.0.0
+AltTab_2024.1.0.0.7z
+2024.1 new features and bug fixes
+---------------------------------
+Initial release.
+
+PS
+--
+'+' : indicates new feature
+'-' : indicates bug fixed

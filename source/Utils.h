@@ -8,6 +8,9 @@
 
 bool EnableConsoleWindow();
 
+std::string Trim(const std::string& str, const std::string& seps = " \t\r\n");
+
+std::vector<std::string>  Split(const std::string& s , const std::string& seps  =  " \t");
 std::vector<std::wstring> Split(const std::wstring& s, const std::wstring& seps = L" \t");
 
 bool EqualsIgnoreCase(const std::string& s, const std::string& t);

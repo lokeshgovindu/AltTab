@@ -155,7 +155,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)libraries\log4cpp\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>log4cpp.lib;Dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>log4cpp.lib;Dwmapi.lib;Shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -175,7 +175,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)libraries\log4cpp\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>log4cpp.lib;Dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>log4cpp.lib;Dwmapi.lib;Shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseNoLogger|x64'">
@@ -195,28 +195,34 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)libraries\log4cpp\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>log4cpp.lib;Dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>log4cpp.lib;Dwmapi.lib;Shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\AltTab.cpp" />
     <ClCompile Include="source\AltTabSettings.cpp" />
     <ClCompile Include="source\AltTabWindow.cpp" />
+    <ClCompile Include="source\CheckForUpdates.cpp" />
     <ClCompile Include="source\fuzzywuzzy.cpp" />
     <ClCompile Include="source\Logger.cpp" />
     <ClCompile Include="source\Utils.cpp" />
+    <ClCompile Include="source\WebBrowser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include=".gitignore" />
     <None Include="AltTabSettings.ini" />
+    <CopyFileToFolders Include="Help.mht" />
+    <None Include="log4cpp-config.properties" />
     <None Include="README.md" />
+    <CopyFileToFolders Include="ReadMe.mht" />
     <None Include="Tasks.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\AltTab.h" />
     <ClInclude Include="source\AltTabSettings.h" />
     <ClInclude Include="source\AltTabWindow.h" />
+    <ClInclude Include="source\CheckForUpdates.h" />
     <ClInclude Include="source\framework.h" />
     <ClInclude Include="source\fuzzywuzzy.h" />
     <ClInclude Include="source\GlobalData.h" />
@@ -226,12 +232,16 @@
     <ClInclude Include="source\Tooltips.h" />
     <ClInclude Include="source\Utils.h" />
     <ClInclude Include="source\version.h" />
+    <ClInclude Include="source\WebBrowser.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="source\AltTab.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="source\AltTab.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="ReleaseNotes.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

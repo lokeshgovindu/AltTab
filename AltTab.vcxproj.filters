@@ -33,6 +33,12 @@
     <ClCompile Include="source\fuzzywuzzy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\WebBrowser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\CheckForUpdates.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
@@ -40,6 +46,9 @@
     <None Include="README.md" />
     <None Include="Tasks.md" />
     <None Include=".gitignore" />
+    <None Include="log4cpp-config.properties">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\AltTab.h">
@@ -78,6 +87,12 @@
     <ClInclude Include="source\fuzzywuzzy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="source\WebBrowser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\CheckForUpdates.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="source\AltTab.ico">
@@ -88,5 +103,16 @@
     <ResourceCompile Include="source\AltTab.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="Help.mht">
+      <Filter>Resource Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="ReadMe.mht">
+      <Filter>Resource Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="ReleaseNotes.txt">
+      <Filter>Resource Files</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

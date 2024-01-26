@@ -6,6 +6,7 @@
 
 #define TIMER_CHECK_ALT_KEYUP       1
 #define TIMER_WINDOW_COUNT          2
+#define TIMER_CHECK_FOR_UPDATES     3
 
 
 #ifdef _DEBUG
@@ -20,17 +21,19 @@ typedef BOOL(WINAPI* IsHungAppWindowFunc)(HWND);
 
 extern HINSTANCE                            g_hInstance;
 extern HWND                                 g_hMainWnd;              // AltTab main window handle
+extern HWND                                 g_hSetingsWnd;           // AltTab settings window handle
 extern HWND                                 g_hAltTabWnd;            // AltTab window handle
 extern HWND                                 g_hFGWnd;                // Foreground window handle
 extern HWND                                 g_hStaticText;
 extern HWND                                 g_hListView;
-extern HWND                                 g_hTooltip;
+extern HWND                                 g_hToolTip;
+extern HWND                                 g_hCustomTooltip;
 extern HANDLE                               g_hAltTabThread;
 extern DWORD                                g_idThreadAttachTo;
 extern AltTabSettings                       g_Settings;
 extern IsHungAppWindowFunc                  g_pfnIsHungAppWindow;
 
-extern std::shared_ptr<log4cpp::Category>   gLogger;
+extern std::shared_ptr<log4cpp::Category>   g_Logger;
 
 extern std::vector<AltTabWindowData>        g_AltTabWindows;
 extern AltTabWindowData                     g_AltBacktickWndInfo; // TODO
