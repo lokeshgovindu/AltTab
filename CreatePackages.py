@@ -105,7 +105,7 @@ if __name__ == "__main__":
     vc_env = query_vcvarsall(17.7)
     os.environ["Path"] = vc_env["path"]
 
-    if False:
+    if True:
         build_solution(r'AltTab.sln', 'Debug|x64', 'clean')
         build_solution(r'AltTab.sln', 'Release|x64', 'clean')
         build_solution(r'AltTab.sln', 'ReleaseNoLogger|x64', 'clean')
