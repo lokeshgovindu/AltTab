@@ -12,6 +12,7 @@
 #include "GlobalData.h"
 #include "AltTabWindow.h"
 #include "Tooltips.h"
+#include <regex>
 
 #define WM_SETTEXTCOLOR (WM_USER + 1)
 
@@ -30,7 +31,71 @@ HWND              g_hToolTip           = nullptr;
 void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings);
 void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings);
 void AddTooltips         (HWND hDlg);
+void ATLogSettings       (const AltTabSettings& settings);
 
+/*!
+ * \brief Constructor
+ */
+AltTabSettings::AltTabSettings() {
+    Reset();
+}
+
+/*!
+ * \brief Reset settings to default values.
+ */
+void AltTabSettings::Reset() {
+    FontName                 = DEFAULT_FONT_NAME;
+    FontSize                 = DEFAULT_FONT_SIZE;
+    FontStyle                = DEFAULT_FONT_STYLE;
+    FontColor                = DEFAULT_FONT_COLOR;
+    BackgroundColor          = DEFAULT_BG_COLOR;
+    WidthPercentage          = DEFAULT_WIDTH;
+    HeightPercentage         = DEFAULT_HEIGHT;
+    FuzzyMatchPercent        = DEFAULT_FUZZYMATCHPERCENT;
+    Transparency             = DEFAULT_TRANSPARENCY;
+    SimilarProcessGroups     = DEFAULT_SIMILARPROCESSGROUPS;
+    CheckForUpdatesOpt       = DEFAULT_CHECKFORUPDATES;
+    PromptTerminateAll       = DEFAULT_PROMPTTERMINATEALL;
+    DisableAltTab            = false;
+    ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
+    ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
+    ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
+    ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
+
+    // Clear the previous ProcessGroupsList
+    g_Settings.ProcessGroupsList.clear();
+
+    auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
+    for (auto& item : vs) {
+        auto processes = Split(item, L"/");
+        for (auto& processName : processes)
+            processName = ToLower(processName);
+        g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
+    }
+
+    // Process ProcessExclusions
+    // Always split and convert to lower case, then it is easy while checking
+    g_Settings.ProcessExclusionList.clear();
+    g_Settings.ProcessExclusionList = Split(ToLower(g_Settings.ProcessExclusions), L"/");
+
+    // Initialize additional settings
+    g_AltBacktickWndInfo.hWnd   = nullptr;
+    g_AltBacktickWndInfo.hOwner = nullptr;
+}
+
+int AltTabSettings::GetCheckForUpdatesIndex() const {
+    auto it = std::find(CheckForUpdatesOptions.begin(), CheckForUpdatesOptions.end(), this->CheckForUpdatesOpt);
+    if (it == CheckForUpdatesOptions.end()) {
+        return 0;
+    }
+    return (int)std::distance(CheckForUpdatesOptions.begin(), it);
+}
+
+/**
+ * \brief Add tooltips to AltTab settings dialog controls.
+ * 
+ * \param hDlg
+ */
 void AddTooltips(HWND hDlg) {
     g_hToolTip = CreateWindowEx(
         0,
@@ -337,6 +402,9 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , g_Settings.ProcessExclusions       );
 }
 
+/*!
+ * \brief Load settings the the settings file path
+ */
 void ATLoadSettings() {
     AT_LOG_TRACE;
     std::wstring iniFile = ATSettingsFilePath();
@@ -379,11 +447,22 @@ void ATLoadSettings() {
     g_AltBacktickWndInfo.hOwner = nullptr;
 }
 
+/*!
+ * \brief Save current senttings to the settings ini file path.
+ */
 void ATSaveSettings() {
     AT_LOG_TRACE;
     ATSettingsToFile(ATSettingsFilePath(true));
 }
 
+/*!
+ * \brief Get the text of the given dialog item. Actually this is the wrapper on GetDlgItemText
+ * 
+ * \param hDlg          Dialog handle
+ * \param nIDDlgItem    Dialog item
+ * 
+ * \return Dialog item text in std::wstring.
+ */
 std::wstring GetDlgItemTextEx(HWND hDlg, int nIDDlgItem) {
     int      textLength             = GetWindowTextLength(GetDlgItem(hDlg, nIDDlgItem));
     wchar_t* buffer                 = new wchar_t[textLength + 1];
@@ -403,7 +482,19 @@ void ATApplySettings(HWND hDlg) {
     AT_LOG_TRACE;
 
     // Read settings from UI
-    ATReadSettingsFromUI(hDlg, g_Settings);
+    AltTabSettings settings;
+    ATReadSettingsFromUI(hDlg, settings);
+    ATLogSettings(settings);
+
+    // Check if the settings are valid
+    bool isValid = false;
+    auto errorInfo = settings.IsValid(isValid);
+    if (!isValid) {
+        MessageBox(hDlg, errorInfo.second.c_str(), errorInfo.first.c_str(), MB_ICONERROR | MB_OK);
+        return;
+    }
+
+    g_Settings = settings;
 
     // Save settings
     ATSaveSettings();
@@ -479,7 +570,7 @@ bool AreSettingsModified(HWND hDlg) {
         settings.ShowColHeader            != g_Settings.ShowColHeader            ||
         settings.ShowColProcessName       != g_Settings.ShowColProcessName       ||
         settings.PromptTerminateAll       != g_Settings.PromptTerminateAll       ||
-        settings.CheckForUpdatesOpt       != g_Settings.CheckForUpdatesOpt          ||
+        settings.CheckForUpdatesOpt       != g_Settings.CheckForUpdatesOpt       ||
         settings.ProcessExclusionsEnabled != g_Settings.ProcessExclusionsEnabled ||
         settings.ProcessExclusions        != g_Settings.ProcessExclusions        ||
         false;
@@ -487,64 +578,51 @@ bool AreSettingsModified(HWND hDlg) {
     return modified;
 }
 
+/**
+ * \brief Available options of CheckForUpdates
+ */
 StringList AltTabSettings::CheckForUpdatesOptions = { L"Startup", L"Daily", L"Weekly", L"Never" };
 
-/*!
- * \brief Constructor
+/**
+ * \brief Check if the given settings are valid.
+ * 
+ * \return true if settings are valid false otherwise.
  */
-AltTabSettings::AltTabSettings() {
-    Reset();
-}
+std::pair<std::wstring, std::wstring> AltTabSettings::IsValid(bool& valid) {
+    const std::wregex pattern(L"^[^\\/:*?\"<>|]+.exe$");
 
-/*!
- * \brief Reset settings to default values.
- */
-void AltTabSettings::Reset() {
-    FontName                 = DEFAULT_FONT_NAME;
-    FontSize                 = DEFAULT_FONT_SIZE;
-    FontStyle                = DEFAULT_FONT_STYLE;
-    FontColor                = DEFAULT_FONT_COLOR;
-    BackgroundColor          = DEFAULT_BG_COLOR;
-    WidthPercentage          = DEFAULT_WIDTH;
-    HeightPercentage         = DEFAULT_HEIGHT;
-    FuzzyMatchPercent        = DEFAULT_FUZZYMATCHPERCENT;
-    Transparency             = DEFAULT_TRANSPARENCY;
-    SimilarProcessGroups     = DEFAULT_SIMILARPROCESSGROUPS;
-    CheckForUpdatesOpt       = DEFAULT_CHECKFORUPDATES;
-    PromptTerminateAll       = DEFAULT_PROMPTTERMINATEALL;
-    DisableAltTab            = false;
-    ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
-    ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
-    ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
-    ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
-
-    // Clear the previous ProcessGroupsList
-    g_Settings.ProcessGroupsList.clear();
-
-    auto vs = Split(g_Settings.SimilarProcessGroups, L"|");
-    for (auto& item : vs) {
-        auto processes = Split(item, L"/");
-        for (auto& processName : processes)
-            processName = ToLower(processName);
-        g_Settings.ProcessGroupsList.emplace_back(processes.begin(), processes.end());
+    // Check similar process groups
+    auto vs = Split(SimilarProcessGroups, L"|");
+    for (int i = 0; i < vs.size(); ++i) {
+        auto processes = Split(vs[i], L"/");
+        for (auto& processName : processes) {
+            if (!std::regex_match(processName, pattern)) {
+                valid = false;
+                return {
+                    L"Invalid Similar Process Groups",
+                    std::format(L"Similar Process Groups text contains invalid characters.\n"
+                                 "A file name should not contain any of the following characters: \\ / : * ? \" < > | and ends with .exe.\n"
+                                 "Found an invalid process name [{}] in group {}, please verify...", processName, i + 1)
+                };
+            }
+        }
     }
 
-    // Process ProcessExclusions
-    // Always split and convert to lower case, then it is easy while checking
-    g_Settings.ProcessExclusionList.clear();
-    g_Settings.ProcessExclusionList = Split(ToLower(g_Settings.ProcessExclusions), L"/");
-
-    // Initialize additional settings
-    g_AltBacktickWndInfo.hWnd   = nullptr;
-    g_AltBacktickWndInfo.hOwner = nullptr;
-}
-
-int AltTabSettings::GetCheckForUpdatesIndex() const {
-    auto it = std::find(CheckForUpdatesOptions.begin(), CheckForUpdatesOptions.end(), this->CheckForUpdatesOpt);
-    if (it == CheckForUpdatesOptions.end()) {
-        return 0;
+    // Check exclude process list
+    auto excludeProcessNames = Split(ProcessExclusions, L"/");
+    for (auto& processName : excludeProcessNames) {
+        if (!std::regex_match(processName, pattern)) {
+            valid = false;
+            return {
+                L"Invalid Process Exclusions",
+                std::format(L"Invalid process name [{}] in Process Exclusions, please verify..."
+                "A file name should not contain any of the following characters: \\ / : * ? \" < > | and ends with .exe.", processName)
+            };
+        }
     }
-    return (int)std::distance(CheckForUpdatesOptions.begin(), it);
+
+    valid = true;
+    return {};
 }
 
 /*!
@@ -572,7 +650,6 @@ void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings) {
  
     CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
     EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), settings.ProcessExclusionsEnabled);
-    EnableWindow      (GetDlgItem(hDlg, IDC_CHECK_SHOW_PREVIEW)     , FALSE);
  
     SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , settings.FuzzyMatchPercent, FALSE);
     SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));

@@ -51,6 +51,19 @@ def query_vcvarsall(version, arch="x64"):
 
     return result
 
+
+def build_solution(solution_file_path, build_config_platform, build_action):
+    if not os.path.exists(solution_file_path):
+        print('Solution file not found: %s' % solution_file_path)
+        return -1
+
+    build_action = build_action.lower()
+    command = 'devenv %s /%s \"%s\"' % (solution_file_path, build_action, build_config_platform)
+    print('Running Command : [%s]' % command)
+    os.system(command)
+    print('\n')
+
+
 def read_version_info():
     version_header = r'source/version.h'
     major, minor, patch, build = 0, 0, 0, 0  # Default values
@@ -80,9 +93,27 @@ def create_7z_archive(output_filename, files_to_pack):
             else:
                 print(f"Warning: File '{file_path}' not found. Skipping.")
 
-if __name__ == "__main__":
-    output_filename = 'AltTab_{}.7z'.format(read_version_info())
-    files_to_pack = [r'x64\ReleaseNoLogger\AltTab.exe', 'Help.mht', 'ReadMe.mht', 'ReleaseNotes.txt']
+
+def create_package(config_name):
+    output_filename = r'Releases\AltTab_{}_{}_x64.7z'.format(read_version_info(), config_name)
+    files_to_pack = [r'x64\%s\AltTab.exe' % config_name, 'Help.mht', 'ReadMe.mht', 'ReleaseNotes.txt']
 
     create_7z_archive(output_filename, files_to_pack)
     print(f"Package '{output_filename}' created successfully.")
+
+if __name__ == "__main__":
+    vc_env = query_vcvarsall(17.7)
+    os.environ["Path"] = vc_env["path"]
+
+    if False:
+        build_solution(r'AltTab.sln', 'Debug|x64', 'clean')
+        build_solution(r'AltTab.sln', 'Release|x64', 'clean')
+        build_solution(r'AltTab.sln', 'ReleaseNoLogger|x64', 'clean')
+
+        build_solution(r'AltTab.sln', 'Debug|x64', 'build')
+        build_solution(r'AltTab.sln', 'Release|x64', 'build')
+        build_solution(r'AltTab.sln', 'ReleaseNoLogger|x64', 'build')
+
+    create_package('Debug')
+    create_package('Release')
+    create_package('ReleaseNoLogger')

@@ -1,9 +1,9 @@
 MIME-Version: 1.0
-Content-Type: multipart/related; boundary="----=_NextPart_01DA4C77.FA397660"
+Content-Type: multipart/related; boundary="----=_NextPart_01DA520A.67BC1160"
 
 This document is a Single File Web Page, also known as a Web Archive file.  If you are seeing this message, your browser or editor doesn't support Web Archive files.  Please download a browser that supports Web Archive.
 
-------=_NextPart_01DA4C77.FA397660
+------=_NextPart_01DA520A.67BC1160
 Content-Location: file:///C:/EA821A05/ReadMe.htm
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/html; charset="windows-1252"
@@ -25,16 +25,16 @@ xmlns=3D"http://www.w3.org/TR/REC-html40">
  <o:DocumentProperties>
   <o:Author>Lokesh Govindu</o:Author>
   <o:LastAuthor>GOVINDU Lokesh</o:LastAuthor>
-  <o:Revision>31</o:Revision>
-  <o:TotalTime>102</o:TotalTime>
+  <o:Revision>32</o:Revision>
+  <o:TotalTime>110</o:TotalTime>
   <o:Created>2017-08-19T07:28:00Z</o:Created>
-  <o:LastSaved>2024-01-21T09:11:00Z</o:LastSaved>
+  <o:LastSaved>2024-01-28T11:22:00Z</o:LastSaved>
   <o:Pages>1</o:Pages>
-  <o:Words>304</o:Words>
-  <o:Characters>1736</o:Characters>
-  <o:Lines>14</o:Lines>
+  <o:Words>337</o:Words>
+  <o:Characters>1927</o:Characters>
+  <o:Lines>16</o:Lines>
   <o:Paragraphs>4</o:Paragraphs>
-  <o:CharactersWithSpaces>2036</o:CharactersWithSpaces>
+  <o:CharactersWithSpaces>2260</o:CharactersWithSpaces>
   <o:Version>16.00</o:Version>
  </o:DocumentProperties>
  <o:OfficeDocumentSettings>
@@ -45,6 +45,7 @@ xmlns=3D"http://www.w3.org/TR/REC-html40">
 <link rel=3DcolorSchemeMapping href=3D"ReadMe_files/colorschememapping.xml">
 <!--[if gte mso 9]><xml>
  <w:WordDocument>
+  <w:SpellingState>Clean</w:SpellingState>
   <w:TrackMoves>false</w:TrackMoves>
   <w:TrackFormatting/>
   <w:PunctuationKerning/>
@@ -562,8 +563,8 @@ cent 1"/>
   <w:LsdException Locked=3D"false" SemiHidden=3D"true" Name=3D"Revision"/>
   <w:LsdException Locked=3D"false" Priority=3D"34" QFormat=3D"true"
    Name=3D"List Paragraph"/>
-  <w:LsdException Locked=3D"false" Priority=3D"29" QFormat=3D"true" Name=3D"=
-Quote"/>
+  <w:LsdException Locked=3D"false" Priority=3D"29" QFormat=3D"true" Name=3D=
+"Quote"/>
   <w:LsdException Locked=3D"false" Priority=3D"30" QFormat=3D"true"
    Name=3D"Intense Quote"/>
   <w:LsdException Locked=3D"false" Priority=3D"66" Name=3D"Medium List 2 Ac=
@@ -1052,6 +1053,9 @@ span.PlainTextChar
 	font-family:Consolas;
 	mso-ascii-font-family:Consolas;
 	mso-hansi-font-family:Consolas;}
+span.SpellE
+	{mso-style-name:"";
+	mso-spl-e:yes;}
 .MsoChpDefault
 	{mso-style-type:export-only;
 	mso-default-props:yes;
@@ -1168,7 +1172,8 @@ amily:
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>o------------------------------------------------------------------------=
-------o<o:p></o:p></span></p>
+------<span
+class=3DSpellE>o</span><o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1182,7 +1187,7 @@ style=3D'mso-spacerun:yes'>                                                =
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>|
-ProductName: AltTab<span
+ProductName: <span class=3DSpellE>AltTab</span><span
 style=3D'mso-spacerun:yes'>                                                =
          
 </span>|<o:p></o:p></span></p>
@@ -1190,9 +1195,10 @@ style=3D'mso-spacerun:yes'>                                                =
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
-'>|
-ProductPage: <a href=3D"http://alttabalternative.sourceforge.net/">http://a=
-lttab.sourceforge.net/</a><span
+'>| <span
+class=3DSpellE>ProductPage</span>: <a
+href=3D"http://alttabalternative.sourceforge.net/">http://alttab.sourceforg=
+e.net/</a><span
 style=3D'mso-spacerun:yes'>                                  </span>|<o:p><=
 /o:p></span></p>
 
@@ -1208,7 +1214,8 @@ style=3D'mso-spacerun:yes'>                                                =
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>|<span
-style=3D'mso-spacerun:yes'>      </span>Author: Lokesh Govindu<span
+style=3D'mso-spacerun:yes'>      </span>Author: Lokesh <span class=3DSpellE=
+>Govindu</span><span
 style=3D'mso-spacerun:yes'>                                                 
 </span>|<o:p></o:p></span></p>
 
@@ -1226,7 +1233,8 @@ style=3D'mso-spacerun:yes'>                                         </span>=
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>|<span
-style=3D'mso-spacerun:yes'>    </span>HomePage: <a
+style=3D'mso-spacerun:yes'>    </span><span class=3DSpellE>HomePage</span>:=
+ <a
 href=3D"https://github.com/lokeshgovindu">https://github.com/lokeshgovindu<=
 /a><span
 style=3D'mso-spacerun:yes'>                                </span>|<o:p></o=
@@ -1244,7 +1252,8 @@ style=3D'mso-spacerun:yes'>                                                =
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>o------------------------------------------------------------------------=
-------o<o:p></o:p></span></p>
+------<span
+class=3DSpellE>o</span><o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1266,12 +1275,14 @@ amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>------------<o:p></o:p></span></p>
 
-<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
-amily:
-"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
-'>AltTab
-is an alternative application for native windows switcher.<o:p></o:p></span=
-></p>
+<p class=3DMsoPlainText><span class=3DSpellE><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'>AltTab</span></span><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'> is an alternative application for native windows
+switcher.<o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1282,8 +1293,10 @@ amily:
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>Use
-Alt+Tab / Alt+Shift+Tab to bring the main AltTab window, use<o:p></o:p></sp=
-an></p>
+<span class=3DSpellE>Alt+Tab</span> / <span class=3DSpellE>Alt+Shift+Tab</s=
+pan> to
+bring the main <span class=3DSpellE>AltTab</span> window, use<o:p></o:p></s=
+pan></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1296,8 +1309,9 @@ o:p></span></p>
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '><span
-style=3D'mso-spacerun:yes'>  </span>Shift+Tab key to select previous row<o:=
-p></o:p></span></p>
+style=3D'mso-spacerun:yes'>  </span><span class=3DSpellE>Shift+Tab</span> k=
+ey to
+select previous row<o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1323,14 +1337,19 @@ amily:
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>Just
-execute the AltTab and try the following:<o:p></o:p></span></p>
+execute the <span class=3DSpellE>AltTab</span> and try the following:<o:p><=
+/o:p></span></p>
 
-<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
-amily:
-"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
-'>Alt+Tab
-/ Alt+Shift+Tab / Alt+Backtick(~) / Alt+Shift+Backtick(~).<o:p></o:p></span=
-></p>
+<p class=3DMsoPlainText><span class=3DSpellE><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'>Alt+Tab</span></span><span lang=3DEN-US
+style=3D'font-size:11.0pt;font-family:"Lucida Console";mso-bidi-font-family=
+:"Courier New";
+mso-ansi-language:EN-US'> / <span class=3DSpellE>Alt+Shift+Tab</span> / <sp=
+an
+class=3DSpellE>Alt+Backtick</span>(~) / <span class=3DSpellE>Alt+Shift+Back=
+tick</span>(~).<o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1352,11 +1371,13 @@ amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>--------<o:p></o:p></span></p>
 
-<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
-amily:
-"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
-'>AltTab
-official site:<o:p></o:p></span></p>
+<p class=3DMsoPlainText><span class=3DSpellE><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'>AltTab</span></span><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'> official site:<o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1370,11 +1391,13 @@ amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '><o:p>&nbsp;</o:p></span></p>
 
-<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
-amily:
-"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
-'>AltTab
-wiki:<o:p></o:p></span></p>
+<p class=3DMsoPlainText><span class=3DSpellE><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'>AltTab</span></span><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'> wiki:<o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1388,11 +1411,13 @@ amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '><o:p>&nbsp;</o:p></span></p>
 
-<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
-amily:
-"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
-'>AltTab
-support:<o:p></o:p></span></p>
+<p class=3DMsoPlainText><span class=3DSpellE><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'>AltTab</span></span><span lang=3DEN-US style=3D'fo=
+nt-size:
+11.0pt;font-family:"Lucida Console";mso-bidi-font-family:"Courier New";
+mso-ansi-language:EN-US'> support:<o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'mso-ansi-language:EN-US=
 '><span
@@ -1427,7 +1452,35 @@ amily:
 amily:
 "Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
 '>-
-Not handled Alt+Ctrl+Tab<o:p></o:p></span></p>
+When running any application as an administrator (as elevated permissions),=
+ <o:p></o:p></span></p>
+
+<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
+amily:
+"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
+'><span
+style=3D'mso-spacerun:yes'>  </span><span class=3DSpellE>AltTab</span> hotk=
+eys does
+not work when the elevated applications are in focus.<o:p></o:p></span></p>
+
+<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
+amily:
+"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
+'><span
+style=3D'mso-spacerun:yes'>  </span>This can be addressed by also running <=
+span
+class=3DSpellE>AltTab</span> as an administrator.<o:p></o:p></span></p>
+
+<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
+amily:
+"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
+'><o:p>&nbsp;</o:p></span></p>
+
+<p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
+amily:
+"Lucida Console";mso-bidi-font-family:"Courier New";mso-ansi-language:EN-US=
+'>-
+Not handled <span class=3DSpellE>Alt+Ctrl+Tab</span><o:p></o:p></span></p>
 
 <p class=3DMsoPlainText><span lang=3DEN-US style=3D'font-size:11.0pt;font-f=
 amily:
@@ -1515,7 +1568,7 @@ sp;</o:p></span></p>
 
 </html>
 
-------=_NextPart_01DA4C77.FA397660
+------=_NextPart_01DA520A.67BC1160
 Content-Location: file:///C:/EA821A05/ReadMe_files/themedata.thmx
 Content-Transfer-Encoding: base64
 Content-Type: application/vnd.ms-officetheme
@@ -1577,7 +1630,7 @@ ZW1lMS54bWxQSwECLQAUAAYACAAAACEADdGQn7YAAAAbAQAAJwAAAAAAAAAAAAAAAADSCQAAdGhl
 bWUvdGhlbWUvX3JlbHMvdGhlbWVNYW5hZ2VyLnhtbC5yZWxzUEsFBgAAAAAFAAUAXQEAAM0KAAAA
 AA==
 
-------=_NextPart_01DA4C77.FA397660
+------=_NextPart_01DA520A.67BC1160
 Content-Location: file:///C:/EA821A05/ReadMe_files/colorschememapping.xml
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/xml
@@ -1587,7 +1640,7 @@ Content-Type: text/xml
  bg1=3D"lt1" tx1=3D"dk1" bg2=3D"lt2" tx2=3D"dk2" accent1=3D"accent1" accent=
 2=3D"accent2" accent3=3D"accent3" accent4=3D"accent4" accent5=3D"accent5" a=
 ccent6=3D"accent6" hlink=3D"hlink" folHlink=3D"folHlink"/>
-------=_NextPart_01DA4C77.FA397660
+------=_NextPart_01DA520A.67BC1160
 Content-Location: file:///C:/EA821A05/ReadMe_files/filelist.xml
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/xml; charset="utf-8"
@@ -1598,4 +1651,4 @@ Content-Type: text/xml; charset="utf-8"
  <o:File HRef=3D"colorschememapping.xml"/>
  <o:File HRef=3D"filelist.xml"/>
 </xml>
-------=_NextPart_01DA4C77.FA397660--
+------=_NextPart_01DA520A.67BC1160--

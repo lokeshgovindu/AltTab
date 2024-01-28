@@ -39,14 +39,14 @@
 	- [x] Group 1:  | Close          | Delete       |
 	- [x] Group 1:  | Terminate      | Shift+Delete |
 	- [x] Separator |----------------+--------------|
-	- [x] Group 2:  | &Close All     |			    |
-	- [x] Group 2:  | &Terminate All |			    |
+	- [x] Group 2:  | &Close All     |              |
+	- [x] Group 2:  | &Terminate All |              |
 	- [x] Separator |----------------+--------------|
-	- [x] Group 3:  | &Open Path     |			    |
-	- [x] Group 3:  | Copy &Path     |			    |
+	- [x] Group 3:  | &Open Path     |              |
+	- [x] Group 3:  | Copy &Path     |              |
 	- [x] Separator |----------------+--------------|
 	- [x] Group 4:  | About          | Shift+F1	    |
-	- [x] Group 4:  | Settings       | F2		    |
+	- [x] Group 4:  | Settings       | F2           |
 - [ ] Logger
 	- [x] Customize logging
 	- [x] Rollover beyoung the max size

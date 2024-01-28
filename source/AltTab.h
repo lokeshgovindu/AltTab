@@ -3,6 +3,11 @@
 #include "resource.h"
 #include <string>
 
+struct ToolTipInfo {
+    std::wstring  ToolTipText;
+    int           Duration;
+};
+
 LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wp, LPARAM lp);
 
 LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -49,4 +54,8 @@ std::wstring GetAppDirPath();
 
 void LogLastErrorInfo();
 
-void ShowCustomToolTip(LPCWSTR tooltipText);
+void CreateCustomToolTip();
+
+void ShowCustomToolTip(const std::wstring& tooltipText, int duration = 3000);
+
+void CALLBACK HideCustomToolTip(HWND hWnd = nullptr, UINT uMsg = 0, UINT_PTR idEvent = 0, DWORD dwTime = 0);

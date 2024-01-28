@@ -30,7 +30,7 @@ using StringList           = std::vector<std::wstring>;
 #define DEFAULT_PROCESS_EXCLUSIONS           L""
 
 /*!
- * AltTab application settings
+ * \brief AltTab application settings
  * 
  * SimilarProcessGroups is a string, ProcessList are separated by | and processes are separated by /. 
  * Example:
@@ -70,6 +70,7 @@ struct AltTabSettings {
     void Reset();
 
     int GetCheckForUpdatesIndex() const;
+    std::pair<std::wstring, std::wstring> IsValid(bool& valid);
 
     static StringList      CheckForUpdatesOptions;
 };

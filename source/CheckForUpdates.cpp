@@ -31,9 +31,14 @@ void        WriteCheckForUpdatesTS(const std::chrono::system_clock::time_point& 
 
 // Function to compare version strings
 int CompareVersions(const std::string& updateVersion, const std::string& currentVersion) {
-    // Implement your version comparison logic here
     // Return 1 if v1 > v2, -1 if v1 < v2, and 0 if v1 == v2
-    return updateVersion.compare(currentVersion);
+    auto uv = Split(updateVersion , ".");
+    auto cv = Split(currentVersion, ".");
+    for (int i = 0; i < uv.size(); ++i) {
+        if (std::stoi(uv[i]) > std::stoi(cv[i])) return 1;
+        if (std::stoi(uv[i]) < std::stoi(cv[i])) return -1;
+    }
+    return 0;
 }
 
 std::wstring GetLastErrorEx() {
@@ -103,6 +108,9 @@ void CheckForUpdates(bool quiteMode) {
     for (int i = 2; i < remainingLines.size(); i++) {
         latestChanges += remainingLines[i] + "\n";
     }
+
+    AT_LOG_INFO("Current Version: %s", currentVersion.c_str());
+    AT_LOG_INFO("Update Version : %s", updateVersion.c_str());
 
     if (CompareVersions(updateVersion, currentVersion) > 0) {
         AT_LOG_INFO("Update available!");

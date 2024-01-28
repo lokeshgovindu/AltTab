@@ -21,7 +21,17 @@
 #include "CheckForUpdates.h"
 #include <thread>
 
-#define MAX_LOADSTRING 100
+#pragma comment(lib, "comctl32.lib")
+
+#pragma comment(                                         \
+        linker,                                          \
+            "/manifestdependency:\"type='win32' "        \
+            "name='Microsoft.Windows.Common-Controls' "  \
+            "version='6.0.0.0' "                         \
+            "processorArchitecture='*' "                 \
+            "publicKeyToken='6595b64144ccf1df' "         \
+            "language='*' "                              \
+            "\"")
 
 // ----------------------------------------------------------------------------
 // Global Variables:
@@ -33,6 +43,8 @@ HWND        g_hFGWnd             = nullptr;              // Foreground window ha
 HWND        g_hMainWnd           = nullptr;              // AltTab main window handle
 HWND        g_hSetingsWnd        = nullptr;              // AltTab settings window handle
 HWND        g_hCustomToolTip     = nullptr;              // Custom tool tip
+UINT_PTR    g_TooltipTimerId;
+TOOLINFO    g_ToolInfo           = {};                   // Custom tool tip
 bool        g_IsAltTab           = false;                // Is Alt+Tab pressed
 bool        g_IsAltBacktick      = false;                // Is Alt+Backtick pressed
 DWORD       g_MainThreadID       = GetCurrentThreadId(); // Main thread ID
@@ -60,8 +72,6 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    //ShowCustomToolTip(L"Initializing AltTab...");
-
     // Make sure only one instance is running
     HANDLE hMutex = CreateMutex(nullptr, TRUE, AT_PRODUCT_NAMEW);
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
@@ -83,26 +93,27 @@ int APIENTRY wWinMain(
 
     g_hInstance = hInstance; // Store instance handle in our global variable
 
+    CreateCustomToolTip();
+
+    // ----------------------------------------------------------------------------
+    // Start writing your code from here...
+    // ----------------------------------------------------------------------------
+    ShowCustomToolTip(L"Initializing AltTab...", 1000);
+
     // Load settings from AltTabSettings.ini file
     ATLoadSettings();
 
     // Run At Startup
-    //RunAtStartup(true);
+    RunAtStartup(true);
 
     // System tray
     // Create a hidden window for tray icon handling
     g_hMainWnd = CreateMainWindow(hInstance);
 
-    // TODO: This is a temporary solution to fix for application focus issue.
-    // https://stackoverflow.com/questions/22422708/popup-window-unable-to-receive-focus-when-top-level-window-is-minimized
-    //g_hAltTabWnd = CreateAltTabWindow();
-    //DestoryAltTabWindow();
-
 	 HINSTANCE hinstUser32 = LoadLibrary(L"user32.dll");
     if (hinstUser32) {
        g_pfnIsHungAppWindow = (IsHungAppWindowFunc)GetProcAddress(hinstUser32, "IsHungAppWindow");
     }
-
 
     // Add the tray icon
     if (!AddNotificationIcon(g_hMainWnd)) {
@@ -298,7 +309,7 @@ INT_PTR CALLBACK ATAboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
         SetWindowLong(hDlg, GWL_EXSTYLE, GetWindowLong(hDlg, GWL_EXSTYLE) | WS_EX_APPWINDOW);
 
         std::wstring productInfo = std::format(L"<a href=\"{}\">{}</a> v{}", AT_PRODUCT_PAGE, AT_PRODUCT_NAMEW, AT_VERSION_TEXTW);
-        std::wstring copyright   = std::format(L"Copyright © {} <a href=\"{}\">{}</a>", GetCurrentYear(), AT_PRODUCT_PAGE, AT_AUTHOR_NAME);
+        std::wstring copyright   = std::format(L"Copyright © {} <a href=\"{}\">{}</a>", AT_PRODUCT_YEARW, AT_PRODUCT_PAGE, AT_AUTHOR_NAME);
 
         SetDlgItemTextW(hDlg, IDC_SYSLINK_ABOUT_PRODUCT_NAME, productInfo.c_str());
         SetDlgItemTextW(hDlg, IDC_SYSLINK_ABOUT_COPYRIGHT   , copyright.c_str());
@@ -703,12 +714,15 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
     }
     break;
 
-    case ID_TRAYCONTEXTMENU_CHECKFORUPDATES:
+    case ID_TRAYCONTEXTMENU_CHECKFORUPDATES: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_CHECKFORUPDATES");
         ShowCustomToolTip(L"Checking for updates...");
-        CheckForUpdates();
-        //DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_CHECK_FOR_UPDATES), nullptr, ATCheckForUpdatesDlgProc);
-        break;
+
+        // Had to run CheckForUpdates in a thread to display the tooltip... :-(
+        std::thread thr(CheckForUpdates, false); thr.detach();
+    }
+    //DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_CHECK_FOR_UPDATES), nullptr, ATCheckForUpdatesDlgProc);
+    break;
 
     case ID_TRAYCONTEXTMENU_RUNATSTARTUP: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
@@ -969,7 +983,7 @@ void ShowInWebBrowser(const std::wstring& fileName) {
         0,
         CLASS_NAME,
         filePath.wstring().c_str(),
-        WS_OVERLAPPEDWINDOW,
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -1030,22 +1044,22 @@ void LogLastErrorInfo() {
 }
 
 // Function to create and show a custom tooltip at the mouse location
-void ShowCustomToolTip(LPCWSTR tooltipText) {
+void CreateCustomToolTip() {
     AT_LOG_TRACE;
     // Create a tooltip window
-    g_hCustomToolTip = CreateWindowEx(
-        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,
-        L"STATIC",
-        tooltipText,
-        WS_POPUP | WS_BORDER | SS_CENTER | SS_CENTERIMAGE,
+    g_hCustomToolTip = CreateWindowExW(
+        WS_EX_TOPMOST,
+        TOOLTIPS_CLASSW,
+        nullptr,
+        TTS_NOPREFIX | TTS_ALWAYSTIP,
         0,
         0,
         0,
         0,
-        NULL,
-        NULL,
-        GetModuleHandle(NULL),
-        NULL);
+        nullptr,
+        nullptr,
+        g_hInstance,
+        nullptr);
 
     if (!g_hCustomToolTip) {
         AT_LOG_ERROR("Failed to create tooltip window.");
@@ -1053,18 +1067,72 @@ void ShowCustomToolTip(LPCWSTR tooltipText) {
         return;
     }
 
-    // Set the tooltip window style to be transparent
-    SetLayeredWindowAttributes(g_hCustomToolTip, RGB(0, 0, 0), 0, LWA_COLORKEY);
+	 // Initialize members of the toolinfo structure
+    g_ToolInfo.cbSize      = sizeof(TOOLINFO);
+    g_ToolInfo.uFlags      = TTF_TRACK;
+    g_ToolInfo.hwnd        = nullptr;
+    g_ToolInfo.hinst       = nullptr;
+    g_ToolInfo.uId         = 0;
+    g_ToolInfo.lpszText    = (LPWSTR)L"Creating tooltip...";
 
-    // Get the mouse position
-    POINT mousePos;
-    GetCursorPos(&mousePos);
+    // ToolTip control will cover the whole window
+    g_ToolInfo.rect.left   = 0;
+    g_ToolInfo.rect.top    = 0;
+    g_ToolInfo.rect.right  = 0;
+    g_ToolInfo.rect.bottom = 0;
 
-    // Set the tooltip window position
-    SetWindowPos(g_hCustomToolTip, HWND_TOPMOST, mousePos.x + 15, mousePos.y + 15, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
+	 // Send an add tool message to the tooltip control window
+    SendMessage(g_hCustomToolTip, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+}
 
-    // Show the tooltip
-    ShowWindow(g_hCustomToolTip, SW_SHOWNOACTIVATE);
+DWORD WINAPI ShowCustomToolTipThread(LPVOID pvParam) {
+    AT_LOG_TRACE;
+
+    // Get mouse coordinates
+    POINT pt;
+    GetCursorPos(&pt);
+
+    ToolTipInfo* tti            = (ToolTipInfo*)pvParam;
+    AT_LOG_INFO("tooltip: %s, duration: %d", WStrToUTF8(tti->ToolTipText).c_str(), tti->Duration);
+    int duration        = tti->Duration;
+    g_ToolInfo.lpszText = (LPWSTR)tti->ToolTipText.c_str();
+
+    SendMessage(g_hCustomToolTip, TTM_SETTOOLINFO  ,    0, (LPARAM)&g_ToolInfo);
+    SendMessage(g_hCustomToolTip, TTM_TRACKPOSITION,    0, (LPARAM)(DWORD)MAKELONG(pt.x + 12, pt.y + 12));
+    SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, true, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+    if (duration != -1) {
+        AT_LOG_INFO("Start TIMER_CUSTOM_TOOLTIP timer");
+        g_TooltipTimerId = SetTimer(nullptr, TIMER_CUSTOM_TOOLTIP, duration, HideCustomToolTip);
+    }
+    return 0;
+}
+
+void ShowCustomToolTip(const std::wstring& tooltipText, int duration /*= 3000*/) {
+    AT_LOG_TRACE;
+#if 0
+    // TODO: Still this is not working properly so going with alternative
+    ToolTipInfo* tti = new ToolTipInfo { tooltipText, duration };
+    //std::thread tooltipThread(ShowCustomToolTipThread, (LPVOID)&tti);
+    //tooltipThread.detach();
+    CreateThread(nullptr, 0, ShowCustomToolTipThread, (LPVOID)tti, 0, nullptr);
+#else
+    // Get mouse coordinates
+    POINT pt;
+    GetCursorPos(&pt);
+
+    g_ToolInfo.lpszText = (LPWSTR)(LPCWSTR)tooltipText.c_str();
+    SendMessage(g_hCustomToolTip, TTM_SETTOOLINFO,      0, (LPARAM)&g_ToolInfo);
+    SendMessage(g_hCustomToolTip, TTM_TRACKPOSITION,    0, (LPARAM)(DWORD)MAKELONG(pt.x + 12, pt.y + 12));
+    SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, true, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+   
+    g_TooltipTimerId = SetTimer(nullptr, TIMER_CUSTOM_TOOLTIP, duration, HideCustomToolTip);
+#endif // 0
+}
+
+void CALLBACK HideCustomToolTip(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+    AT_LOG_TRACE;
+    KillTimer(nullptr, g_TooltipTimerId);
+    SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, false, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
 }
 
 int GetCurrentYear() {

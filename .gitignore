@@ -3,3 +3,5 @@ bin/
 x64/
 AltTab.vcxproj.user
 AltTab.aps
+Releases/
+*.7z

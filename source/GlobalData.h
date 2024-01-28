@@ -1,4 +1,5 @@
 #pragma once
+#include <CommCtrl.h>
 
 // ----------------------------------------------------------------------------
 // Global declarations
@@ -7,6 +8,7 @@
 #define TIMER_CHECK_ALT_KEYUP       1
 #define TIMER_WINDOW_COUNT          2
 #define TIMER_CHECK_FOR_UPDATES     3
+#define TIMER_CUSTOM_TOOLTIP        4
 
 
 #ifdef _DEBUG
@@ -28,6 +30,8 @@ extern HWND                                 g_hStaticText;
 extern HWND                                 g_hListView;
 extern HWND                                 g_hToolTip;
 extern HWND                                 g_hCustomTooltip;
+extern TOOLINFO                             g_ToolInfo;
+extern UINT_PTR                             g_TooltipTimerId;
 extern HANDLE                               g_hAltTabThread;
 extern DWORD                                g_idThreadAttachTo;
 extern AltTabSettings                       g_Settings;

@@ -34,9 +34,9 @@ void CreateLogger() {
     // %d{%Y-%m-%d %H:%M:%S,%l}
     // %t - threadID
     log4cpp::PatternLayout* layout = new log4cpp::PatternLayout();
-    //layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] [ThreadID-%t] %m%n");
-    layout->setConversionPattern("%d{%Y-%m-%d %H:%M:%S,%l} [%-5p] %m%n");
-    //layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] %m%n");
+    //layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] [ThreadID-%5t] %m%n");   // Show thread-id
+    layout->setConversionPattern("%d{%Y-%m-%d %H:%M:%S,%l} [%-5p] %m%n");           // Show date
+    //layout->setConversionPattern("%d{%H:%M:%S,%l} [%-5p] %m%n");                  // Simple
 
     appender->setLayout(layout);
 
