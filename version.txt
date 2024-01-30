@@ -1,7 +1,7 @@
-24.2.0.0
-AltTab_24.2.0.0.7z
-24.2.0.0 new features and bug fixes
------------------------------------
+2024.2.0.0
+AltTab_2024.2.0.0.7z
+2024.2 new features and bug fixes
+---------------------------------
 Initial release of AltTab.
 
 + Alt+Tab, Alt+Shift+Tab, Alt+Backtick & Alt+Shift+Backtick
