@@ -100,6 +100,11 @@ int APIENTRY wWinMain(
     // ----------------------------------------------------------------------------
     ShowCustomToolTip(L"Initializing AltTab...", 1000);
 
+    HRESULT hr = OleInitialize(nullptr);
+    if (FAILED(hr)) {
+        AT_LOG_ERROR("Failed to initialize OLE.");
+    }
+
     // Load settings from AltTabSettings.ini file
     ATLoadSettings();
 
@@ -145,6 +150,8 @@ int APIENTRY wWinMain(
     }
 
     UnhookWindowsHookEx(g_KeyboardHook);
+
+    OleUninitialize();
 
     return (int) msg.wParam;
 }
@@ -202,14 +209,6 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         case ID_TRAYCONTEXTMENU_EXIT:
             AT_LOG_INFO("ID_TRAYCONTEXTMENU_EXIT");
             PostQuitMessage(0);
-            //int result = MessageBoxW(
-            //    hWnd,
-            //    L"Are you sure you want to exit?",
-            //    AT_PRODUCT_NAMEW,
-            //    MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2);
-            //if (result == IDOK) {
-            //    PostQuitMessage(0);
-            //}
             break;
         }
 
@@ -379,8 +378,6 @@ void ActivateWindow(HWND hTargetWnd) {
                 //return;
             }
 
-            //AT_LOG_INFO("Going for final try using AttachThreadInput...");
-            
             // It seems it is always better to use AttachThreadInput than 
             // SetForegroundWindow even the BringWindowToTop succeeded. So not
             // going to comment the below piece of code.
@@ -930,10 +927,8 @@ bool IsNativeATWDisplayed() {
 
 BOOL IsHungAppWindowEx(HWND hwnd) {
     if (g_pfnIsHungAppWindow && g_pfnIsHungAppWindow(hwnd)) {
-#if 1
         std::string title = GetWindowTitleExA(hwnd);
         AT_LOG_INFO("IsHungWnd: [%s]", title.c_str());
-#endif
         return (TRUE);
     }
 
@@ -960,12 +955,6 @@ LRESULT CALLBACK HelpWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 void ShowInWebBrowser(const std::wstring& fileName) {
-    HRESULT hr = OleInitialize(nullptr);
-    if (FAILED(hr)) {
-        AT_LOG_ERROR("Failed to initialize OLE.");
-        return;
-    }
-
     std::filesystem::path filePath = GetAppDirPath();
     filePath.append(fileName);
     const wchar_t CLASS_NAME[] = L"AltTab_HelperCls";
@@ -998,11 +987,9 @@ void ShowInWebBrowser(const std::wstring& fileName) {
     RECT rc = {};
     GetClientRect(hHelpWnd, &rc);
 
-    auto webBrowser = new WebBrowser(hHelpWnd);
+    WebBrowser* webBrowser(new WebBrowser(hHelpWnd));
     webBrowser->SetRect(rc);
     webBrowser->Navigate(filePath);
-
-    OleUninitialize();
 }
 
 void ShowHelpWindow() {
@@ -1092,7 +1079,7 @@ DWORD WINAPI ShowCustomToolTipThread(LPVOID pvParam) {
     POINT pt;
     GetCursorPos(&pt);
 
-    ToolTipInfo* tti            = (ToolTipInfo*)pvParam;
+    ToolTipInfo* tti    = (ToolTipInfo*)pvParam;
     AT_LOG_INFO("tooltip: %s, duration: %d", WStrToUTF8(tti->ToolTipText).c_str(), tti->Duration);
     int duration        = tti->Duration;
     g_ToolInfo.lpszText = (LPWSTR)tti->ToolTipText.c_str();

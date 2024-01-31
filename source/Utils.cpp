@@ -171,7 +171,7 @@ double GetRatioW(const wchar_t* s1, const wchar_t* s2) {
 }
 
 struct ScopedTimer {
-    ScopedTimer() {
+    ScopedTimer() : m_Elapsed(0.) {
         QueryPerformanceCounter(&m_tStartTime);
     }
 

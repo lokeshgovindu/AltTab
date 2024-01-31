@@ -1,9 +1,9 @@
 MIME-Version: 1.0
-Content-Type: multipart/related; boundary="----=_NextPart_01DA53BD.E874BD20"
+Content-Type: multipart/related; boundary="----=_NextPart_01DA53BE.DBC2A870"
 
 This document is a Single File Web Page, also known as a Web Archive file.  If you are seeing this message, your browser or editor doesn't support Web Archive files.  Please download a browser that supports Web Archive.
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help.htm
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/html; charset="windows-1252"
@@ -36,16 +36,16 @@ w\:* {behavior:url(#default#VML);}
   <o:Author>Lokesh Govindu</o:Author>
   <o:Keywords>AltTabAlternative;Help</o:Keywords>
   <o:LastAuthor>GOVINDU Lokesh</o:LastAuthor>
-  <o:Revision>197</o:Revision>
-  <o:TotalTime>1210</o:TotalTime>
+  <o:Revision>198</o:Revision>
+  <o:TotalTime>1213</o:TotalTime>
   <o:Created>2016-10-23T06:30:00Z</o:Created>
-  <o:LastSaved>2024-01-30T15:20:00Z</o:LastSaved>
+  <o:LastSaved>2024-01-30T15:26:00Z</o:LastSaved>
   <o:Pages>4</o:Pages>
-  <o:Words>631</o:Words>
-  <o:Characters>3601</o:Characters>
-  <o:Lines>30</o:Lines>
+  <o:Words>652</o:Words>
+  <o:Characters>3722</o:Characters>
+  <o:Lines>31</o:Lines>
   <o:Paragraphs>8</o:Paragraphs>
-  <o:CharactersWithSpaces>4224</o:CharactersWithSpaces>
+  <o:CharactersWithSpaces>4366</o:CharactersWithSpaces>
   <o:Version>16.00</o:Version>
  </o:DocumentProperties>
  <o:OfficeDocumentSettings>
@@ -59,8 +59,6 @@ target=3D"Help_files/props015.xml">
 <!--[if gte mso 9]><xml>
  <w:WordDocument>
   <w:View>Print</w:View>
-  <w:SpellingState>Clean</w:SpellingState>
-  <w:GrammarState>Clean</w:GrammarState>
   <w:TrackMoves>false</w:TrackMoves>
   <w:TrackFormatting/>
   <w:PunctuationKerning/>
@@ -1397,12 +1395,6 @@ span.SubtitleChar
 	mso-themecolor:text1;
 	mso-themetint:165;
 	letter-spacing:.75pt;}
-span.SpellE
-	{mso-style-name:"";
-	mso-spl-e:yes;}
-span.GramE
-	{mso-style-name:"";
-	mso-gram-e:yes;}
 .MsoChpDefault
 	{mso-style-type:export-only;
 	mso-default-props:yes;
@@ -1773,28 +1765,23 @@ word-wrap:break-word'>
 
 <div class=3DWordSection1>
 
-<p class=3DMsoTitle align=3Dcenter style=3D'text-align:center'><span class=
-=3DSpellE><b><span
-lang=3DEN-US style=3D'mso-ansi-language:EN-US'>AltTab</span></b></span><b><=
-span
-lang=3DEN-US style=3D'mso-ansi-language:EN-US'><o:p></o:p></span></b></p>
+<p class=3DMsoTitle align=3Dcenter style=3D'text-align:center'><b><span lan=
+g=3DEN-US
+style=3D'mso-ansi-language:EN-US'>AltTab<o:p></o:p></span></b></p>
 
 <p class=3DMsoNormal><span lang=3DEN-US style=3D'mso-ansi-language:EN-US'><=
 o:p>&nbsp;</o:p></span></p>
 
-<p class=3DMsoNoSpacing><span class=3DSpellE><span lang=3DEN-US style=3D'ms=
-o-ansi-language:
-EN-US'>AltTab</span></span><span lang=3DEN-US style=3D'mso-ansi-language:EN=
--US'> is
-a small application created in C++ and Win32, is an alternative for windows
-native task switcher (<span class=3DSpellE>Alt+Tab</span> / <span class=3DS=
-pellE>Alt+Shift+Tab</span>).<o:p></o:p></span></p>
+<p class=3DMsoNoSpacing><span lang=3DEN-US style=3D'mso-ansi-language:EN-US=
+'>AltTab
+is a small application created in C++ and Win32, is an alternative for wind=
+ows
+native task switcher (Alt+Tab / Alt+Shift+Tab).<o:p></o:p></span></p>
 
 <p class=3DMsoNoSpacing><span lang=3DEN-US style=3D'mso-ansi-language:EN-US=
-'>Use <span
-class=3DSpellE>Alt+Tab</span> / <span class=3DSpellE>Alt+Shift+Tab</span> t=
-o bring
-the main <span class=3DSpellE>AltTab</span> window.<o:p></o:p></span></p>
+'>Use
+Alt+Tab / Alt+Shift+Tab to bring the main AltTab window.<o:p></o:p></span><=
+/p>
 
 <p class=3DMsoNoSpacing><span lang=3DEN-US style=3D'mso-ansi-language:EN-US=
 '><o:p>&nbsp;</o:p></span></p>
@@ -1886,8 +1873,7 @@ style=3D'font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
 e:EN-US'>Provided
 configuration/setting INI file &amp; UI to change font style, background co=
 lor,
-window transparency, <span class=3DGramE>width</span> and height.<o:p></o:p=
-></span></p>
+window transparency, width and height.<o:p></o:p></span></p>
 
 <p class=3DMsoListParagraphCxSpLast style=3D'text-indent:-18.0pt;mso-list:l=
 1 level1 lfo2'><![if !supportLists]><span
@@ -1906,19 +1892,18 @@ the same application using Alt+(Accent/Backtick)<o:p></o:p></span></h1>
 
 <p class=3DMsoNormal><span style=3D'mso-no-proof:yes'><!--[if gte vml 1]><v=
 :shape
- id=3D"Picture_x0020_2" o:spid=3D"_x0000_i1029" type=3D"#_x0000_t75" alt=3D=
-"A blue line on a black background&#10;&#10;Description automatically gener=
-ated"
+ id=3D"_x0000_i1029" type=3D"#_x0000_t75" alt=3D"A blue line on a black bac=
+kground&#10;&#10;Description automatically generated"
  style=3D'width:540pt;height:98.25pt;visibility:visible;mso-wrap-style:squa=
 re'>
  <v:imagedata src=3D"Help_files/image009.png" o:title=3D"A blue line on a b=
 lack background&#10;&#10;Description automatically generated"/>
 </v:shape><![endif]--><![if !vml]><img border=3D0 width=3D720 height=3D131
-src=3D"Help_files/image005.jpg"
+src=3D"Help_files/image001.jpg"
 alt=3D"A blue line on a black background&#10;&#10;Description automatically=
  generated"
-v:shapes=3D"Picture_x0020_2"><![endif]></span><span lang=3DEN-US style=3D'm=
-so-ansi-language:
+v:shapes=3D"_x0000_i1029"><![endif]></span><span lang=3DEN-US style=3D'mso-=
+ansi-language:
 EN-US'><o:p></o:p></span></p>
 
 <p class=3DMsoNoSpacing><a name=3D"_Hlk482821087"></a><a name=3D"_Hlk482821=
@@ -1956,7 +1941,7 @@ re'>
  <v:imagedata src=3D"Help_files/image010.png" o:title=3D"A blue line on a b=
 lack background&#10;&#10;Description automatically generated"/>
 </v:shape><![endif]--><![if !vml]><img border=3D0 width=3D720 height=3D158
-src=3D"Help_files/image007.jpg"
+src=3D"Help_files/image002.jpg"
 alt=3D"A blue line on a black background&#10;&#10;Description automatically=
  generated"
 v:shapes=3D"Picture_x0020_3"><![endif]></span><span lang=3DEN-US style=3D'm=
@@ -1991,8 +1976,8 @@ pt;
 emecolor:
   accent3;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:5'><a name=3D"_Hlk48126734=
-3"><b><span
-  style=3D'color:black;mso-color-alt:windowtext'>Key</span></b></a></p>
+3"><span
+  style=3D'color:black;mso-color-alt:windowtext'>Key</span></a></p>
   </td>
   <span style=3D'mso-bookmark:_Hlk481267343'></span>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border:solid #A5A5A5 1=
@@ -2026,8 +2011,8 @@ olor:
   <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:68'><span style=3D'mso-boo=
 kmark:
   _Hlk481267343'><b><span style=3D'color:black;mso-color-alt:windowtext'>Ho=
-me / <span
-  class=3DSpellE>PageUp</span></span><o:p></o:p></b></span></p>
+me /
+  PageUp</span><o:p></o:p></b></span></p>
   </td>
   <span style=3D'mso-bookmark:_Hlk481267343'></span>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
@@ -2063,7 +2048,7 @@ kmark:
   accent3;mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:4'><span style=3D'mso-book=
 mark:_Hlk481267343'><b>End
-  / <span class=3DSpellE>PageDown</span><o:p></o:p></b></span></p>
+  / PageDown<o:p></o:p></b></span></p>
   </td>
   <span style=3D'mso-bookmark:_Hlk481267343'></span>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
@@ -2192,8 +2177,8 @@ lack;
   mso-border-top-themetint:153;mso-border-alt:solid #C9C9C9 .5pt;mso-border=
 -themecolor:
   accent3;mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
-  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:4'><span class=3DSpellE><b=
->AlphaNumeric</b></span><b><o:p></o:p></b></p>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:4'><b>AlphaNumeric<o:p></o=
+:p></b></p>
   </td>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
 -left:
@@ -2226,8 +2211,7 @@ olor:
   accent3;mso-background-themetint:51;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:68'><b><span style=3D'colo=
 r:black;
-  mso-color-alt:windowtext'>F1 (<span class=3DSpellE>FunctionKey</span>)</s=
-pan><o:p></o:p></b></p>
+  mso-color-alt:windowtext'>F1 (FunctionKey)</span><o:p></o:p></b></p>
   </td>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
 -left:
@@ -2258,8 +2242,8 @@ lack;
   mso-border-top-themetint:153;mso-border-alt:solid #C9C9C9 .5pt;mso-border=
 -themecolor:
   accent3;mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
-  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:4'><b>F2 (<span class=3DSp=
-ellE>FunctionKey</span>)<o:p></o:p></b></p>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:4'><b>F2 (FunctionKey)<o:p=
+></o:p></b></p>
   </td>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
 -left:
@@ -2397,16 +2381,127 @@ ently
 
 <p class=3DMsoNormal><span lang=3DEN-US style=3D'mso-ansi-language:EN-US;ms=
 o-no-proof:
-yes'><!--[if gte vml 1]><v:shape id=3D"Picture_x0020_10" o:spid=3D"_x0000_i=
-1027"
+yes'><!--[if gte vml 1]><v:shape id=3D"Picture_x0020_2" o:spid=3D"_x0000_i1=
+027"
  type=3D"#_x0000_t75" style=3D'width:156pt;height:152.25pt;visibility:visib=
 le;
  mso-wrap-style:square'>
- <v:imagedata src=3D"Help_files/image012.png" o:title=3D""/>
+ <v:imagedata src=3D"Help_files/image003.png" o:title=3D""/>
 </v:shape><![endif]--><![if !vml]><img border=3D0 width=3D208 height=3D203
-src=3D"Help_files/image012.png" v:shapes=3D"Picture_x0020_10"><![endif]></s=
-pan><span
+src=3D"Help_files/image003.png" v:shapes=3D"Picture_x0020_2"><![endif]></sp=
+an><span
 lang=3DEN-US style=3D'mso-ansi-language:EN-US'><o:p></o:p></span></p>
+
+<table class=3DMsoTable15Grid4Accent3 border=3D1 cellspacing=3D0 cellpaddin=
+g=3D0
+ width=3D718 style=3D'width:538.4pt;border-collapse:collapse;border:none;
+ mso-border-alt:solid #C9C9C9 .5pt;mso-border-themecolor:accent3;mso-border=
+-themetint:
+ 153;mso-yfti-tbllook:1184;mso-padding-alt:0cm 5.4pt 0cm 5.4pt'>
+ <tr style=3D'mso-yfti-irow:-1;mso-yfti-firstrow:yes;mso-yfti-lastfirstrow:=
+yes'>
+  <td width=3D189 valign=3Dtop style=3D'width:141.5pt;border:solid #A5A5A5 =
+1.0pt;
+  mso-border-themecolor:accent3;border-right:none;mso-border-top-alt:solid =
+#A5A5A5 .5pt;
+  mso-border-top-themecolor:accent3;mso-border-left-alt:solid #A5A5A5 .5pt;
+  mso-border-left-themecolor:accent3;mso-border-bottom-alt:solid #A5A5A5 .5=
+pt;
+  mso-border-bottom-themecolor:accent3;background:#A5A5A5;mso-background-th=
+emecolor:
+  accent3;padding:0cm 5.4pt 0cm 5.4pt'>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:5'><b><span style=3D'color=
+:white;
+  mso-themecolor:background1'>Menu<o:p></o:p></span></b></p>
+  </td>
+  <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border:solid #A5A5A5 1=
+.0pt;
+  mso-border-themecolor:accent3;border-left:none;mso-border-top-alt:solid #=
+A5A5A5 .5pt;
+  mso-border-top-themecolor:accent3;mso-border-bottom-alt:solid #A5A5A5 .5p=
+t;
+  mso-border-bottom-themecolor:accent3;mso-border-right-alt:solid #A5A5A5 .=
+5pt;
+  mso-border-right-themecolor:accent3;background:#A5A5A5;mso-background-the=
+mecolor:
+  accent3;padding:0cm 5.4pt 0cm 5.4pt'>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:1'><b><span style=3D'color=
+:white;
+  mso-themecolor:background1'>Description<o:p></o:p></span></b></p>
+  </td>
+ </tr>
+ <tr style=3D'mso-yfti-irow:0'>
+  <td width=3D189 valign=3Dtop style=3D'width:141.5pt;border:solid #C9C9C9 =
+1.0pt;
+  mso-border-themecolor:accent3;mso-border-themetint:153;border-top:none;
+  mso-border-top-alt:solid #C9C9C9 .5pt;mso-border-top-themecolor:accent3;
+  mso-border-top-themetint:153;mso-border-alt:solid #C9C9C9 .5pt;mso-border=
+-themecolor:
+  accent3;mso-border-themetint:153;background:#EDEDED;mso-background-themec=
+olor:
+  accent3;mso-background-themetint:51;padding:0cm 5.4pt 0cm 5.4pt'>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:68'><b><u><span style=3D'c=
+olor:black;
+  mso-color-alt:windowtext'>O</span></u><span style=3D'color:black;mso-colo=
+r-alt:
+  windowtext'>pen Path</span><o:p></o:p></b></p>
+  </td>
+  <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
+-left:
+  none;border-bottom:solid #C9C9C9 1.0pt;mso-border-bottom-themecolor:accen=
+t3;
+  mso-border-bottom-themetint:153;border-right:solid #C9C9C9 1.0pt;mso-bord=
+er-right-themecolor:
+  accent3;mso-border-right-themetint:153;mso-border-top-alt:solid #C9C9C9 .=
+5pt;
+  mso-border-top-themecolor:accent3;mso-border-top-themetint:153;mso-border=
+-left-alt:
+  solid #C9C9C9 .5pt;mso-border-left-themecolor:accent3;mso-border-left-the=
+metint:
+  153;mso-border-alt:solid #C9C9C9 .5pt;mso-border-themecolor:accent3;
+  mso-border-themetint:153;background:#EDEDED;mso-background-themecolor:acc=
+ent3;
+  mso-background-themetint:51;padding:0cm 5.4pt 0cm 5.4pt'>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:64'><span style=3D'color:b=
+lack;
+  mso-color-alt:windowtext'>Open the file explorer of the selected process =
+file
+  path</span><o:p></o:p></p>
+  </td>
+ </tr>
+ <tr style=3D'mso-yfti-irow:1;mso-yfti-lastrow:yes'>
+  <td width=3D189 valign=3Dtop style=3D'width:141.5pt;border:solid #C9C9C9 =
+1.0pt;
+  mso-border-themecolor:accent3;mso-border-themetint:153;border-top:none;
+  mso-border-top-alt:solid #C9C9C9 .5pt;mso-border-top-themecolor:accent3;
+  mso-border-top-themetint:153;mso-border-alt:solid #C9C9C9 .5pt;mso-border=
+-themecolor:
+  accent3;mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
+  <p class=3DMsoNoSpacing style=3D'mso-yfti-cnfc:4'><b>Copy <u>P</u>ath<o:p=
+></o:p></b></p>
+  </td>
+  <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border-top:none;border=
+-left:
+  none;border-bottom:solid #C9C9C9 1.0pt;mso-border-bottom-themecolor:accen=
+t3;
+  mso-border-bottom-themetint:153;border-right:solid #C9C9C9 1.0pt;mso-bord=
+er-right-themecolor:
+  accent3;mso-border-right-themetint:153;mso-border-top-alt:solid #C9C9C9 .=
+5pt;
+  mso-border-top-themecolor:accent3;mso-border-top-themetint:153;mso-border=
+-left-alt:
+  solid #C9C9C9 .5pt;mso-border-left-themecolor:accent3;mso-border-left-the=
+metint:
+  153;mso-border-alt:solid #C9C9C9 .5pt;mso-border-themecolor:accent3;
+  mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
+  <p class=3DMsoNoSpacing>Copy the selected process path to clipboard<o:p><=
+/o:p></p>
+  </td>
+ </tr>
+</table>
+
+<p class=3DMsoNormal><span lang=3DEN-US style=3D'mso-ansi-language:EN-US'><=
+o:p>&nbsp;</o:p></span></p>
 
 <h1><span lang=3DEN-US style=3D'mso-ansi-language:EN-US'>Tray Menu<o:p></o:=
 p></span></h1>
@@ -2472,8 +2567,7 @@ emecolor:
   accent3;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal;mso-yf=
 ti-cnfc:
-  5'><b><span style=3D'color:black;mso-color-alt:windowtext'>Setting</span>=
-</b></p>
+  5'><span style=3D'color:black;mso-color-alt:windowtext'>Setting</span></p>
   </td>
   <td width=3D529 valign=3Dtop style=3D'width:14.0cm;border:solid #A5A5A5 1=
 .0pt;
@@ -2525,10 +2619,9 @@ ent3;
   mso-background-themetint:51;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal;mso-yf=
 ti-cnfc:
-  64'><span class=3DSpellE><span style=3D'color:black;mso-color-alt:windowt=
-ext'>AltTab</span></span><span
-  style=3D'color:black;mso-color-alt:windowtext'> settings file path.</span=
-></p>
+  64'><span style=3D'color:black;mso-color-alt:windowtext'>AltTab settings =
+file
+  path.</span></p>
   </td>
  </tr>
  <tr style=3D'mso-yfti-irow:1'>
@@ -2558,22 +2651,21 @@ metint:
   153;mso-border-alt:solid #C9C9C9 .5pt;mso-border-themecolor:accent3;
   mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'>Fuzzy=
- name
-  match percent between search string and process name/title.</p>
+ name match
+  percent between search string and process name/title.</p>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'><span
   style=3D'mso-spacerun:yes'>    </span>100 % means exact match (uses native
   string search algorithm)</p>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'><span
   style=3D'mso-spacerun:yes'>      </span>80 % would cause &quot;files&quot=
 ; to
-  match &quot;<span class=3DSpellE>filas</span>&quot; and so on ...</p>
+  match &quot;filas&quot; and so on ...</p>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'><b
   style=3D'mso-bidi-font-weight:normal'>Reference: </b><a
   href=3D"https://en.wikipedia.org/wiki/Approximate_string_matching">Approx=
 imate
   string matching</a>, <a
-  href=3D"https://en.wikipedia.org/wiki/Levenshtein_distance"><span class=
-=3DSpellE>Levenshtein</span>
+  href=3D"https://en.wikipedia.org/wiki/Levenshtein_distance">Levenshtein
   distance</a></p>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'><b
   style=3D'mso-bidi-font-weight:normal'><span style=3D'color:red'>Note:</sp=
@@ -2582,8 +2674,7 @@ an></b><span
   <p class=3DMsoNoSpacing>If <span style=3D'color:red'>string match percent=
  is NOT
   100%,</span> search uses approximate string-matching algorithm, this is
-  significantly slow <span class=3DGramE>compare</span> to native string se=
-arch.</p>
+  significantly slow compare to native string search.</p>
   </td>
  </tr>
  <tr style=3D'mso-yfti-irow:2'>
@@ -2702,14 +2793,10 @@ mum
   height w.r.t percentage of screen height.</span></p>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal;mso-yf=
 ti-cnfc:
-  64'><span style=3D'color:black;mso-color-alt:windowtext'>If there are <sp=
-an
-  class=3DGramE>more</span> number of processes which exceeds the <span
-  class=3DSpellE>WindowHeight</span> to accommodate all the tasks, then res=
-ize
-  the window to <span class=3DSpellE>WindowHeight</span> according scroll b=
-ar
-  presence.</span></p>
+  64'><span style=3D'color:black;mso-color-alt:windowtext'>If there are more
+  number of processes which exceeds the WindowHeight to accommodate all the
+  tasks, then resize the window to WindowHeight according scroll bar presen=
+ce.</span></p>
   </td>
  </tr>
  <tr style=3D'mso-yfti-irow:5'>
@@ -2775,8 +2862,8 @@ n:right;
     <td width=3D370 valign=3Dtop style=3D'width:277.35pt;padding:0cm 5.4pt =
 0cm 5.4pt'>
     <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'>For=
- every 24
-    hours since the last run</p>
+ every
+    24 hours since the last run</p>
     </td>
    </tr>
    <tr style=3D'mso-yfti-irow:2'>
@@ -2878,9 +2965,7 @@ metint:
   mso-border-themetint:153;padding:0cm 5.4pt 0cm 5.4pt'>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'>Show =
 column
-  header for <span class=3DSpellE>listview</span> in <span class=3DSpellE>A=
-ltTab</span>
-  window.</p>
+  header for listview in AltTab window.</p>
   </td>
  </tr>
  <tr style=3D'mso-yfti-irow:8'>
@@ -2919,9 +3004,7 @@ ent3;
 ti-cnfc:
   64'><span style=3D'color:black;mso-color-alt:windowtext'>Add the process =
 name
-  column to <span class=3DSpellE>listview</span> in <span class=3DSpellE>Al=
-tTab</span>
-  window.</span></p>
+  column to listview in AltTab window.</span></p>
   </td>
  </tr>
  <tr style=3D'mso-yfti-irow:9'>
@@ -2978,8 +3061,9 @@ pan
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   </span></span></span><![endif]>A file/process name can't contain any of t=
 he
-  following characters: <b style=3D'mso-bidi-font-weight:normal'>\ <span
-  class=3DGramE>/ :</span> * ? &quot; &lt; &gt; |</b></p>
+  following characters: <b style=3D'mso-bidi-font-weight:normal'>\ / : * ? =
+&quot;
+  &lt; &gt; |</b></p>
   <p class=3DMsoNormal style=3D'margin-bottom:0cm;line-height:normal'><b
   style=3D'mso-bidi-font-weight:normal'>Defaults</b>: <span style=3D'color:=
 #7030A0'>notepad.exe/notepad++.exe</span>|<span
@@ -3026,7 +3110,7 @@ ent3;
 ti-cnfc:
   64'><span style=3D'color:black;mso-color-alt:windowtext'>Given process na=
 mes
-  are excluded in <span class=3DSpellE>AltTab</span> window</span></p>
+  are excluded in AltTab window</span></p>
   </td>
  </tr>
  <tr style=3D'mso-yfti-irow:11;mso-yfti-lastrow:yes'>
@@ -3070,7 +3154,7 @@ o:p>&nbsp;</o:p></span></p>
 
 </html>
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/item0014.xml
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/xml
@@ -3080,7 +3164,7 @@ s:b=3D"http://schemas.openxmlformats.org/officeDocument/2006/bibliography" =
 xmlns=3D"http://schemas.openxmlformats.org/officeDocument/2006/bibliography=
 " SelectedStyle=3D"\APASixthEditionOfficeOnline.xsl" StyleName=3D"APA" Vers=
 ion=3D"6"></b:Sources>
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/props015.xml
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/xml
@@ -3090,7 +3174,7 @@ Content-Type: text/xml
 s:ds=3D"http://schemas.openxmlformats.org/officeDocument/2006/customXml"><d=
 s:schemaRefs><ds:schemaRef ds:uri=3D"http://schemas.openxmlformats.org/offi=
 ceDocument/2006/bibliography"/></ds:schemaRefs></ds:datastoreItem>
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/themedata.thmx
 Content-Transfer-Encoding: base64
 Content-Type: application/vnd.ms-officetheme
@@ -3152,7 +3236,7 @@ dGhlbWUxLnhtbFBLAQItABQABgAIAAAAIQAN0ZCftgAAABsBAAAnAAAAAAAAAAAAAAAAANQJAAB0
 aGVtZS90aGVtZS9fcmVscy90aGVtZU1hbmFnZXIueG1sLnJlbHNQSwUGAAAAAAUABQBdAQAAzwoA
 AAAA
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/colorschememapping.xml
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/xml
@@ -3162,8 +3246,8 @@ Content-Type: text/xml
  bg1=3D"lt1" tx1=3D"dk1" bg2=3D"lt2" tx2=3D"dk2" accent1=3D"accent1" accent=
 2=3D"accent2" accent3=3D"accent3" accent4=3D"accent4" accent5=3D"accent5" a=
 ccent6=3D"accent6" hlink=3D"hlink" folHlink=3D"folHlink"/>
-------=_NextPart_01DA53BD.E874BD20
-Content-Location: file:///C:/2675A1F0/Help_files/image005.jpg
+------=_NextPart_01DA53BE.DBC2A870
+Content-Location: file:///C:/2675A1F0/Help_files/image001.jpg
 Content-Transfer-Encoding: base64
 Content-Type: image/jpeg
 
@@ -3485,8 +3569,8 @@ b/Gj+w9P/wCff/x9v8aKKAD+w9P/AOff/wAfb/Gj+w9P/wCff/x9v8aKKAD+w9P/AOff/wAfb/Gj
 f/x9v8aKKAD+w9P/AOff/wAfb/Gj+w9P/wCff/x9v8aKKAD+w9P/AOff/wAfb/GnRaNYxzI6QYZW
 BB3t1/OiigD/2Q==
 
-------=_NextPart_01DA53BD.E874BD20
-Content-Location: file:///C:/2675A1F0/Help_files/image007.jpg
+------=_NextPart_01DA53BE.DBC2A870
+Content-Location: file:///C:/2675A1F0/Help_files/image002.jpg
 Content-Transfer-Encoding: base64
 Content-Type: image/jpeg
 
@@ -3844,7 +3928,86 @@ o/4UAWL7xffagYZZ44mvIUCLcEscYGAwQnYrY7gVhMzOxZiWZjkknJJrV/4Ru7/56Qf99H/Cj/hG
 j/hG7v8A56Qf99H/AAoAyansf+Qhbf8AXVf5ir//AAjd3/z0g/76P+FS2vh+6iu4ZGkhwkiscMex
 +lAH/9k=
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
+Content-Location: file:///C:/2675A1F0/Help_files/image003.png
+Content-Transfer-Encoding: base64
+Content-Type: image/png
+
+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
+
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/image006.gif
 Content-Transfer-Encoding: base64
 Content-Type: image/gif
@@ -6151,7 +6314,7 @@ UV+d9dZdfx12r1SPnfbabb8d94Jnz5333n3/Hfisdg+e+OKNP7714ZFfnvnmnR9X+eeln55f+uov
 5Mr67LXfnnutsO8e/PDFlz768c0/H/3Ty0+f/fbdz/r79+Wfn37d468f//z113Cr/v3/H4ABFOAA
 CVhAAx4QgQlU4AIZ2EAHPhCCEZTgBClYQQteEIMZ1CAGAwIAOw==
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/image009.png
 Content-Transfer-Encoding: base64
 Content-Type: image/png
@@ -6587,7 +6750,7 @@ PV4FLySABJAAEtjGBPAklW3cudi065ZANj6IuYGFFsTccMZSkAASQAJrIYAWxLXQw3uRQN4SMDhJ
 JW/rihVDAkgACSABJIAEkAASyA0B6oOYm5IyKgUtiBnhwsRIAAkggU0hgBbETcGOhSKBHBD4/wGK
 grh8T4j3OQAAAABJRU5ErkJggk==
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/image010.png
 Content-Transfer-Encoding: base64
 Content-Type: image/png
@@ -7064,86 +7227,7 @@ x6mPV8ENCSABJIAEkAASQAJIYB8RMFgoe5uth0czRyNRLhZDdbhNkng6EkACSAAJIAEkgAT2ioDp
 Mjd71SCsFwkgASSABJAAEkACSGBvCdAYxL1tAdaOBJAAEkACSAAJIAEkUFAE/n+6EFmoQCIVUwAA
 AABJRU5ErkJggk==
 
-------=_NextPart_01DA53BD.E874BD20
-Content-Location: file:///C:/2675A1F0/Help_files/image012.png
-Content-Transfer-Encoding: base64
-Content-Type: image/png
-
-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
-AAAASUVORK5CYIJ=
-
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/image004.png
 Content-Transfer-Encoding: base64
 Content-Type: image/png
@@ -7237,7 +7321,7 @@ wfhwNgx/lR48GWHny8EA0zmgJTBFrNPtoSXodPizOc+clbIZiV41QgCMqVEwGmFKufuYRkAAI9Mg
 oEpMYB+TBiu0CSCArARCmCHgZSWzfmjdSQSQlToZ9nxOizUm3wjo3S0E/g/KFOSIyxdK4AAAAABJ
 RU5ErkJggk==
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/image003.png
 Content-Transfer-Encoding: base64
 Content-Type: image/png
@@ -7695,7 +7779,7 @@ IEJt2vFoNgiAAAgUgQBEqAi9AB9AAARAoE0JQITatOPRbBAAARAoAgGIUBF6AT6AAAiAQJsSgAi1
 acej2SAAAiBQBAIQoSL0AnwAARAAgTYlABFq045Hs0EABECgCAR4Koci+AEfQAAEQAAE2pDA/w9w
 SKX9wjAZfAAAAABJRU5ErkJggk==
 
-------=_NextPart_01DA53BD.E874BD20
+------=_NextPart_01DA53BE.DBC2A870
 Content-Location: file:///C:/2675A1F0/Help_files/filelist.xml
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/xml; charset="utf-8"
@@ -7708,12 +7792,12 @@ Content-Type: text/xml; charset="utf-8"
  <o:File HRef=3D"colorschememapping.xml"/>
  <o:File HRef=3D"image006.gif"/>
  <o:File HRef=3D"image009.png"/>
- <o:File HRef=3D"image005.jpg"/>
+ <o:File HRef=3D"image001.jpg"/>
  <o:File HRef=3D"image010.png"/>
- <o:File HRef=3D"image007.jpg"/>
- <o:File HRef=3D"image012.png"/>
+ <o:File HRef=3D"image002.jpg"/>
+ <o:File HRef=3D"image003.png"/>
  <o:File HRef=3D"image004.png"/>
  <o:File HRef=3D"image003.png"/>
  <o:File HRef=3D"filelist.xml"/>
 </xml>
-------=_NextPart_01DA53BD.E874BD20--
+------=_NextPart_01DA53BE.DBC2A870--

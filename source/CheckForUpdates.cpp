@@ -15,6 +15,7 @@
 #include <fstream>
 #include "AltTabSettings.h"
 #include <filesystem>
+#include <regex>
 
 #pragma comment(lib, "wininet.lib")
 
@@ -66,12 +67,8 @@ std::wstring GetLastErrorEx() {
 // Function to check for updates from a URL using Windows API
 void CheckForUpdates(bool quiteMode) {
     AT_LOG_TRACE;
-    //{
-    //    DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_CHECK_FOR_UPDATES), nullptr, ATCheckForUpdatesDlgProc);
-    //    return;
-    //}
     // Initialize WinINet
-    HINTERNET hInternet = InternetOpen(L"Sample WinINet", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    HINTERNET hInternet = InternetOpen(L"Sample WinINet", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0);
     if (!hInternet) {
         AT_LOG_ERROR("Error initializing WinINet");
         GetLastErrorEx();
@@ -79,9 +76,13 @@ void CheckForUpdates(bool quiteMode) {
     }
 
     // Open a URL
-    HINTERNET hConnect = InternetOpenUrl(hInternet, AT_UPDATE_FILE_URL, NULL, 0, INTERNET_FLAG_RELOAD, 0);
+    HINTERNET hConnect = InternetOpenUrl(hInternet, AT_UPDATE_FILE_URL, nullptr, 0, INTERNET_FLAG_RELOAD, 0);
     if (!hConnect) {
         AT_LOG_ERROR("Error opening URL with WinINet");
+        if (!quiteMode) {
+            std::wstring info = std::format(L"Failed to download file [{}], please check again.", AT_UPDATE_FILE_URL);
+            MessageBox(nullptr, info.c_str(), AT_PRODUCT_NAMEW, MB_OK | MB_ICONERROR);
+        }
         GetLastErrorEx();
         InternetCloseHandle(hInternet);
         return;
@@ -111,6 +112,23 @@ void CheckForUpdates(bool quiteMode) {
 
     AT_LOG_INFO("Current Version: %s", currentVersion.c_str());
     AT_LOG_INFO("Update Version : %s", updateVersion.c_str());
+
+    auto IsValidVersion = [](const std::string& version) {
+        // Define a regex pattern for a version number
+        std::regex versionPattern(R"(\b\d+\.\d+\.\d+\.\d+\b)");
+
+        // Use std::regex_match to check if the entire string matches the pattern
+        return std::regex_match(version, versionPattern);
+    };
+
+    if (!IsValidVersion(updateVersion)) {
+        AT_LOG_ERROR("Invalid update version: %s, please check again!", updateVersion.c_str());
+        if (!quiteMode) {
+            std::string info = std::format("Invalid update version: {}", updateVersion);
+            MessageBoxA(nullptr, info.c_str(), AT_PRODUCT_NAMEA, MB_OK | MB_ICONERROR);
+        }
+        return;
+    }
 
     if (CompareVersions(updateVersion, currentVersion) > 0) {
         AT_LOG_INFO("Update available!");

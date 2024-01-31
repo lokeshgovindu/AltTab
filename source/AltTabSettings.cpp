@@ -644,11 +644,11 @@ void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings) {
     SendMessage(hEditBox1, WM_SETFONT     , (WPARAM)hFont    , TRUE);
     SendMessage(hEditBox2, WM_SETFONT     , (WPARAM)hFont    , TRUE);
  
-    CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , settings.PromptTerminateAll ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , settings.ShowColHeader      ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , settings.ShowColProcessName ? BST_CHECKED : BST_UNCHECKED);
- 
+    CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , settings.PromptTerminateAll       ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , settings.ShowColHeader            ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , settings.ShowColProcessName       ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
+
     EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), settings.ProcessExclusionsEnabled);
  
     SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , settings.FuzzyMatchPercent, FALSE);
