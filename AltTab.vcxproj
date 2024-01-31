@@ -239,6 +239,7 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="source\AltTab.rc" />
+    <ResourceCompile Include="source\Version.rc" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="ReleaseNotes.txt" />

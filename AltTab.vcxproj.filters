@@ -103,6 +103,9 @@
     <ResourceCompile Include="source\AltTab.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="source\Version.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="Help.mht">
