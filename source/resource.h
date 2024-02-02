@@ -41,6 +41,9 @@
 #define IDC_EDIT_CFU_CHANGES            1028
 #define IDC_STATIC_CFU_CURRENT_VERSION  1029
 #define IDC_STATIC_CFU_UPDATE_VERSION   1030
+#define IDC_STATIC_1                    1031
+#define IDC_STATIC_2                    1032
+#define IDC_STATIC_3                    1033
 #define ID_TRAYCONTEXTMENU_ABOUTALTTAB  32771
 #define ID_TRAYCONTEXTMENU_README       32772
 #define ID_TRAYCONTEXTMENU_HELP         32773
@@ -73,7 +76,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        134
 #define _APS_NEXT_COMMAND_VALUE         32796
-#define _APS_NEXT_CONTROL_VALUE         1031
+#define _APS_NEXT_CONTROL_VALUE         1034
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

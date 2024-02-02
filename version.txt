@@ -1,5 +1,5 @@
 2024.2.0.2
-AltTab_2024.2.0.2.7z
+AltTab_2024.2.0.2_x64.7z
 2024.2 new features and bug fixes
 ---------------------------------
 Initial release of AltTab.

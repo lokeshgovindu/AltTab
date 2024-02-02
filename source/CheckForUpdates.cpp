@@ -181,8 +181,12 @@ INT_PTR CALLBACK ATCheckForUpdatesDlgProc(HWND hDlg, UINT message, WPARAM wParam
                                   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                   DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console");
  
-        HWND hEditBox1 = GetDlgItem(hDlg, IDC_EDIT_CFU_CHANGES);
-        SendMessage(hEditBox1, WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(GetDlgItem(hDlg, IDC_EDIT_CFU_CHANGES          ), WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(GetDlgItem(hDlg, IDC_STATIC_CFU_CURRENT_VERSION), WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(GetDlgItem(hDlg, IDC_STATIC_CFU_UPDATE_VERSION ), WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(GetDlgItem(hDlg, IDC_STATIC_1                  ), WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(GetDlgItem(hDlg, IDC_STATIC_2                  ), WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessage(GetDlgItem(hDlg, IDC_STATIC_3                  ), WM_SETFONT, (WPARAM)hFont, TRUE);
 
         SetDlgItemTextA(hDlg, IDC_STATIC_CFU_CURRENT_VERSION, g_UpdatesInfo.CurrentVersion.c_str());
         SetDlgItemTextA(hDlg, IDC_STATIC_CFU_UPDATE_VERSION , g_UpdatesInfo.UpdateVersion.c_str());
