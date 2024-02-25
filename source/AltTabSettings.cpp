@@ -116,7 +116,11 @@ void AddTooltips(HWND hDlg) {
     toolInfo.hwnd     = hDlg;
     toolInfo.uFlags   = TTF_SUBCLASS;
 
+    // Enable multiple lines
     SendMessage(g_hToolTip, TTM_SETMAXTIPWIDTH, 0, MAXINT);
+
+    // TODO: Not working
+    SendMessage(g_hToolTip, TTM_SETTIPBKCOLOR, RGB(255, 255, 0), 0);
 
     ADD_TOOLTIP(IDC_EDIT_SETTINGS_FILEPATH       , TT_SETTINGS_FILEPATH       );
     ADD_TOOLTIP(IDC_EDIT_SIMILAR_PROCESS_GROUPS  , TT_SIMILAR_PROCESS_GROUPS  );

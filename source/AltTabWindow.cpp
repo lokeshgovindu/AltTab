@@ -32,6 +32,7 @@ HWND           g_hStaticText       = nullptr;
 HWND           g_hListView         = nullptr;
 HFONT          g_hFont             = nullptr;
 int            g_SelectedIndex     = 0;
+int            g_MouseHoverIndex   = -1;
 HANDLE         g_hAltTabThread     = nullptr;
 std::wstring   g_SearchString;
 const int      COL_ICON_WIDTH      = 36;
@@ -102,10 +103,16 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     wchar_t windowTitle[bufferSize];
                     GetWindowTextW(hOwner, windowTitle, bufferSize);
 
+                    // We get the actual window title for the process but windows adds "(Not Responding)"
+                    // to the processes which are hung. So, appending "(Not Responding)" to the hung process manually.
+                    std::wstring title = windowTitle;
+                    if (IsHungAppWindow(hWnd)) {
+                        title += L" (Not Responding)";
+                    }
                     AltTabWindowData item = { hWnd,
                                               hOwner,
                                               GetWindowIcon(hOwner),
-                                              windowTitle,
+                                              title,
                                               filePath.filename().wstring(),
                                               filePath.wstring(),
                                               processId };
@@ -278,6 +285,12 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     int nextInd     = (selectedInd + N + direction) % N;
 
     ATWListViewSelectItem(nextInd);
+
+    TRACKMOUSEEVENT tme;
+    tme.cbSize    = sizeof(tme);
+    tme.dwFlags   = TME_LEAVE;
+    tme.hwndTrack = hAltTabWnd;
+    TrackMouseEvent(&tme);
 
     return hAltTabWnd;
 #endif // 0
@@ -694,6 +707,19 @@ LRESULT CALLBACK ListViewSubclassProc(
         //AT_LOG_INFO("Not handled: wParam: %0#4x, iswprint: %d", wParam, iswprint((wint_t)wParam));
         break;
 
+    case WM_NOTIFY: {
+        LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
+        if (nmhdr->code == LVN_ITEMCHANGED) {
+            LPNMLISTVIEW pnmListView = reinterpret_cast<LPNMLISTVIEW>(nmhdr);
+
+            if ((pnmListView->uChanged & LVIF_STATE) && (pnmListView->uNewState & LVIS_SELECTED)) {
+                // The mouse has moved over the item
+                // You can show a message or perform any action here
+                MessageBox(hListView, L"Mouse moved over item!", L"ListView Notification", MB_OK | MB_ICONINFORMATION);
+            }
+        }
+    } break;
+
     //case WM_KILLFOCUS:
     //    AT_LOG_INFO("WM_KILLFOCUS");
 
@@ -945,8 +971,34 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         AT_LOG_INFO("WM_KILLFOCUS");
         break;
 
-    //case WM_NOTIFY:
-    //    AT_LOG_INFO("WM_NOTIFY");
+    case WM_NOTIFY: {
+        LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
+        if (nmhdr->code == LVN_HOTTRACK) {
+            LPNMLISTVIEW pnmListView = reinterpret_cast<LPNMLISTVIEW>(nmhdr);
+
+            // Check if the mouse is hovering over an item
+            if (pnmListView->iItem >= 0 && (pnmListView->iItem != g_MouseHoverIndex || !g_TooltipVisible)) {
+                g_MouseHoverIndex = pnmListView->iItem;
+
+                HideCustomToolTip();
+
+                // The mouse is over an item
+                std::wstring info = std::format(
+                    L"Path: {}\nPID: {}",
+                    g_AltTabWindows[g_MouseHoverIndex].FullPath,
+                    g_AltTabWindows[g_MouseHoverIndex].PID);
+                ShowCustomToolTip(info);
+            }
+        }
+    } break;
+
+    case WM_MOUSEHOVER:
+        AT_LOG_INFO("WM_MOUSEHOVER");
+        break;
+
+    //case WM_MOUSELEAVE:
+    //    AT_LOG_INFO("WM_MOUSELEAVE");
+    //    HideCustomToolTip();
     //    break;
 
     case WM_TIMER: {

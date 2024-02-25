@@ -33,9 +33,6 @@
     <ClCompile Include="source\fuzzywuzzy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\WebBrowser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\CheckForUpdates.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -87,9 +84,6 @@
     <ClInclude Include="source\fuzzywuzzy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\WebBrowser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\CheckForUpdates.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -108,13 +102,13 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="Help.mht">
-      <Filter>Resource Files</Filter>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="ReadMe.mht">
-      <Filter>Resource Files</Filter>
-    </CopyFileToFolders>
     <CopyFileToFolders Include="ReleaseNotes.txt">
+      <Filter>Resource Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="ReadMe.txt">
+      <Filter>Resource Files</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="AltTab.chm">
       <Filter>Resource Files</Filter>
     </CopyFileToFolders>
   </ItemGroup>

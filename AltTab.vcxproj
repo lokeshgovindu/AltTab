@@ -206,16 +206,16 @@
     <ClCompile Include="source\fuzzywuzzy.cpp" />
     <ClCompile Include="source\Logger.cpp" />
     <ClCompile Include="source\Utils.cpp" />
-    <ClCompile Include="source\WebBrowser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
     <None Include=".gitignore" />
+    <CopyFileToFolders Include="AltTab.chm">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="AltTabSettings.ini" />
-    <CopyFileToFolders Include="Help.mht" />
     <None Include="log4cpp-config.properties" />
     <None Include="README.md" />
-    <CopyFileToFolders Include="ReadMe.mht" />
     <None Include="Tasks.md" />
   </ItemGroup>
   <ItemGroup>
@@ -232,7 +232,6 @@
     <ClInclude Include="source\Tooltips.h" />
     <ClInclude Include="source\Utils.h" />
     <ClInclude Include="source\version.h" />
-    <ClInclude Include="source\WebBrowser.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="source\AltTab.ico" />
@@ -245,6 +244,7 @@
     <CopyFileToFolders Include="ReleaseNotes.txt" />
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="ReadMe.txt" />
     <Text Include="version.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -16,7 +16,6 @@
 #include <process.h>
 #include <CommCtrl.h>
 #include "GlobalData.h"
-#include "WebBrowser.h"
 #include <filesystem>
 #include "CheckForUpdates.h"
 #include <thread>
@@ -44,6 +43,7 @@ HWND        g_hMainWnd           = nullptr;              // AltTab main window h
 HWND        g_hSetingsWnd        = nullptr;              // AltTab settings window handle
 HWND        g_hCustomToolTip     = nullptr;              // Custom tool tip
 UINT_PTR    g_TooltipTimerId;
+bool        g_TooltipVisible     = false;                // Is tooltip visible or not
 TOOLINFO    g_ToolInfo           = {};                   // Custom tool tip
 bool        g_IsAltTab           = false;                // Is Alt+Tab pressed
 bool        g_IsAltBacktick      = false;                // Is Alt+Backtick pressed
@@ -100,11 +100,6 @@ int APIENTRY wWinMain(
     // ----------------------------------------------------------------------------
     ShowCustomToolTip(L"Initializing AltTab...", 1000);
 
-    HRESULT hr = OleInitialize(nullptr);
-    if (FAILED(hr)) {
-        AT_LOG_ERROR("Failed to initialize OLE.");
-    }
-
     // Load settings from AltTabSettings.ini file
     ATLoadSettings();
 
@@ -150,8 +145,6 @@ int APIENTRY wWinMain(
     }
 
     UnhookWindowsHookEx(g_KeyboardHook);
-
-    OleUninitialize();
 
     return (int) msg.wParam;
 }
@@ -417,6 +410,9 @@ void DestoryAltTabWindow(bool activate) {
     //    CloseHandle(g_hAltTabThread);
     //    g_hAltTabThread = nullptr;
     //}
+
+    // Hide custom tooltip
+    HideCustomToolTip();
 
     // Kill timer
     KillTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP);
@@ -954,54 +950,38 @@ LRESULT CALLBACK HelpWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-void ShowInWebBrowser(const std::wstring& fileName) {
+/*!
+ * Open the file with the default associated program
+ * 
+ * \param fileName   File name
+ */
+void ShellExecuteEx(const std::wstring& fileName) {
     std::filesystem::path filePath = GetAppDirPath();
     filePath.append(fileName);
-    const wchar_t CLASS_NAME[] = L"AltTab_HelperCls";
 
-    WNDCLASS wc      = {};
-    wc.hInstance     = g_hInstance;
-    wc.lpfnWndProc   = HelpWndProc;
-    wc.hIcon         = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_ALTTAB));
-    wc.lpszClassName = CLASS_NAME;
+    // Use ShellExecute to open the file with the default associated program
+    HINSTANCE hInstance = ShellExecuteW(nullptr, L"open", filePath.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
-    // Register the window class, return value is ignored from second time onwards
-    RegisterClass(&wc);
-
-    HWND hHelpWnd = CreateWindowExW(
-        0,
-        CLASS_NAME,
-        filePath.wstring().c_str(),
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        nullptr,
-        nullptr,
-        g_hInstance,
-        nullptr);
-
-    ShowWindow(hHelpWnd, SW_SHOWNORMAL);
-
-    RECT rc = {};
-    GetClientRect(hHelpWnd, &rc);
-
-    WebBrowser* webBrowser(new WebBrowser(hHelpWnd));
-    webBrowser->SetRect(rc);
-    webBrowser->Navigate(filePath);
+    if ((INT_PTR)hInstance > 32) {
+        // ShellExecute returns a value greater than 32 if successful
+        AT_LOG_INFO("File opened successfully!");
+    } else {
+        // Otherwise, it indicates an error
+        AT_LOG_ERROR("Failed to open file!");
+        LogLastErrorInfo();
+    }
 }
 
 void ShowHelpWindow() {
-    ShowInWebBrowser(L"Help.mht");
+    ShellExecuteEx(L"AltTab.chm");
 }
 
 void ShowReadMeWindow() {
-    ShowInWebBrowser(L"ReadMe.mht");
+    ShellExecuteEx(L"ReadMe.txt");
 }
 
 void ShowReleaseNotesWindow() {
-    ShowInWebBrowser(L"ReleaseNotes.txt");
+    ShellExecuteEx(L"ReleaseNotes.txt");
 }
 
 std::wstring GetAppDirPath() {
@@ -1070,6 +1050,11 @@ void CreateCustomToolTip() {
 
 	 // Send an add tool message to the tooltip control window
     SendMessage(g_hCustomToolTip, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+
+    // Enable multiple lines
+    SendMessage(g_hCustomToolTip, TTM_SETMAXTIPWIDTH, 0, MAXINT);
+
+    SendMessage(g_hCustomToolTip, TTM_SETTIPBKCOLOR, RGB(255, 255, 0), 0);
 }
 
 DWORD WINAPI ShowCustomToolTipThread(LPVOID pvParam) {
@@ -1103,16 +1088,29 @@ void ShowCustomToolTip(const std::wstring& tooltipText, int duration /*= 3000*/)
     //tooltipThread.detach();
     CreateThread(nullptr, 0, ShowCustomToolTipThread, (LPVOID)tti, 0, nullptr);
 #else
-    // Get mouse coordinates
-    POINT pt;
-    GetCursorPos(&pt);
+    if (!g_TooltipVisible) {
+       // Get mouse coordinates
+       POINT pt;
+       GetCursorPos(&pt);
 
-    g_ToolInfo.lpszText = (LPWSTR)(LPCWSTR)tooltipText.c_str();
-    SendMessage(g_hCustomToolTip, TTM_SETTOOLINFO,      0, (LPARAM)&g_ToolInfo);
-    SendMessage(g_hCustomToolTip, TTM_TRACKPOSITION,    0, (LPARAM)(DWORD)MAKELONG(pt.x + 12, pt.y + 12));
-    SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, true, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+       g_ToolInfo.lpszText = (LPWSTR)(LPCWSTR)tooltipText.c_str();
+       SendMessage(g_hCustomToolTip, TTM_SETTOOLINFO,      0, (LPARAM)&g_ToolInfo);
+       SendMessage(g_hCustomToolTip, TTM_TRACKPOSITION,    0, (LPARAM)(DWORD)MAKELONG(pt.x + 12, pt.y + 12));
+       SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, true, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
    
-    g_TooltipTimerId = SetTimer(nullptr, TIMER_CUSTOM_TOOLTIP, duration, HideCustomToolTip);
+       g_TooltipTimerId = SetTimer(nullptr, TIMER_CUSTOM_TOOLTIP, duration, HideCustomToolTip);
+       g_TooltipVisible = true;
+    }
+    //// Get mouse coordinates
+    //POINT pt;
+    //GetCursorPos(&pt);
+
+    //g_ToolInfo.lpszText = (LPWSTR)(LPCWSTR)tooltipText.c_str();
+    //SendMessage(g_hCustomToolTip, TTM_SETTOOLINFO,      0, (LPARAM)&g_ToolInfo);
+    //SendMessage(g_hCustomToolTip, TTM_TRACKPOSITION,    0, (LPARAM)(DWORD)MAKELONG(pt.x + 12, pt.y + 12));
+    //SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, true, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+   
+    //g_TooltipTimerId = SetTimer(nullptr, TIMER_CUSTOM_TOOLTIP, duration, HideCustomToolTip);
 #endif // 0
 }
 
@@ -1120,6 +1118,7 @@ void CALLBACK HideCustomToolTip(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dw
     AT_LOG_TRACE;
     KillTimer(nullptr, g_TooltipTimerId);
     SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, false, (LPARAM)(LPTOOLINFO)&g_ToolInfo);
+    g_TooltipVisible = false;
 }
 
 int GetCurrentYear() {

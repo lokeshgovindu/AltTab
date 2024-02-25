@@ -32,6 +32,7 @@ extern HWND                                 g_hToolTip;
 extern HWND                                 g_hCustomTooltip;
 extern TOOLINFO                             g_ToolInfo;
 extern UINT_PTR                             g_TooltipTimerId;
+extern bool                                 g_TooltipVisible;
 extern HANDLE                               g_hAltTabThread;
 extern DWORD                                g_idThreadAttachTo;
 extern AltTabSettings                       g_Settings;
@@ -45,5 +46,6 @@ extern AltTabWindowData                     g_AltBacktickWndInfo; // TODO
 extern bool                                 g_IsAltTab;
 extern bool                                 g_IsAltBacktick;
 extern int                                  g_SelectedIndex;
+extern int                                  g_MouseHoverIndex;
 extern DWORD                                g_MainThreadID;
 extern std::wstring                         g_SearchString;

@@ -15,6 +15,13 @@ Known Issues
 - Available @ https://sourceforge.net/p/alttab/tickets/
 
 
+2024.3 new features and bug fixes
+---------------------------------
++ Show process path and ID in tooltip on mouse hover on item in the list view.
++ Removed Help.mht and added Help.chm instead.
+- Append "(Not Responding)" to title for the hung process.
+
+
 2024.2 new features and bug fixes
 ---------------------------------
 Initial release of AltTab.
