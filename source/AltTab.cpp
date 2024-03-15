@@ -585,53 +585,6 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         }
     } // if (isAltPressed && !isCtrlPressed)
 
-#if 0
-    if (g_hAltTabWnd && (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU)) {
-        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-            // Alt key released, destroy your window
-            AT_LOG_INFO("--------- Alt key released! ---------");
-            DestoryAltTabWindow();
-        }
-        //return TRUE;
-    }
-#endif
-
-#if 0
-    // Check for Alt key released event
-    if (g_hAltTabWnd && (vkCode == VK_MENU || vkCode == VK_LMENU || vkCode == VK_RMENU))
-    {
-        if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-            // Alt key released, destroy your window
-            AT_LOG_INFO("--------- Alt key released! ---------");
-            Sleep(100);
-            if (g_hAltTabWnd) {
-                int selectedInd = ATWListViewGetSelectedItem();
-                ShowWindow(g_hAltTabWnd, SW_HIDE);
-                Sleep(10);
-                HWND hWnd = nullptr;
-                if (selectedInd != -1) {
-                    hWnd = g_AltTabWindows[selectedInd].hWnd;
-                    AT_LOG_INFO("hWnd = %#x", hWnd);
-                }
-                DestoryAltTabWindow();
-
-                // Simulate Alt keyup event using keybd_event
-                //keybd_event(VK_MENU, 0, 0, 0);
-                //Sleep(10);
-                AT_LOG_INFO("hWnd = %#x", hWnd);
-                if (hWnd) {
-                    ActivateWindow(hWnd);
-                }
-                //keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
-                //keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
-                //PostMessageW(hWnd, WM_KEYUP, VK_LMENU, 0);
-                //Sleep(10);
-                //return TRUE;
-            }
-        }
-    }
-#endif
-
     //AT_LOG_INFO("CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);");
     return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
 }
@@ -936,20 +889,6 @@ BOOL IsHungAppWindowEx(HWND hwnd) {
     return (dwErr == 0 || dwErr == 1460);
 }
 
-LRESULT CALLBACK HelpWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_CREATE: {
-    }
-
-    break;
-
-    default:
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
-    }
-
-    return 0;
-}
-
 /*!
  * Open the file with the default associated program
  * 
@@ -1101,6 +1040,7 @@ void ShowCustomToolTip(const std::wstring& tooltipText, int duration /*= 3000*/)
        g_TooltipTimerId = SetTimer(nullptr, TIMER_CUSTOM_TOOLTIP, duration, HideCustomToolTip);
        g_TooltipVisible = true;
     }
+
     //// Get mouse coordinates
     //POINT pt;
     //GetCursorPos(&pt);

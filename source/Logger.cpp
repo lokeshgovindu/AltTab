@@ -23,7 +23,7 @@ void CreateLogger() {
     EnableConsoleWindow();
     log4cpp::Appender* appender = new log4cpp::OstreamAppender("console", &std::cout);
 #else
-    std::filesystem::path logFilePath = ATSettingsDirPath();
+    std::filesystem::path logFilePath = ATLocalAppDataDirPath();
     logFilePath.append("AltTab.log");
 
     log4cpp::Appender* appender = new log4cpp::RollingFileAppender("FileAppender", logFilePath.string(), 5 * 1024 * 1024, 5);

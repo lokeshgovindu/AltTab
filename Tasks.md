@@ -53,7 +53,14 @@
 	- [x] Log to file
 	- [x] Log to console
 	- [ ] Use external .properties file for log4cpp
-- [ ] Custom tooltip
+- [x] Custom tooltip.
+- [ ] Add support for multiple monitors.
+- [x] Use chm files instead of mht.
+- [x] Option to disable Search String in AltTab settings UI.
+- [ ] Handle Alt+Ctrl+Tab to display the AltTab window.
+- [x] Save settings to application directory instead of local AppData directory.
+- [ ] Option to disable tray icon in .ini file.
+- [ ] Option to specify the rounded corners in AltTab settings UI.
 
 
 ## Bug Fixes

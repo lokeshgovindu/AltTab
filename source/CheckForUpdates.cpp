@@ -224,7 +224,7 @@ INT_PTR CALLBACK ATCheckForUpdatesDlgProc(HWND hDlg, UINT message, WPARAM wParam
 }
 
 std::chrono::system_clock::time_point ReadLastCheckForUpdatesTS() {
-    std::filesystem::path filePath = ATSettingsDirPath();
+    std::filesystem::path filePath = ATLocalAppDataDirPath();
     filePath.append(CHECK_FOR_UPDATES_FILENAME);
     std::ifstream file(filePath.string());
 
@@ -240,7 +240,7 @@ std::chrono::system_clock::time_point ReadLastCheckForUpdatesTS() {
 }
 
 void WriteCheckForUpdatesTS(const std::chrono::system_clock::time_point& timestamp) {
-    std::filesystem::path filePath = ATSettingsDirPath();
+    std::filesystem::path filePath = ATLocalAppDataDirPath();
     filePath.append(CHECK_FOR_UPDATES_FILENAME);
 
     std::ofstream file(filePath.string());

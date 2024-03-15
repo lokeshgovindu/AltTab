@@ -36,6 +36,8 @@ const wchar_t* TT_CHECK_FOR_UPDATES            = LR"(How frequently check for up
 
 const wchar_t* TT_PROMPT_TERMINATE_ALL         = LR"(Prompts for confirmation before terminating a window/process)";
 
+const wchar_t* TT_SHOW_SEARCH_STRING           = LR"(Show/hide search string control in AltTab window)";
+
 const wchar_t* TT_SHOW_COLUMN_HEADER           = LR"(Show/hide column header of AltTab window listview)";
 
 const wchar_t* TT_SHOW_COLUMN_PROCESS_NAME     = LR"(Show/hide process name column in AltTab window listview)";

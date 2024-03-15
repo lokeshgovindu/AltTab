@@ -57,6 +57,7 @@ void AltTabSettings::Reset() {
     CheckForUpdatesOpt       = DEFAULT_CHECKFORUPDATES;
     PromptTerminateAll       = DEFAULT_PROMPTTERMINATEALL;
     DisableAltTab            = false;
+    ShowSearchString         = DEFAULT_SHOW_SEARCH_STRING;
     ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
     ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
     ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
@@ -130,6 +131,7 @@ void AddTooltips(HWND hDlg) {
     ADD_TOOLTIP(IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , TT_WINDOW_WIDTH_PERCENT    );
     ADD_TOOLTIP(IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, TT_WINDOW_HEIGHT_PERCENT   );
     ADD_TOOLTIP(IDC_CHECK_PROMPT_TERMINATE_ALL   , TT_PROMPT_TERMINATE_ALL    );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_SEARCH_STRING     , TT_SHOW_SEARCH_STRING      );
     ADD_TOOLTIP(IDC_CHECK_SHOW_COL_HEADER        , TT_SHOW_COLUMN_HEADER      );
     ADD_TOOLTIP(IDC_CHECK_SHOW_COL_PROCESSNAME   , TT_SHOW_COLUMN_PROCESS_NAME);
     ADD_TOOLTIP(IDC_CHECK_FOR_UPDATES            , TT_CHECK_FOR_UPDATES       );
@@ -311,13 +313,8 @@ bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& proc
     return g_Settings.ProcessGroupsList[index].contains(ToLower(processNameB));
 }
 
-/*!
- * \brief AltTab settings directory path
- * 
- * \return AltTab settings directory path
- */
-std::wstring ATSettingsDirPath() {
-    // Get the path to the Roaming AppData folder
+std::wstring ATLocalAppDataDirPath() {
+    // Get the path to the Local AppData folder
     wchar_t szPath[MAX_PATH] = { 0 };
     SHGetFolderPath(nullptr, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, szPath);
     std::filesystem::path settingsDirPath = szPath;
@@ -330,12 +327,19 @@ std::wstring ATSettingsDirPath() {
     return settingsDirPath.wstring();
 }
 
+std::wstring ATApplicationDirPath() {
+    wchar_t szPath[MAX_PATH] = { 0 };
+    GetModuleFileName(nullptr, szPath, MAX_PATH);
+    std::filesystem::path appDirPath = szPath;
+    return appDirPath.parent_path().wstring();
+}
+
 // ----------------------------------------------------------------------------
 // AltTab settings file path
 // ----------------------------------------------------------------------------
 std::wstring ATSettingsFilePath(bool overwrite) {
     AT_LOG_INFO("overwrite = %d", overwrite);
-    std::filesystem::path settingsFilePath = ATSettingsDirPath();
+    std::filesystem::path settingsFilePath = ATApplicationDirPath();
     settingsFilePath.append(SETTINGS_INI_FILENAME);
     if (!std::filesystem::exists(settingsFilePath) || overwrite) {
         std::ofstream fs(settingsFilePath);
@@ -343,14 +347,14 @@ std::wstring ATSettingsFilePath(bool overwrite) {
             throw std::exception("Failed to create AltTab.ini file in APPDATA/AltTab");
         }
         fs << "; -----------------------------------------------------------------------------" << std::endl;
-        fs << "; Configuration/settings file for AltTab." << std::endl;
-        fs << "; Notes:" << std::endl;
-        fs << ";   1. Do NOT edit manually if you are not familiar with settings." << std::endl;
-        fs << ";   2. Color Format is RGB(0xAA, 0xBB, 0xCC) => 0xAABBCC, in hex format." << std::endl;
-        fs << ";      0xAA : Red component" << std::endl;
-        fs << ";      0xBB : Green component" << std::endl;
-        fs << ";      0xCC : Blue component" << std::endl;
-        fs << ";   3. FontStyle: normal / italic / bold / bold italic" << std::endl;
+        fs << "; Configuration/settings file for AltTab."                                       << std::endl;
+        fs << "; Notes:"                                                                        << std::endl;
+        fs << ";   1. Do NOT edit manually if you are not familiar with settings."              << std::endl;
+        fs << ";   2. Color Format is RGB(0xAA, 0xBB, 0xCC) => 0xAABBCC, in hex format."        << std::endl;
+        fs << ";      0xAA : Red component"                                                     << std::endl;
+        fs << ";      0xBB : Green component"                                                   << std::endl;
+        fs << ";      0xCC : Blue component"                                                    << std::endl;
+        fs << ";   3. FontStyle: normal / italic / bold / bold italic"                          << std::endl;
         fs << ";   4. Please delete this file to create a new settings file when AltTab opens." << std::endl;
         fs << "; -----------------------------------------------------------------------------" << std::endl;
         fs.close();
@@ -399,6 +403,7 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"General"          , L"WindowTransparency"    , g_Settings.Transparency            );
     WriteSetting(iniFile, L"General"          , L"WindowWidthPercentage" , g_Settings.WidthPercentage         );
     WriteSetting(iniFile, L"General"          , L"WindowHeightPercentage", g_Settings.HeightPercentage        );
+    WriteSetting(iniFile, L"General"          , L"ShowSearchString"      , g_Settings.ShowSearchString        );
     WriteSetting(iniFile, L"General"          , L"ShowColHeader"         , g_Settings.ShowColHeader           );
     WriteSetting(iniFile, L"General"          , L"ShowColProcessName"    , g_Settings.ShowColProcessName      );
     WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdatesOpt      );
@@ -424,6 +429,7 @@ void ATLoadSettings() {
     ReadSetting(iniFile, L"General"          , L"WindowTransparency"    , DEFAULT_TRANSPARENCY              , g_Settings.Transparency            );
     ReadSetting(iniFile, L"General"          , L"WindowWidthPercentage" , DEFAULT_WIDTH                     , g_Settings.WidthPercentage         );
     ReadSetting(iniFile, L"General"          , L"WindowHeightPercentage", DEFAULT_HEIGHT                    , g_Settings.HeightPercentage        );
+    ReadSetting(iniFile, L"General"          , L"ShowSearchString"      , DEFAULT_SHOW_SEARCH_STRING        , g_Settings.ShowSearchString        );
     ReadSetting(iniFile, L"General"          , L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER           , g_Settings.ShowColHeader           );
     ReadSetting(iniFile, L"General"          , L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME      , g_Settings.ShowColProcessName      );
     ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdatesOpt      );
@@ -523,6 +529,7 @@ void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
     settings.WidthPercentage           = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
     settings.HeightPercentage          = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
     settings.PromptTerminateAll        = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL ) == BST_CHECKED;
+    settings.ShowSearchString          = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_SEARCH_STRING   ) == BST_CHECKED;
     settings.ShowColHeader             = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER      ) == BST_CHECKED;
     settings.ShowColProcessName        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME ) == BST_CHECKED;
     settings.ProcessExclusionsEnabled  = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS   ) == BST_CHECKED;
@@ -545,6 +552,7 @@ void ATLogSettings(const AltTabSettings& settings) {
     AT_LOG_DEBUG("WidthPercentage         : [%d]", settings.WidthPercentage);
     AT_LOG_DEBUG("HeightPercentage        : [%d]", settings.HeightPercentage);
     AT_LOG_DEBUG("PromptTerminateAll      : [%d]", settings.PromptTerminateAll);
+    AT_LOG_DEBUG("ShowSearchString        : [%d]", settings.ShowSearchString);
     AT_LOG_DEBUG("ShowColHeader           : [%d]", settings.ShowColHeader);
     AT_LOG_DEBUG("ShowColProcessName      : [%d]", settings.ShowColProcessName);
     AT_LOG_DEBUG("ProcessExclusionsEnabled: [%d]", settings.ProcessExclusionsEnabled);
@@ -571,6 +579,7 @@ bool AreSettingsModified(HWND hDlg) {
         settings.WidthPercentage          != g_Settings.WidthPercentage          ||
         settings.HeightPercentage         != g_Settings.HeightPercentage         ||
         settings.SimilarProcessGroups     != g_Settings.SimilarProcessGroups     ||
+        settings.ShowSearchString         != g_Settings.ShowSearchString         ||
         settings.ShowColHeader            != g_Settings.ShowColHeader            ||
         settings.ShowColProcessName       != g_Settings.ShowColProcessName       ||
         settings.PromptTerminateAll       != g_Settings.PromptTerminateAll       ||
@@ -590,7 +599,9 @@ StringList AltTabSettings::CheckForUpdatesOptions = { L"Startup", L"Daily", L"We
 /**
  * \brief Check if the given settings are valid.
  * 
- * \return true if settings are valid false otherwise.
+ * \param[out]  valid      Will be set to true if settings are valid otherwise false.
+ * 
+ * \return Returns a pair of strings. First string is the title of the error message box and the second string is the error message.
  */
 std::pair<std::wstring, std::wstring> AltTabSettings::IsValid(bool& valid) {
     const std::wregex pattern(L"^[^\\/:*?\"<>|]+.exe$");
@@ -649,25 +660,26 @@ void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings) {
     SendMessage(hEditBox2, WM_SETFONT     , (WPARAM)hFont    , TRUE);
  
     CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , settings.PromptTerminateAll       ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_SEARCH_STRING     , settings.ShowSearchString         ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , settings.ShowColHeader            ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , settings.ShowColProcessName       ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
 
     EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), settings.ProcessExclusionsEnabled);
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , settings.FuzzyMatchPercent, FALSE);
+    SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , settings.FuzzyMatchPercent  , FALSE);
     SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
     SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETPOS                  , 0, MAKELPARAM(settings.FuzzyMatchPercent, 0));
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , settings.Transparency     , FALSE);
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , settings.Transparency       , FALSE);
     SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
     SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETPOS                  , 0, MAKELPARAM(settings.Transparency, 0));
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , settings.WidthPercentage  , FALSE);
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , settings.WidthPercentage    , FALSE);
     SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
     SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETPOS                  , 0, MAKELPARAM(settings.WidthPercentage, 0));
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, settings.HeightPercentage , FALSE);
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, settings.HeightPercentage   , FALSE);
     SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
     SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETPOS                  , 0, MAKELPARAM(settings.HeightPercentage, 0));
  

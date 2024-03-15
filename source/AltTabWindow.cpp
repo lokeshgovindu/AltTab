@@ -780,7 +780,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             style |= LVS_NOCOLUMNHEADER;
         }
 
-        // Create  Static control
+        // Create Static control for the search string
         int staticTextHeight = 24;
 
         // Calculate the required height for the static control based on font size
@@ -793,17 +793,30 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         staticTextHeight = (int)(tm.tmHeight + tm.tmExternalLeading + 1);
         ReleaseDC(hWnd, hdc);
 
+        // While creating static search string control, use 0 for height and
+        // use -1 for the rest of the calculations while adjusting window size.
+        if (!g_Settings.ShowSearchString) {
+            staticTextHeight = 0;
+        }
+
+        int X      = 0;
+        int Y      = 0;
+        int width  = windowWidth;
+        int height = staticTextHeight;
+
+        //AT_LOG_INFO("StaticTextControl: X: %d, Y: %d, width: %d, height: %d", X, Y, width, height);
+
         // Create a static text control
         HWND hStaticText = CreateWindowW(
             L"Static",                          // Static text control class
             L"Search String: empty",            // Text content
             WS_CHILD | WS_VISIBLE | SS_CENTER,  // Styles
-            0,                                  // X
-            0,                                  // Y
-            windowWidth,                        // Width
-            staticTextHeight,                   // Height
+            X,                                  // X
+            Y,                                  // Y
+            width,                              // Width
+            height,                             // Height
             hWnd,                               // Parent window
-            (HMENU)NULL,                        // Menu or control ID (set to NULL for static text)
+            (HMENU)nullptr,                     // Menu or control ID (set to NULL for static text)
             g_hInstance,                        // Instance handle
             nullptr                             // No window creation data
         );
@@ -811,16 +824,32 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         SendMessage(hStaticText, WM_SETFONT, (WPARAM)g_hFont, 0);
         g_hStaticText = hStaticText;
 
+        // Here adding 1 pixel to the Y position to avoid the static text control overlap with the ListView control
+        if (g_Settings.ShowSearchString) {
+            Y += staticTextHeight + 1;
+        } else {
+            staticTextHeight = -1;
+        }
+
+        // Here, reducing the window width by 1 (-1) to fit the scrollbar properly in the window.
+        // height is reduced by 3 (-3)
+        //  1 pixel for the static text control and listView control overlap
+        //  2 pixels for the upper and bottom border in listview control
+        width  = windowWidth - 1; 
+        height = windowHeight - staticTextHeight - 3;
+        
+        //AT_LOG_INFO("ListViewControl: X: %d, Y: %d, width: %d, height: %d", X, Y, width, height);
+
         // Create ListView control
         HWND hListView = CreateWindowExW(
             0,                                     // Optional window styles
             WC_LISTVIEW,                           // Predefined class
             L"",                                   // No window title
             style,                                 // Styles
-            0,                                     // X
-            staticTextHeight + 1,                  // Y
-            windowWidth - 1,                       // Width
-            windowHeight - staticTextHeight - 3,   // Height
+            X,                                     // X
+            Y,                                     // Y
+            width,                                 // Width
+            height,                                // Height
             hWnd,                                  // Parent window
             (HMENU)IDC_LISTVIEW,                   // Control identifier
             g_hInstance,                           // Instance handle
@@ -892,7 +921,9 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             int colTitleWidth    = g_Settings.WindowWidth - (COL_ICON_WIDTH + GetColProcessNameWidth()) - scrollBarWidth - 1;
             int lvHeight         = (g_Settings.WindowHeight - itemHeight + 1) / itemHeight * itemHeight;
             int requiredHeight   = lvHeight + headerHeight + staticTextHeight + 3;
+
             ListView_SetColumnWidth(hListView, 1, colTitleWidth);
+
             // Here, reducing the window width by 1 (-1) to fit the scrollbar properly in the window.
             SetWindowPos(hListView, nullptr, 0, 0, windowWidth - 1, lvHeight, SWP_NOMOVE | SWP_NOZORDER);
             SetWindowPos(hWnd, HWND_TOPMOST, windowX, windowY, windowWidth, requiredHeight, SWP_NOZORDER);

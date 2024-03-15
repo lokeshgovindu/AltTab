@@ -24,6 +24,7 @@ using StringList           = std::vector<std::wstring>;
 #define DEFAULT_SIMILARPROCESSGROUPS         L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe"
 #define DEFAULT_CHECKFORUPDATES              L"Startup"
 #define DEFAULT_PROMPTTERMINATEALL           true
+#define DEFAULT_SHOW_SEARCH_STRING           true
 #define DEFAULT_SHOW_COL_HEADER              false
 #define DEFAULT_SHOW_COL_PROCESSNAME         false
 #define DEFAULT_PROCESS_EXCLUSIONS_ENABLED   false
@@ -59,6 +60,7 @@ struct AltTabSettings {
     std::wstring           CheckForUpdatesOpt;        // Check for updates
     bool                   PromptTerminateAll;        // Ask before terminating all processes
     bool                   DisableAltTab;             // Disable AltTab hotkeys
+    bool                   ShowSearchString;          // Show search string
     bool                   ShowColHeader;             // Show column header
     bool                   ShowColProcessName;        // Show column - Process Name
     bool                   ProcessExclusionsEnabled;  // Process exclusions enabled
@@ -91,7 +93,19 @@ bool IsSimilarProcess(int index, const std::wstring& processName);
 
 bool IsSimilarProcess(const std::wstring& processNameA, const std::wstring& processNameB);
 
-std::wstring ATSettingsDirPath();
+/*!
+ * \brief AltTab settings directory path
+ * 
+ * \return AltTab settings directory path
+ */
+std::wstring ATLocalAppDataDirPath();
+
+/*!
+ * \brief Application directory path where AltTab.exe is running.
+ * 
+ * \returns Application directory path where AltTab.exe is running.
+ */
+std::wstring ATApplicationDirPath();
 
 std::wstring ATSettingsFilePath(bool overwrite = false);
 
