@@ -72,6 +72,13 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+    // Set process DPI awareness
+    if (!SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE)) {
+        // Handle error if setting DPI awareness fails
+        // For simplicity, you may just display a message box
+        AT_LOG_ERROR("Failed to set DPI awareness!");
+    }
+
     // Make sure only one instance is running
     HANDLE hMutex = CreateMutex(nullptr, TRUE, AT_PRODUCT_NAMEW);
     if (GetLastError() == ERROR_ALREADY_EXISTS) {

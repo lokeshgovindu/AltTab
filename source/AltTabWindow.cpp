@@ -482,7 +482,7 @@ void AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowDa
     ListView_SetItemText(hListView, index, 2, const_cast<wchar_t*>(windowData.ProcessName.c_str()));
 }
 
-static void CustomizeListView(HWND hListView) {
+static void CustomizeListView(HWND hListView, int dpi) {
     // Set extended style for the List View control
     DWORD dwExStyle = LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER;
     ListView_SetExtendedListViewStyle(hListView, dwExStyle);
@@ -493,7 +493,7 @@ static void CustomizeListView(HWND hListView) {
     LVCOLUMN lvCol   = {0};
     lvCol.mask       = LVCF_TEXT | LVCF_WIDTH;
     lvCol.pszText    = (LPWSTR)L"#";
-    lvCol.cx         = COL_ICON_WIDTH;
+    lvCol.cx         = ScaleValueForDPI(COL_ICON_WIDTH, dpi);
     ListView_InsertColumn(hListView, 0, &lvCol);
 
     if (g_Settings.ShowColProcessName) {
@@ -791,6 +791,10 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         TEXTMETRIC tm;
         GetTextMetrics(hdc, &tm);
         staticTextHeight = (int)(tm.tmHeight + tm.tmExternalLeading + 1);
+
+        // Get the DPI of the window/screen
+        int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+
         ReleaseDC(hWnd, hdc);
 
         // While creating static search string control, use 0 for height and
@@ -869,7 +873,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         g_Settings.WindowHeight = wndHeight;
 
         // Add header / columns
-        CustomizeListView(hListView);
+        CustomizeListView(hListView, dpi);
 
         // Set ListView background and font colors
         SetListViewCustomColors(hListView, g_Settings.BackgroundColor, g_Settings.FontColor);

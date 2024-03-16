@@ -40,3 +40,7 @@ double GetRatioW(const wchar_t* s1, const wchar_t* s2);
 double GetPartialRatioW(const wchar_t* s1, const wchar_t* s2);
 
 double GetPartialRatioW(const std::wstring& s1, const std::wstring& s2);
+
+int ScaleValueForDPI(int value, int dpi = 96);
+
+int GetDPIForWindow(HWND hWnd);

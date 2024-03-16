@@ -210,3 +210,18 @@ double GetPartialRatioW(const std::wstring& s1, const std::wstring& s2) {
         return 0.0;
     }
 }
+
+// Helper function to scale a value based on DPI
+int ScaleValueForDPI(int value, int dpi) {
+    // For simplicity, you can use a linear scaling factor
+    // For more precise scaling, you may need to adjust according to DPI settings
+    return MulDiv(value, dpi, 96);
+}
+
+// Helper function to get the DPI of a window
+int GetDPIForWindow(HWND hWnd) {
+    HDC hdc = GetDC(hWnd);
+    int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+    ReleaseDC(hWnd, hdc);
+    return dpi;
+}

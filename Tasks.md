@@ -12,19 +12,21 @@
 	- [x] Shift+Delete  : Kill Window
 - [x] System tray.
 	- [x] Add application to system tray.
-	- [x] Group 1: About
-	- [x] Separator ---------------------------
-	- [x] Group 2: ReadMe
-	- [x] Group 2: Help
-	- [x] Group 2: Release Notes
-	- [x] Separator ---------------------------
-	- [x] Group 3: Settings
-	- [x] Group 3: Disable AltTab
-	- [x] Group 3: Check for updates
-	- [x] Group 3: Run At Startup
-	- [x] Separator ---------------------------
-	- [x] Group 4: Restart
-	- [x] Group 4: Exit
+	- [x]           o----------------------------o
+	- [x] Group 1:  | About                      |
+	- [x] Separator |----------------------------|
+	- [x] Group 2:  | ReadMe					 |
+	- [x] Group 2:  | Help						 |
+	- [x] Group 2:  | Release Notes				 |
+	- [x] Separator |----------------------------|
+	- [x] Group 3:  | Settings					 |
+	- [x] Group 3:  | Disable AltTab			 |
+	- [x] Group 3:  | Check for updates			 |
+	- [x] Group 3:  | Run At Startup			 |
+	- [x] Separator |----------------------------|
+	- [x] Group 4:  | Restart					 |
+	- [x] Group 4:  | Exit						 |
+	- [x]           o----------------------------o
 - [x] Add search string functionality
 - [x] Settings & Settings UI
 	- [x] Load & Save settings from & to AltTabSettings.ini file
@@ -36,6 +38,7 @@
 	- [x] Exclude processes
 - [x] Custom icon
 - [x] Add Context Menu
+	- [x]	        o-------------------------------o
 	- [x] Group 1:  | Close          | Delete       |
 	- [x] Group 1:  | Terminate      | Shift+Delete |
 	- [x] Separator |----------------+--------------|
@@ -47,6 +50,7 @@
 	- [x] Separator |----------------+--------------|
 	- [x] Group 4:  | About          | Shift+F1	    |
 	- [x] Group 4:  | Settings       | F2           |
+	- [x]	        o-------------------------------o
 - [ ] Logger
 	- [x] Customize logging
 	- [x] Rollover beyoung the max size
@@ -61,6 +65,7 @@
 - [x] Save settings to application directory instead of local AppData directory.
 - [ ] Option to disable tray icon in .ini file.
 - [ ] Option to specify the rounded corners in AltTab settings UI.
+- [x] Make the AltTab window DPI aware.
 
 
 ## Bug Fixes
