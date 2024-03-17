@@ -40,11 +40,14 @@
 #define IDC_STATIC_FUZZY_MATCH_PERCENT  1026
 #define IDC_GROUP_PROCESS_EXCLUSIONS    1027
 #define IDC_EDIT_CFU_CHANGES            1028
+#define IDC_CHECK_ALT_CTRL_TAB          1028
 #define IDC_STATIC_CFU_CURRENT_VERSION  1029
+#define IDC_BUTTON_RELOAD               1029
 #define IDC_STATIC_CFU_UPDATE_VERSION   1030
 #define IDC_STATIC_1                    1031
 #define IDC_STATIC_2                    1032
 #define IDC_STATIC_3                    1033
+#define IDC_GROUPBOX_STORAGE            1034
 #define ID_TRAYCONTEXTMENU_ABOUTALTTAB  32771
 #define ID_TRAYCONTEXTMENU_README       32772
 #define ID_TRAYCONTEXTMENU_HELP         32773
@@ -68,6 +71,7 @@
 #define ID_Menu                         32793
 #define ID_CONTEXTMENU_OPEN_PATH        32794
 #define ID_CONTEXTMENU_COPY_PATH        32795
+#define ID_TRAYCONTEXTMENU_RELOADALTTABSETTINGS 32796
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -76,8 +80,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        134
-#define _APS_NEXT_COMMAND_VALUE         32796
-#define _APS_NEXT_CONTROL_VALUE         1034
+#define _APS_NEXT_COMMAND_VALUE         32798
+#define _APS_NEXT_CONTROL_VALUE         1035
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

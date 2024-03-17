@@ -1,3 +1,25 @@
+2024.3.0.0
+AltTab_2024.3.0.0_x64.7z
+2024.3 new features and bug fixes
+---------------------------------
++ Show process path and ID in tooltip on mouse hover on item in the list view.
++ Handled Alt+Ctrl+Tab.
++ Settings are stored in application directory instead of user profile Local 
+  AppData directory.
++ Added [SearchString] section in AltTabSettings.ini file to customize the
+  search string control font name, size, style, color and background color.
++ Saving the colors in 0xRRGGBB format in AltTabSettings.ini file.
++ AltTab window is high DPI aware.
++ Upgraded help file format from mht to chm.
++ Option to disable Search String in AltTab settings UI.
++ Reload settings from AltTabSettings.ini if any changes are made manually from
+  using tray context menu or from AltTab settings dialog.
+- Append "(Not Responding)" to title for the hung process.
+- Do not switch to Alt+Ctrl+Tab window if Alt+Tab window is already active.
+- Reset in Settings dialog resets the settings to the default values in UI but
+  not saving to file.
+
+
 2024.2.0.2
 AltTab_2024.2.0.2_x64.7z
 2024.2 new features and bug fixes
@@ -18,6 +40,7 @@ Initial release of AltTab.
      | notepad.exe and notepad++.exe are marked as similar processes.
   Use settings dialog to define similar process groups.
 + Exclude processes
+
 
 PS
 --

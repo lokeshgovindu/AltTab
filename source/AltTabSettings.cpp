@@ -33,6 +33,26 @@ void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings);
 void AddTooltips         (HWND hDlg);
 void ATLogSettings       (const AltTabSettings& settings);
 
+namespace {
+    // Convert COLORREF to 0xRRGGBB format
+    std::wstring ColorRefToRGBString(COLORREF colorRef) {
+        wchar_t buffer[9]; // Format: 0xRRGGBB\0
+        swprintf(buffer, 9, L"0x%02X%02X%02X", GetRValue(colorRef), GetGValue(colorRef), GetBValue(colorRef));
+        return buffer;
+    }
+
+    // Construct COLORREF from RGB integer value
+    COLORREF RGBIntToColorRef(int hexValue) {
+        // Extract individual components
+        int red   = (hexValue >> 16) & 0xFF;
+        int green = (hexValue >>  8) & 0xFF;
+        int blue  = (hexValue      ) & 0xFF;
+
+        // Combine components into COLORREF format
+        return RGB(red, green, blue);
+    }
+}
+
 /*!
  * \brief Constructor
  */
@@ -44,11 +64,16 @@ AltTabSettings::AltTabSettings() {
  * \brief Reset settings to default values.
  */
 void AltTabSettings::Reset() {
-    FontName                 = DEFAULT_FONT_NAME;
-    FontSize                 = DEFAULT_FONT_SIZE;
-    FontStyle                = DEFAULT_FONT_STYLE;
-    FontColor                = DEFAULT_FONT_COLOR;
-    BackgroundColor          = DEFAULT_BG_COLOR;
+    SSFontName               = DEFAULT_SS_FONT_NAME;
+    SSFontSize               = DEFAULT_SS_FONT_SIZE;
+    SSFontStyle              = DEFAULT_SS_FONT_STYLE;
+    SSFontColor              = DEFAULT_SS_FONT_COLOR;
+    SSBackgroundColor        = DEFAULT_SS_BG_COLOR;
+    LVFontName               = DEFAULT_LV_FONT_NAME;
+    LVFontSize               = DEFAULT_LV_FONT_SIZE;
+    LVFontStyle              = DEFAULT_LV_FONT_STYLE;
+    LVFontColor              = DEFAULT_LV_FONT_COLOR;
+    LVBackgroundColor        = DEFAULT_LV_BG_COLOR;
     WidthPercentage          = DEFAULT_WIDTH;
     HeightPercentage         = DEFAULT_HEIGHT;
     FuzzyMatchPercent        = DEFAULT_FUZZYMATCHPERCENT;
@@ -60,6 +85,7 @@ void AltTabSettings::Reset() {
     ShowSearchString         = DEFAULT_SHOW_SEARCH_STRING;
     ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
     ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
+    AltCtrlTabEnabled        = DEFAULT_ALT_CTRL_TAB_ENABLED;
     ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
     ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
 
@@ -82,6 +108,20 @@ void AltTabSettings::Reset() {
     // Initialize additional settings
     g_AltBacktickWndInfo.hWnd   = nullptr;
     g_AltBacktickWndInfo.hOwner = nullptr;
+}
+
+/*!
+ * \brief Load settings from AltTabSettings.ini file.
+ */
+void AltTabSettings::Load() {
+    ATLoadSettings();
+}
+
+/*!
+ * \brief Save current settings to AltTabSettings.ini file.
+ */
+void AltTabSettings::Save() {
+    ATSaveSettings();
 }
 
 int AltTabSettings::GetCheckForUpdatesIndex() const {
@@ -141,6 +181,7 @@ void AddTooltips(HWND hDlg) {
     ADD_TOOLTIP(IDOK                             , TT_OK_SETTINGS             );
     ADD_TOOLTIP(IDCANCEL                         , TT_CANCEL_SETTINGS         );
     ADD_TOOLTIP(IDC_BUTTON_RESET                 , TT_RESET_SETTINGS          );
+    ADD_TOOLTIP(IDC_BUTTON_RELOAD                , TT_RELOAD_SETTINGS         );
 }
 
 // ----------------------------------------------------------------------------
@@ -178,10 +219,16 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
 
     //case WM_CTLCOLORSTATIC:
     //{
-    //    HDC  hdcEdit = (HDC)wParam;
-    //    HWND hEdit   = (HWND)lParam;
-    //    SetTextColor(hdcEdit, RGB(255, 0, 255));
-    //    return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
+    //    HDC  hdcStatic = (HDC)wParam;
+    //    HWND hStatic   = (HWND)lParam;
+    //    //AT_LOG_DEBUG("hStatic = %d", hStatic);
+    //    if (hStatic == GetDlgItem(hDlg, IDC_STATIC_FUZZY_MATCH_PERCENT)) {
+    //        AT_LOG_INFO("Control Found");
+    //        SetTextColor(hdcStatic, RGB(0, 0, 0xFF));
+    //        SetBkColor  (hdcStatic, TRANSPARENT);
+    //        return (INT_PTR)GetStockObject(TRANSPARENT);
+    //        //return (INT_PTR)CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+    //    }
     //}
     //break;
 
@@ -195,10 +242,11 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
     //        AT_LOG_INFO("BS_GROUPBOX: Group Box Found");
     //        // Set the text color for the group box
     //        SetTextColor(hdcStatic, RGB(0, 0, 255));
-    //        SetBkColor(hdcStatic, TRANSPARENT);
+    //        SetBkColor  (hdcStatic, TRANSPARENT);
 
     //        // Return a handle to the brush for the background
     //        return (LRESULT)GetSysColorBrush(COLOR_BTNFACE);
+    //        //return (INT_PTR)CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
     //    }
     //} break;
 
@@ -243,6 +291,25 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
                 MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
             if (result == IDYES) {
                 g_Settings.Reset();
+                g_Settings.Save();
+                ATSettingsInitDialog(hDlg, g_Settings);
+            }
+            return (INT_PTR)TRUE;
+        }
+
+        if (LOWORD(wParam) == IDC_BUTTON_RELOAD)
+        {
+            AT_LOG_INFO("IDC_BUTTON_RELOAD Pressed!");
+            int result = MessageBoxW(
+                hDlg,
+                L"Are you sure you want to reload settings from AltTabSettings.ini?",
+                AT_PRODUCT_NAMEW L": Reload Settings",
+                MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+            if (result == IDYES) {
+                g_Settings.Load();
+#ifdef _DEBUG
+                ATLogSettings(g_Settings);
+#endif // _DEBUG
                 ATSettingsInitDialog(hDlg, g_Settings);
             }
             return (INT_PTR)TRUE;
@@ -276,7 +343,7 @@ INT_PTR CALLBACK ATSettingsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
             DeleteObject(hFont);
         }
         DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_SMALL, 0));
-        DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_BIG, 0));
+        DestroyIcon((HICON)SendMessage(hDlg, WM_GETICON, ICON_BIG  , 0));
 
         g_hSetingsWnd = nullptr;
     }
@@ -351,11 +418,13 @@ std::wstring ATSettingsFilePath(bool overwrite) {
         fs << "; Notes:"                                                                        << std::endl;
         fs << ";   1. Do NOT edit manually if you are not familiar with settings."              << std::endl;
         fs << ";   2. Color Format is RGB(0xAA, 0xBB, 0xCC) => 0xAABBCC, in hex format."        << std::endl;
-        fs << ";      0xAA : Red component"                                                     << std::endl;
-        fs << ";      0xBB : Green component"                                                   << std::endl;
-        fs << ";      0xCC : Blue component"                                                    << std::endl;
+        fs << ";        0xAA : Red component"                                                   << std::endl;
+        fs << ";        0xBB : Green component"                                                 << std::endl;
+        fs << ";        0xCC : Blue component"                                                  << std::endl;
         fs << ";   3. FontStyle: normal / italic / bold / bold italic"                          << std::endl;
         fs << ";   4. Please delete this file to create a new settings file when AltTab opens." << std::endl;
+        fs << ";   5. Please use tray menu Reload AltTabSettings.ini / Reload in Settings"      << std::endl;
+        fs << ";      dialog to make use of new settings without restarting AltTab."            << std::endl;
         fs << "; -----------------------------------------------------------------------------" << std::endl;
         fs.close();
         ATSettingsToFile(settingsFilePath.wstring());
@@ -392,12 +461,22 @@ void ReadSetting(const std::wstring& iniFile, LPCTSTR section, LPCTSTR keyName, 
  * \param iniFile    AltTab settings file path
  */
 void ATSettingsToFile(const std::wstring& iniFile) {
-    WriteSetting(iniFile, L"ListView"         , L"FontName"              , g_Settings.FontName                );
-    WriteSetting(iniFile, L"ListView"         , L"FontSize"              , g_Settings.FontSize                );
-    WriteSetting(iniFile, L"ListView"         , L"FontStyle"             , g_Settings.FontStyle               );
-    WriteSetting(iniFile, L"ListView"         , L"FontColor"             , g_Settings.FontColor               );
-    WriteSetting(iniFile, L"ListView"         , L"BackgroundColor"       , g_Settings.BackgroundColor         );
-    WriteSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups    );
+    // Convert color values to 0xRRGGBB string format and save in AltTabSettings.ini file
+    std::wstring SSFontColor       = ColorRefToRGBString(g_Settings.SSFontColor      );
+    std::wstring SSBackgroundColor = ColorRefToRGBString(g_Settings.SSBackgroundColor);
+    std::wstring LVFontColor       = ColorRefToRGBString(g_Settings.LVFontColor      );
+    std::wstring LVBackgroundColor = ColorRefToRGBString(g_Settings.LVBackgroundColor);
+
+    WriteSetting(iniFile, L"SearchString"     , L"FontName"              , g_Settings.SSFontName              );
+    WriteSetting(iniFile, L"SearchString"     , L"FontSize"              , g_Settings.SSFontSize              );
+    WriteSetting(iniFile, L"SearchString"     , L"FontStyle"             , g_Settings.SSFontStyle             );
+    WriteSetting(iniFile, L"SearchString"     , L"FontColor"             , SSFontColor                        );
+    WriteSetting(iniFile, L"SearchString"     , L"BackgroundColor"       , SSBackgroundColor                  );
+    WriteSetting(iniFile, L"ListView"         , L"FontName"              , g_Settings.LVFontName              );
+    WriteSetting(iniFile, L"ListView"         , L"FontSize"              , g_Settings.LVFontSize              );
+    WriteSetting(iniFile, L"ListView"         , L"FontStyle"             , g_Settings.LVFontStyle             );
+    WriteSetting(iniFile, L"ListView"         , L"FontColor"             , LVFontColor                        );
+    WriteSetting(iniFile, L"ListView"         , L"BackgroundColor"       , LVBackgroundColor                  );
     WriteSetting(iniFile, L"General"          , L"PromptTerminateAll"    , g_Settings.PromptTerminateAll      );
     WriteSetting(iniFile, L"General"          , L"FuzzyMatchPercent"     , g_Settings.FuzzyMatchPercent       );
     WriteSetting(iniFile, L"General"          , L"WindowTransparency"    , g_Settings.Transparency            );
@@ -406,23 +485,35 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"General"          , L"ShowSearchString"      , g_Settings.ShowSearchString        );
     WriteSetting(iniFile, L"General"          , L"ShowColHeader"         , g_Settings.ShowColHeader           );
     WriteSetting(iniFile, L"General"          , L"ShowColProcessName"    , g_Settings.ShowColProcessName      );
+    WriteSetting(iniFile, L"General"          , L"AltCtrlTabEnabled"     , g_Settings.AltCtrlTabEnabled       );
     WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdatesOpt      );
+    WriteSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups    );
     WriteSetting(iniFile, L"ProcessExclusions", L"Enabled"               , g_Settings.ProcessExclusionsEnabled);
     WriteSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , g_Settings.ProcessExclusions       );
 }
 
 /*!
- * \brief Load settings the the settings file path
+ * \brief Load settings from the settings file path
  */
 void ATLoadSettings() {
     AT_LOG_TRACE;
     std::wstring iniFile = ATSettingsFilePath();
 
-    ReadSetting(iniFile, L"ListView"         , L"FontName"              , DEFAULT_FONT_NAME                 , g_Settings.FontName                );
-    ReadSetting(iniFile, L"ListView"         , L"FontSize"              , DEFAULT_FONT_SIZE                 , g_Settings.FontSize                );
-    ReadSetting(iniFile, L"ListView"         , L"FontStyle"             , DEFAULT_FONT_STYLE                , g_Settings.FontStyle               );
-    ReadSetting(iniFile, L"ListView"         , L"FontColor"             , DEFAULT_FONT_COLOR                , g_Settings.FontColor               );
-    ReadSetting(iniFile, L"ListView"         , L"BackgroundColor"       , DEFAULT_BG_COLOR                  , g_Settings.BackgroundColor         );
+    DWORD SSFontColor       = 0;
+    DWORD SSBackgroundColor = 0;
+    DWORD LVFontColor       = 0;
+    DWORD LVBackgroundColor = 0;
+
+    ReadSetting(iniFile, L"SearchString"     , L"FontName"              , DEFAULT_SS_FONT_NAME              , g_Settings.SSFontName              );
+    ReadSetting(iniFile, L"SearchString"     , L"FontSize"              , DEFAULT_SS_FONT_SIZE              , g_Settings.SSFontSize              );
+    ReadSetting(iniFile, L"SearchString"     , L"FontStyle"             , DEFAULT_SS_FONT_STYLE             , g_Settings.SSFontStyle             );
+    ReadSetting(iniFile, L"SearchString"     , L"FontColor"             , DEFAULT_SS_FONT_COLOR             , SSFontColor                        );
+    ReadSetting(iniFile, L"SearchString"     , L"BackgroundColor"       , DEFAULT_SS_BG_COLOR               , SSBackgroundColor                  );
+    ReadSetting(iniFile, L"ListView"         , L"FontName"              , DEFAULT_LV_FONT_NAME              , g_Settings.LVFontName              );
+    ReadSetting(iniFile, L"ListView"         , L"FontSize"              , DEFAULT_LV_FONT_SIZE              , g_Settings.LVFontSize              );
+    ReadSetting(iniFile, L"ListView"         , L"FontStyle"             , DEFAULT_LV_FONT_STYLE             , g_Settings.LVFontStyle             );
+    ReadSetting(iniFile, L"ListView"         , L"FontColor"             , DEFAULT_LV_FONT_COLOR             , LVFontColor                        );
+    ReadSetting(iniFile, L"ListView"         , L"BackgroundColor"       , DEFAULT_LV_BG_COLOR               , LVBackgroundColor                  );
     ReadSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , DEFAULT_SIMILARPROCESSGROUPS      , g_Settings.SimilarProcessGroups    );
     ReadSetting(iniFile, L"General"          , L"PromptTerminateAll"    , DEFAULT_PROMPTTERMINATEALL        , g_Settings.PromptTerminateAll      );
     ReadSetting(iniFile, L"General"          , L"FuzzyMatchPercent"     , DEFAULT_FUZZYMATCHPERCENT         , g_Settings.FuzzyMatchPercent       );
@@ -432,9 +523,16 @@ void ATLoadSettings() {
     ReadSetting(iniFile, L"General"          , L"ShowSearchString"      , DEFAULT_SHOW_SEARCH_STRING        , g_Settings.ShowSearchString        );
     ReadSetting(iniFile, L"General"          , L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER           , g_Settings.ShowColHeader           );
     ReadSetting(iniFile, L"General"          , L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME      , g_Settings.ShowColProcessName      );
+    ReadSetting(iniFile, L"General"          , L"AltCtrlTabEnabled"     , DEFAULT_ALT_CTRL_TAB_ENABLED      , g_Settings.AltCtrlTabEnabled       );
     ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdatesOpt      );
     ReadSetting(iniFile, L"ProcessExclusions", L"Enabled"               , DEFAULT_PROCESS_EXCLUSIONS_ENABLED, g_Settings.ProcessExclusionsEnabled);
     ReadSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , DEFAULT_PROCESS_EXCLUSIONS        , g_Settings.ProcessExclusions       );
+
+    // Covert color values (0xRRGGBB that are stored in AltTabSettings.ini file) to COLORREF
+    g_Settings.SSFontColor       = RGBIntToColorRef(SSFontColor      );
+    g_Settings.SSBackgroundColor = RGBIntToColorRef(SSBackgroundColor);
+    g_Settings.LVFontColor       = RGBIntToColorRef(LVFontColor      );
+    g_Settings.LVBackgroundColor = RGBIntToColorRef(LVBackgroundColor);
 
     // Clear the previous ProcessGroupsList
     g_Settings.ProcessGroupsList.clear();
@@ -455,10 +553,14 @@ void ATLoadSettings() {
     // Initialize additional settings
     g_AltBacktickWndInfo.hWnd   = nullptr;
     g_AltBacktickWndInfo.hOwner = nullptr;
+
+#ifdef _DEBUG
+    ATLogSettings(g_Settings);
+#endif // _DEBUG
 }
 
 /*!
- * \brief Save current senttings to the settings ini file path.
+ * \brief Save current settings to the settings ini file path.
  */
 void ATSaveSettings() {
     AT_LOG_TRACE;
@@ -474,8 +576,8 @@ void ATSaveSettings() {
  * \return Dialog item text in std::wstring.
  */
 std::wstring GetDlgItemTextEx(HWND hDlg, int nIDDlgItem) {
-    int      textLength             = GetWindowTextLength(GetDlgItem(hDlg, nIDDlgItem));
-    wchar_t* buffer                 = new wchar_t[textLength + 1];
+    int      textLength = GetWindowTextLength(GetDlgItem(hDlg, nIDDlgItem));
+    wchar_t* buffer     = new wchar_t[textLength + 1];
     GetDlgItemTextW(hDlg, nIDDlgItem, buffer, textLength + 1);
     std::wstring result = buffer;
     delete[] buffer;
@@ -492,7 +594,10 @@ void ATApplySettings(HWND hDlg) {
     AT_LOG_TRACE;
 
     // Read settings from UI
-    AltTabSettings settings;
+    // Since, we are not showing all the settings in the settings dialog, we 
+    // need to copy the existing settings, then all the settings will be properly
+    // copied to the AltTabSettings.ini file.
+    AltTabSettings settings(g_Settings);
     ATReadSettingsFromUI(hDlg, settings);
     ATLogSettings(settings);
 
@@ -532,6 +637,7 @@ void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
     settings.ShowSearchString          = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_SEARCH_STRING   ) == BST_CHECKED;
     settings.ShowColHeader             = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER      ) == BST_CHECKED;
     settings.ShowColProcessName        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME ) == BST_CHECKED;
+    settings.AltCtrlTabEnabled         = IsDlgButtonChecked(hDlg, IDC_CHECK_ALT_CTRL_TAB         ) == BST_CHECKED;
     settings.ProcessExclusionsEnabled  = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS   ) == BST_CHECKED;
     settings.ProcessExclusions         = GetDlgItemTextEx  (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS    );
     int selectedIndex                  = ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES));
@@ -546,17 +652,34 @@ void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
 void ATLogSettings(const AltTabSettings& settings) {
     AT_LOG_TRACE;
     AT_LOG_DEBUG("=== AltTab Settings Begin ===");
-    AT_LOG_DEBUG("SimilarProcessGroups    : [%s]", WStrToUTF8(settings.SimilarProcessGroups).c_str());
-    AT_LOG_DEBUG("FuzzyMatchPercent       : [%d]", settings.FuzzyMatchPercent);
-    AT_LOG_DEBUG("Transparency            : [%d]", settings.Transparency);
-    AT_LOG_DEBUG("WidthPercentage         : [%d]", settings.WidthPercentage);
-    AT_LOG_DEBUG("HeightPercentage        : [%d]", settings.HeightPercentage);
-    AT_LOG_DEBUG("PromptTerminateAll      : [%d]", settings.PromptTerminateAll);
-    AT_LOG_DEBUG("ShowSearchString        : [%d]", settings.ShowSearchString);
-    AT_LOG_DEBUG("ShowColHeader           : [%d]", settings.ShowColHeader);
-    AT_LOG_DEBUG("ShowColProcessName      : [%d]", settings.ShowColProcessName);
-    AT_LOG_DEBUG("ProcessExclusionsEnabled: [%d]", settings.ProcessExclusionsEnabled);
-    AT_LOG_DEBUG("ProcessExclusions       : [%s]", WStrToUTF8(settings.ProcessExclusions).c_str());
+    AT_LOG_DEBUG("[SearchString]");
+    AT_LOG_DEBUG("  SSFontName              : [%s]", WStrToUTF8(settings.SSFontName).c_str());
+    AT_LOG_DEBUG("  SSFontSize              : [%d]", settings.SSFontSize);
+    AT_LOG_DEBUG("  SSFontStyle             : [%s]", WStrToUTF8(settings.SSFontStyle).c_str());
+    AT_LOG_DEBUG("  SSFontColor             : [%s]", WStrToUTF8(ColorRefToRGBString(settings.SSFontColor)).c_str());
+    AT_LOG_DEBUG("  SSBackgroundColor       : [%s]", WStrToUTF8(ColorRefToRGBString(settings.SSBackgroundColor)).c_str());
+    AT_LOG_DEBUG("[ListView]");
+    AT_LOG_DEBUG("  LVFontName              : [%s]", WStrToUTF8(settings.LVFontName).c_str());
+    AT_LOG_DEBUG("  LVFontSize              : [%d]", settings.LVFontSize);
+    AT_LOG_DEBUG("  LVFontStyle             : [%s]", WStrToUTF8(settings.LVFontStyle).c_str());
+    AT_LOG_DEBUG("  LVFontColor             : [%s]", WStrToUTF8(ColorRefToRGBString(settings.LVFontColor)).c_str());
+    AT_LOG_DEBUG("  LVBackgroundColor       : [%s]", WStrToUTF8(ColorRefToRGBString(settings.LVBackgroundColor)).c_str());
+    AT_LOG_DEBUG("[General]");
+    AT_LOG_DEBUG("  FuzzyMatchPercent       : [%d]", settings.FuzzyMatchPercent);
+    AT_LOG_DEBUG("  Transparency            : [%d]", settings.Transparency);
+    AT_LOG_DEBUG("  WidthPercentage         : [%d]", settings.WidthPercentage);
+    AT_LOG_DEBUG("  HeightPercentage        : [%d]", settings.HeightPercentage);
+    AT_LOG_DEBUG("  CheckForUpdatesOpt      : [%s]", WStrToUTF8(settings.CheckForUpdatesOpt).c_str());
+    AT_LOG_DEBUG("  PromptTerminateAll      : [%d]", settings.PromptTerminateAll);
+    AT_LOG_DEBUG("  ShowSearchString        : [%d]", settings.ShowSearchString);
+    AT_LOG_DEBUG("  ShowColHeader           : [%d]", settings.ShowColHeader);
+    AT_LOG_DEBUG("  ShowColProcessName      : [%d]", settings.ShowColProcessName);
+    AT_LOG_DEBUG("  AltCtrlTabEnabled       : [%d]", settings.AltCtrlTabEnabled);
+    AT_LOG_DEBUG("[Backtick]");
+    AT_LOG_DEBUG("  SimilarProcessGroups    : [%s]", WStrToUTF8(settings.SimilarProcessGroups).c_str());
+    AT_LOG_DEBUG("[ProcessExclusions]");
+    AT_LOG_DEBUG("  ProcessExclusionsEnabled: [%d]", settings.ProcessExclusionsEnabled);
+    AT_LOG_DEBUG("  ProcessExclusions       : [%s]", WStrToUTF8(settings.ProcessExclusions).c_str());
     AT_LOG_DEBUG("=== AltTab Settings End ===");
 }
 
@@ -578,14 +701,15 @@ bool AreSettingsModified(HWND hDlg) {
         settings.Transparency             != g_Settings.Transparency             ||
         settings.WidthPercentage          != g_Settings.WidthPercentage          ||
         settings.HeightPercentage         != g_Settings.HeightPercentage         ||
-        settings.SimilarProcessGroups     != g_Settings.SimilarProcessGroups     ||
+        settings.CheckForUpdatesOpt       != g_Settings.CheckForUpdatesOpt       ||
+        settings.PromptTerminateAll       != g_Settings.PromptTerminateAll       ||
         settings.ShowSearchString         != g_Settings.ShowSearchString         ||
         settings.ShowColHeader            != g_Settings.ShowColHeader            ||
         settings.ShowColProcessName       != g_Settings.ShowColProcessName       ||
-        settings.PromptTerminateAll       != g_Settings.PromptTerminateAll       ||
-        settings.CheckForUpdatesOpt       != g_Settings.CheckForUpdatesOpt       ||
+        settings.AltCtrlTabEnabled        != g_Settings.AltCtrlTabEnabled        ||
         settings.ProcessExclusionsEnabled != g_Settings.ProcessExclusionsEnabled ||
         settings.ProcessExclusions        != g_Settings.ProcessExclusions        ||
+        settings.SimilarProcessGroups     != g_Settings.SimilarProcessGroups     ||
         false;
 
     return modified;
@@ -663,6 +787,7 @@ void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings) {
     CheckDlgButton    (hDlg, IDC_CHECK_SHOW_SEARCH_STRING     , settings.ShowSearchString         ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , settings.ShowColHeader            ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , settings.ShowColProcessName       ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_ALT_CTRL_TAB           , settings.AltCtrlTabEnabled        ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
 
     EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), settings.ProcessExclusionsEnabled);

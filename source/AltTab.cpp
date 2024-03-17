@@ -35,20 +35,23 @@
 // ----------------------------------------------------------------------------
 // Global Variables:
 // ----------------------------------------------------------------------------
-HINSTANCE   g_hInstance;                                 // Current instance
-HHOOK       g_KeyboardHook;                              // Keyboard Hook
-HWND        g_hAltTabWnd         = nullptr;              // AltTab window handle
-HWND        g_hFGWnd             = nullptr;              // Foreground window handle
-HWND        g_hMainWnd           = nullptr;              // AltTab main window handle
-HWND        g_hSetingsWnd        = nullptr;              // AltTab settings window handle
-HWND        g_hCustomToolTip     = nullptr;              // Custom tool tip
+HINSTANCE   g_hInstance;                                  // Current instance
+HHOOK       g_KeyboardHook;                               // Keyboard Hook
+HWND        g_hAltTabWnd          = nullptr;              // AltTab window handle
+HWND        g_hFGWnd              = nullptr;              // Foreground window handle
+HWND        g_hMainWnd            = nullptr;              // AltTab main window handle
+HWND        g_hSetingsWnd         = nullptr;              // AltTab settings window handle
+HWND        g_hCustomToolTip      = nullptr;              // Custom tool tip
 UINT_PTR    g_TooltipTimerId;
-bool        g_TooltipVisible     = false;                // Is tooltip visible or not
-TOOLINFO    g_ToolInfo           = {};                   // Custom tool tip
-bool        g_IsAltTab           = false;                // Is Alt+Tab pressed
-bool        g_IsAltBacktick      = false;                // Is Alt+Backtick pressed
-DWORD       g_MainThreadID       = GetCurrentThreadId(); // Main thread ID
-DWORD       g_idThreadAttachTo   = 0;
+bool        g_TooltipVisible      = false;                // Is tooltip visible or not
+TOOLINFO    g_ToolInfo            = {};                   // Custom tool tip
+bool        g_IsAltKeyPressed     = false;                // Is Alt key pressed
+DWORD       g_LastAltKeyPressTime = 0;                    // Last Alt key press time
+bool        g_IsAltTab            = false;                // Is Alt+Tab pressed
+bool        g_IsAltCtrlTab        = false;                // Is Alt+Ctrl+Tab pressed
+bool        g_IsAltBacktick       = false;                // Is Alt+Backtick pressed
+DWORD       g_MainThreadID        = GetCurrentThreadId(); // Main thread ID
+DWORD       g_idThreadAttachTo    = 0;
 
 IsHungAppWindowFunc g_pfnIsHungAppWindow = nullptr;
 
@@ -406,9 +409,11 @@ void ActivateWindow(HWND hTargetWnd) {
     SetActiveWindow(hTargetWnd);
 }
 
-// ----------------------------------------------------------------------------
-// Destroy AltTab Window and do necessary cleanup here
-// ----------------------------------------------------------------------------
+/**
+ * \brief Destroy AltTab Window and do necessary cleanup here
+ * 
+ * \param activate   Input parameter to activate the selected window or not
+ */
 void DestoryAltTabWindow(bool activate) {
     AT_LOG_TRACE;
 
@@ -438,7 +443,7 @@ void DestoryAltTabWindow(bool activate) {
         }
         DestroyWindow(g_hAltTabWnd);
         PostMessage(g_hAltTabWnd, WM_CLOSE, 0, 0);
-        if (!IsHungAppWindowEx(hWnd)) {
+        if (hWnd && !IsHungAppWindowEx(hWnd)) {
             ActivateWindow(hWnd);
         }
     } else {
@@ -448,6 +453,7 @@ void DestoryAltTabWindow(bool activate) {
     // CleanUp
     g_hAltTabWnd    = nullptr;
     g_IsAltTab      = false;
+    g_IsAltCtrlTab  = false;
     g_IsAltBacktick = false;
     g_SelectedIndex = -1;
     g_AltTabWindows.clear();
@@ -481,8 +487,8 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     }
     
     //AT_LOG_INFO(std::format("hAltTabWnd is nullptr: {}", hAltTabWnd == nullptr).c_str());
-    KBDLLHOOKSTRUCT* pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-    DWORD vkCode = pKeyboard->vkCode;
+    auto* pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+    DWORD vkCode    = pKeyboard->vkCode;
         
     // Check if Alt key is pressed
     bool isAltPressed  = GetAsyncKeyState(VK_MENU   ) & 0x8000;
@@ -490,8 +496,11 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
     // ----------------------------------------------------------------------------
     // Alt key is pressed
+    // 20240316: Now we are handling Alt+Ctrl+Tab also. Alt is will be released
+    // when user wants Alt+Ctrl+Tab window. So, isAltPressed is not always true.
+    // Hence, check for g_hAltTabWnd also whether the AltTab window is displayed.
     // ----------------------------------------------------------------------------
-    if (isAltPressed && !isCtrlPressed && pKeyboard->flags & LLKHF_ALTDOWN) {
+    if (isAltPressed && (!isCtrlPressed || g_Settings.AltCtrlTabEnabled) || g_hAltTabWnd != nullptr) {
         // Check if Shift key is pressed
         bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
         int  direction      = isShiftPressed ? -1 : 1;
@@ -512,8 +521,9 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
                     }
 
-                    g_IsAltTab = true;
+                    g_IsAltTab      = true;
                     g_IsAltBacktick = false;
+
                     if (!isShiftPressed) {
                         // Alt+Tab is pressed
                         AT_LOG_INFO("--------- Alt+Tab Pressed! ---------");
@@ -528,8 +538,9 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // Alt + Backtick
                 // ----------------------------------------------------------------------------
                 else if (vkCode == VK_OEM_3) { // 0xC0
-                    g_IsAltTab = false;
+                    g_IsAltTab      = false;
                     g_IsAltBacktick = true;
+
                     if (!isShiftPressed) {
                         // Alt+Backtick is pressed
                         AT_LOG_INFO("--------- Alt+Backtick Pressed! ---------");
@@ -540,12 +551,32 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                         ShowAltTabWindow(g_hAltTabWnd, -1);
                     }
                 }
+                // ----------------------------------------------------------------------------
+                // Check if Alt key is pressed twice within 500ms
+                // ----------------------------------------------------------------------------
+                //else if (vkCode == VK_MENU) {
+                //    DWORD currentTime = GetTickCount();
+
+                //    if (!g_IsAltKeyPressed || currentTime - g_LastAltKeyPressTime < 500) {
+                //        g_IsAltKeyPressed = true;
+                //        g_LastAltKeyPressTime = currentTime;
+                //    } else {
+                //        // Alt key pressed twice quickly!
+                //        AT_LOG_INFO("Alt key pressed twice within 500ms!");
+                //    }
+                //}
 
                 // ----------------------------------------------------------------------------
                 // Create timer here to check the Alt key is released.
                 // ----------------------------------------------------------------------------
                 if (g_IsAltTab || g_IsAltBacktick) {
-                    SetTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP, 50, CheckAltKeyIsReleased);
+                    // Do NOT start the timer if Ctrl key is pressed.
+                    // Here, when user presses Alt+Ctrl+Tab, AltTab window remains open.
+                    if (!g_Settings.AltCtrlTabEnabled || !isCtrlPressed) {
+                        SetTimer(g_hMainWnd, TIMER_CHECK_ALT_KEYUP, 50, CheckAltKeyIsReleased);
+                    } else {
+                        g_IsAltCtrlTab = true;
+                    }
                     return TRUE;
                 }
             } else {
@@ -590,7 +621,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 //AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x, isprint: %d", wParam, vkCode, iswprint(vkCode));
             }
         }
-    } // if (isAltPressed && !isCtrlPressed)
+    } // if (isAltPressed || g_hAltTabWnd != nullptr)
 
     //AT_LOG_INFO("CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);");
     return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);
@@ -604,8 +635,9 @@ void CALLBACK CheckForUpdatesTimerCB(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWO
     auto currentTimeStamp   = std::chrono::system_clock::now();
     auto timeDiff           = currentTimeStamp - lastCheckTimestamp;
 
-    if ((frequency == L"Daily" && timeDiff >= std::chrono::hours(24))
-        || (frequency == L"Weekly" && timeDiff >= std::chrono::hours(7 * 24))) {
+    if ((frequency == L"Daily"  && timeDiff >= std::chrono::hours(24    )) ||
+        (frequency == L"Weekly" && timeDiff >= std::chrono::hours(24 * 7)))
+    {
         // Perform the update check logic here
         CheckForUpdates(true);
 
@@ -685,6 +717,12 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         ToggleCheckState(hSubMenu, menuItemId);
     }
     break;
+
+    case ID_TRAYCONTEXTMENU_RELOADALTTABSETTINGS: {
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELOADALTTABSETTINGS");
+        ATLoadSettings();
+        ShowCustomToolTip(L"Settings reloaded successfully.", 3000);
+    } break;
 
     case ID_TRAYCONTEXTMENU_RESTART: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RESTART");

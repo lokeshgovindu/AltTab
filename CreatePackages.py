@@ -96,7 +96,7 @@ def create_7z_archive(output_filename, files_to_pack):
 
 def create_package(config_name):
     output_filename = r'Releases\AltTab_{}_{}_x64.7z'.format(read_version_info(), config_name)
-    files_to_pack = [r'x64\%s\AltTab.exe' % config_name, 'Help.mht', 'ReadMe.mht', 'ReleaseNotes.txt']
+    files_to_pack = [r'x64\%s\AltTab.exe' % config_name, 'AltTab.chm', 'ReadMe.txt', 'ReleaseNotes.txt']
 
     create_7z_archive(output_filename, files_to_pack)
     print(f"Package '{output_filename}' created successfully.")

@@ -22,8 +22,11 @@ Introduction
 ------------
 AltTab is an alternative application for native windows switcher.
 
-Use Alt+Tab / Alt+Shift+Tab / Alt+Backtick / Alt+Shift+Backtick to bring the
-main AltTab window, and use 
+- Use Alt+Tab / Alt+Shift+Tab / Alt+Backtick / Alt+Shift+Backtick to bring the
+  main AltTab window, and use 
+
+- Use Alt+Ctrl+Tab to bring the main AltTab window and remains open even Alt key
+  is released.
 
   ┌─────────────┬───────────────────────────────────────────────────────────┐
   │ Key         │ Description                                               │
@@ -42,39 +45,42 @@ main AltTab window, and use
 
   Please check the AltTab icon in system tray for some more settings:
   -------------------------------------------------------------------
-  ┌───────────────────┐
-  │ About AltTab      │
-  ├───────────────────┤
-  │ ReadMe            │
-  │ Help              │
-  │ Release Notes     │
-  ├───────────────────┤
-  │ Settings          │
-  │ Disable AltTab    │
-  │ Check for Updates │
-  │ Rut At Startup    │
-  ├───────────────────┤
-  │ Restart           │
-  │ Exit              │
-  └───────────────────┘
+  ┌───────────────────────────┐
+  │ About AltTab              │
+  ├───────────────────────────┤
+  │ ReadMe                    │
+  │ Help                      │
+  │ Release Notes             │
+  ├───────────────────────────┤
+  │ Settings                  │
+  │ Disable AltTab            │
+  │ Check for Updates         │
+  │ Rut At Startup            │
+  ├───────────────────────────┤
+  │ Reload AltTabSettinsg.ini │
+  │ Restart                   │
+  │ Exit                      │
+  └───────────────────────────┘
 
 
 Installation
 ------------
 Just execute the AltTab and try the following:
-Alt+Tab / Alt+Shift+Tab / Alt+Backtick(~) / Alt+Shift+Backtick(~).
+  Alt+Tab / Alt+Shift+Tab
+  Alt+Ctrl+Tab / Alt+Ctrl+Shift+Tab
+  Alt+Backtick(~) / Alt+Shift+Backtick(~)
 
 
 Websites
 --------
 AltTab official site:
-	http://alttab.sourceforge.net/
+  http://alttab.sourceforge.net/
 
 AltTab wiki:
-	https://sourceforge.net/p/alttab/wiki/Home/
+  https://sourceforge.net/p/alttab/wiki/Home/
 
 AltTab support:
-	https://sourceforge.net/projects/alttab/support/
+  https://sourceforge.net/projects/alttab/support/
 
 
 Known Limitations
@@ -82,8 +88,6 @@ Known Limitations
 - When running any application as an administrator (as elevated permissions), 
   AltTab hotkeys does not work when the elevated applications are in focus.
   This can be addressed by also running AltTab as an administrator.
-
-- Not handled Alt+Ctrl+Tab
 
 
 Known Issues

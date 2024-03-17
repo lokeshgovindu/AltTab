@@ -12,21 +12,34 @@ using StringList           = std::vector<std::wstring>;
 #define SETTINGS_INI_FILENAME                L"AltTabSettings.ini"
 #define CHECK_FOR_UPDATES_FILENAME           L"CheckForUpdates.txt"
 
-#define DEFAULT_FONT_NAME                    L"Lucida Handwriting"
-#define DEFAULT_FONT_SIZE                    11
-#define DEFAULT_FONT_STYLE                   L"normal"               // normal, italic, bold and bold italic
-#define DEFAULT_FONT_COLOR                   RGB(0xFF, 0xFF, 0xFF)
-#define DEFAULT_BG_COLOR                     RGB(0x00, 0x00, 0x00)
+
+// ----------------------------------------------------------------------------
+// Default settings
+// Here,
+//   SS - Search String
+//   LV - List View
+// ----------------------------------------------------------------------------
+#define DEFAULT_SS_FONT_NAME                 L"Lucida Handwriting"
+#define DEFAULT_SS_FONT_SIZE                 11
+#define DEFAULT_SS_FONT_STYLE                L"normal"               // normal, italic, bold and bold italic
+#define DEFAULT_SS_FONT_COLOR                RGB(0xFF, 0x00, 0x00)
+#define DEFAULT_SS_BG_COLOR                  RGB(0xFF, 0xFF, 0xFF)
+#define DEFAULT_LV_FONT_NAME                 L"Lucida Handwriting"
+#define DEFAULT_LV_FONT_SIZE                 11
+#define DEFAULT_LV_FONT_STYLE                L"normal"               // normal, italic, bold and bold italic
+#define DEFAULT_LV_FONT_COLOR                RGB(0xFF, 0xFF, 0xFF)
+#define DEFAULT_LV_BG_COLOR                  RGB(0x00, 0x00, 0x00)
 #define DEFAULT_WIDTH                        45
 #define DEFAULT_HEIGHT                       45
 #define DEFAULT_FUZZYMATCHPERCENT            60
 #define DEFAULT_TRANSPARENCY                 222
-#define DEFAULT_SIMILARPROCESSGROUPS         L"notepad.exe/notepad++.exe|iexplore.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/conemu.exe/conemu64.exe"
+#define DEFAULT_SIMILARPROCESSGROUPS         L"notepad.exe/notepad++.exe|iexplore.exe/msedge.exe/chrome.exe/firefox.exe|explorer.exe/xplorer2_lite.exe/xplorer2.exe/xplorer2_64.exe|cmd.exe/WindowsTerminal.exe/conemu.exe/conemu64.exe"
 #define DEFAULT_CHECKFORUPDATES              L"Startup"
 #define DEFAULT_PROMPTTERMINATEALL           true
 #define DEFAULT_SHOW_SEARCH_STRING           true
 #define DEFAULT_SHOW_COL_HEADER              false
 #define DEFAULT_SHOW_COL_PROCESSNAME         false
+#define DEFAULT_ALT_CTRL_TAB_ENABLED         true
 #define DEFAULT_PROCESS_EXCLUSIONS_ENABLED   false
 #define DEFAULT_PROCESS_EXCLUSIONS           L""
 
@@ -44,11 +57,16 @@ using StringList           = std::vector<std::wstring>;
  *    "outlook.exe/teams.exe"
  */
 struct AltTabSettings {
-    std::wstring           FontName;                  // Font Name
-    int                    FontSize;                  // Font Size
-    std::wstring           FontStyle;                 // Font Style
-    COLORREF               FontColor;                 // Font color
-    COLORREF               BackgroundColor;           // Background color
+    std::wstring           SSFontName;                // Search String Font Name
+    int                    SSFontSize;                // Search String Font Size
+    std::wstring           SSFontStyle;               // Search String Font Style
+    COLORREF               SSFontColor;               // Search String Font color
+    COLORREF               SSBackgroundColor;         // Search String Background color
+    std::wstring           LVFontName;                // ListView Font Name
+    int                    LVFontSize;                // ListView Font Size
+    std::wstring           LVFontStyle;               // ListView Font Style
+    COLORREF               LVFontColor;               // ListView Font color
+    COLORREF               LVBackgroundColor;         // ListView Background color
     int                    WidthPercentage;           // Window width in percentage of the actual screen width
     int                    HeightPercentage;          // Window height in percentage of the actual screen height
     int                    WindowWidth;               // Window width, will be calculated at runtime
@@ -63,6 +81,7 @@ struct AltTabSettings {
     bool                   ShowSearchString;          // Show search string
     bool                   ShowColHeader;             // Show column header
     bool                   ShowColProcessName;        // Show column - Process Name
+    bool                   AltCtrlTabEnabled;         // Alt+Ctrl+Tab enabled
     bool                   ProcessExclusionsEnabled;  // Process exclusions enabled
     std::wstring           ProcessExclusions;         // Process exclusions string which are separated by /
     ProcessExclusionList   ProcessExclusionList;      // Process exclusions list, will be constructed at runtime from ProcessExclusions
@@ -70,6 +89,10 @@ struct AltTabSettings {
     AltTabSettings();
 
     void Reset();
+
+    void Load();
+
+    void Save();
 
     int GetCheckForUpdatesIndex() const;
     std::pair<std::wstring, std::wstring> IsValid(bool& valid);

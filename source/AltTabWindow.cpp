@@ -30,7 +30,8 @@
 
 HWND           g_hStaticText       = nullptr;
 HWND           g_hListView         = nullptr;
-HFONT          g_hFont             = nullptr;
+HFONT          g_hSSFont           = nullptr;
+HFONT          g_hLVFont           = nullptr;
 int            g_SelectedIndex     = 0;
 int            g_MouseHoverIndex   = -1;
 HANDLE         g_hAltTabThread     = nullptr;
@@ -551,9 +552,9 @@ static void SetListViewCustomFont(HWND hListView, const std::wstring& fontName, 
     // Modify the font size
     lf.lfHeight = -MulDiv(fontSize, GetDeviceCaps(GetDC(hListView), LOGPIXELSY), 72);
 
-    g_hFont = CreateFontIndirect(&lf);
+    g_hLVFont = CreateFontIndirect(&lf);
 
-    SendMessage(hListView, WM_SETFONT, reinterpret_cast<WPARAM>(g_hFont), MAKELPARAM(TRUE, 0));
+    SendMessage(hListView, WM_SETFONT, reinterpret_cast<WPARAM>(g_hLVFont), MAKELPARAM(TRUE, 0));
 }
 
 static void SetListViewCustomColors(HWND hListView, COLORREF backgroundColor, COLORREF textColor) {
@@ -580,30 +581,52 @@ LRESULT CALLBACK ListViewSubclassProc(
     switch (uMsg) {
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
+        // ----------------------------------------------------------------------------
+        // VK_ESCAPE
+        // ----------------------------------------------------------------------------
         if (wParam == VK_ESCAPE) {
             AT_LOG_INFO("VK_ESCAPE");
             DestoryAltTabWindow();
-        } else if (wParam == VK_DOWN) {
+        }
+        // ----------------------------------------------------------------------------
+        // VK_DOWN
+        // ----------------------------------------------------------------------------
+        else if (wParam == VK_DOWN) {
             AT_LOG_INFO("Down Pressed!");
             ATWListViewSelectNextItem();
             return TRUE;
-        } else if (wParam == VK_UP) {
+        }
+        // ----------------------------------------------------------------------------
+        // VK_DOWN
+        // ----------------------------------------------------------------------------
+        else if (wParam == VK_UP) {
             AT_LOG_INFO("Up Pressed!");
             ATWListViewSelectPrevItem();
             return TRUE;
-        } else if (vkCode == VK_HOME || vkCode == VK_PRIOR) {
+        }
+        // ----------------------------------------------------------------------------
+        // VK_HOME / VK_PRIOR
+        // ----------------------------------------------------------------------------
+        else if (vkCode == VK_HOME || vkCode == VK_PRIOR) {
             AT_LOG_INFO("Home/PageUp Pressed!");
             if (!g_AltTabWindows.empty()) {
                 ATWListViewSelectItem(0);
             }
             return TRUE;
-        } else if (vkCode == VK_END || vkCode == VK_NEXT) {
+        }
+        // ----------------------------------------------------------------------------
+        // VK_END / VK_NEXT
+        // ----------------------------------------------------------------------------
+        else if (vkCode == VK_END || vkCode == VK_NEXT) {
             AT_LOG_INFO("End/PageDown Pressed!");
             if (!g_AltTabWindows.empty()) {
                 ATWListViewSelectItem((int)g_AltTabWindows.size() - 1);
             }
             return TRUE;
         }
+        // ----------------------------------------------------------------------------
+        // VK_DELETE
+        // ----------------------------------------------------------------------------
         else if (vkCode == VK_DELETE) {
             int  direction      = isShiftPressed ? -1 : 1;
 
@@ -626,6 +649,9 @@ LRESULT CALLBACK ListViewSubclassProc(
             RefreshAltTabWindow();
             return TRUE;
         }
+        // ----------------------------------------------------------------------------
+        // Backtick
+        // ----------------------------------------------------------------------------
         else if (vkCode == VK_OEM_3) {   // 0xC0 - '`~' for US
             AT_LOG_INFO("Backtick Pressed!, g_IsAltBacktick = %d", g_IsAltBacktick);
             const int  direction    = isShiftPressed ? -1 : 1;
@@ -662,6 +688,9 @@ LRESULT CALLBACK ListViewSubclassProc(
             if (nextInd != -1) ATWListViewSelectItem(nextInd);
             return TRUE;
         }
+        // ----------------------------------------------------------------------------
+        // VK_F1
+        // ----------------------------------------------------------------------------
         else if (vkCode == VK_F1) {
             DestoryAltTabWindow();
             if (isShiftPressed) {
@@ -671,11 +700,17 @@ LRESULT CALLBACK ListViewSubclassProc(
             }
             return TRUE;
         }
+        // ----------------------------------------------------------------------------
+        // Shift + VK_F1
+        // ----------------------------------------------------------------------------
         else if (isShiftPressed && vkCode == VK_F1) {
             DestoryAltTabWindow();
             DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_ABOUTBOX), nullptr, ATAboutDlgProc);
             return TRUE;
         }
+        // ----------------------------------------------------------------------------
+        // VK_F2
+        // ----------------------------------------------------------------------------
         else if (vkCode == VK_F2) {
             DestoryAltTabWindow();
             // Do NOT assign owner for this, if owner is assigned and the settings
@@ -687,9 +722,19 @@ LRESULT CALLBACK ListViewSubclassProc(
             }
             return TRUE;
         }
+        // ----------------------------------------------------------------------------
+        // VK_ENTER
+        // ----------------------------------------------------------------------------
+        else if (vkCode == VK_RETURN) {
+            AT_LOG_INFO("Enter Pressed!");
+            DestoryAltTabWindow(true);
+            return TRUE;
+        }
+        // ----------------------------------------------------------------------------
         // WM_CHAR won't be sent when ALT is pressed, this is the alternative to handle when a key is pressed.
         // And collect the chars and form a search string.
         // Ignore Backtick (`), Tab, Backspace, and non-printable characters while forming search string.
+        // ----------------------------------------------------------------------------
         else {
             wchar_t ch = '\0';
             bool isChar = ATMapVirtualKey((UINT)wParam, ch);
@@ -773,7 +818,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         int windowHeight = static_cast<int>(screenHeight * g_Settings.HeightPercentage * 0.01);
 
         // Compute the window position (centered on the screen)
-        int windowX = (screenWidth  - windowWidth) / 2;
+        int windowX = (screenWidth  - windowWidth ) / 2;
         int windowY = (screenHeight - windowHeight) / 2;
         DWORD style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS;
         if (!g_Settings.ShowColHeader) {
@@ -785,8 +830,11 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         // Calculate the required height for the static control based on font size
         HDC hdc = GetDC(hWnd);
-        g_hFont = CreateFontEx(hdc, g_Settings.FontName, g_Settings.FontSize, g_Settings.FontStyle);
-        SelectObject(hdc, g_hFont);
+
+        g_hSSFont = CreateFontEx(hdc, g_Settings.SSFontName, g_Settings.SSFontSize, g_Settings.SSFontStyle);
+        g_hLVFont = CreateFontEx(hdc, g_Settings.LVFontName, g_Settings.LVFontSize, g_Settings.LVFontStyle);
+
+        SelectObject(hdc, g_hSSFont);
 
         TEXTMETRIC tm;
         GetTextMetrics(hdc, &tm);
@@ -825,7 +873,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             nullptr                             // No window creation data
         );
 
-        SendMessage(hStaticText, WM_SETFONT, (WPARAM)g_hFont, 0);
+        SendMessage(hStaticText, WM_SETFONT, (WPARAM)g_hSSFont, 0);
         g_hStaticText = hStaticText;
 
         // Here adding 1 pixel to the Y position to avoid the static text control overlap with the ListView control
@@ -860,7 +908,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             nullptr                                // No window creation data
         );
 
-        SendMessage(hListView, WM_SETFONT, (WPARAM)g_hFont, MAKELPARAM(TRUE, 0));
+        SendMessage(hListView, WM_SETFONT, (WPARAM)g_hLVFont, MAKELPARAM(TRUE, 0));
         g_hListView = hListView;
 
         // Subclass the ListView control
@@ -876,7 +924,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         CustomizeListView(hListView, dpi);
 
         // Set ListView background and font colors
-        SetListViewCustomColors(hListView, g_Settings.BackgroundColor, g_Settings.FontColor);
+        SetListViewCustomColors(hListView, g_Settings.LVBackgroundColor, g_Settings.LVFontColor);
 
         // Set window transparency
         SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
@@ -952,8 +1000,11 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         HDC hdcStatic   = (HDC)wParam;
         HWND hwndStatic = (HWND)lParam;
 
-        // Set the text color
-        SetTextColor(hdcStatic, RGB(255, 0, 0)); // Red color
+        // Set the text color and background color of the static text control
+        SetTextColor(hdcStatic, g_Settings.SSFontColor      );
+        SetBkColor  (hdcStatic, g_Settings.SSBackgroundColor);
+
+        return (INT_PTR)CreateSolidBrush(g_Settings.SSBackgroundColor);
     }
     break;
 
@@ -965,6 +1016,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
 
     case WM_CONTEXTMENU: {
+        AT_LOG_INFO("WM_CONTEXTMENU");
         POINT pt;
         GetCursorPos(&pt);
         ShowContextMenu(hWnd, pt);
@@ -986,17 +1038,16 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     case WM_CLOSE:
         AT_LOG_INFO("WM_CLOSE");
         // Release the font
-        if (g_hFont != nullptr) {
-            DeleteObject(g_hFont);
-        }
+        if (g_hLVFont != nullptr) { DeleteObject(g_hLVFont); }
+        if (g_hSSFont != nullptr) { DeleteObject(g_hSSFont); }
         PostQuitMessage(0);
         return TRUE;
 
     case WM_KEYDOWN: {
-        AT_LOG_INFO("WM_KEYDOWN");
         if (wParam == VK_ESCAPE) {
+            AT_LOG_INFO("WM_KEYDOWN: VK_ESCAPE");
             // Close the window when Escape key is pressed
-            PostQuitMessage(0);
+            DestoryAltTabWindow();
             return TRUE;
         }
     }

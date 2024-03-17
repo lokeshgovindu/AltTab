@@ -24,6 +24,7 @@
 	- [x] Group 3:  | Check for updates			 |
 	- [x] Group 3:  | Run At Startup			 |
 	- [x] Separator |----------------------------|
+	- [x] Group 4:  | Reload AltTabSettings.ini  |
 	- [x] Group 4:  | Restart					 |
 	- [x] Group 4:  | Exit						 |
 	- [x]           o----------------------------o
@@ -58,14 +59,15 @@
 	- [x] Log to console
 	- [ ] Use external .properties file for log4cpp
 - [x] Custom tooltip.
-- [ ] Add support for multiple monitors.
 - [x] Use chm files instead of mht.
 - [x] Option to disable Search String in AltTab settings UI.
-- [ ] Handle Alt+Ctrl+Tab to display the AltTab window.
+- [x] Handle Alt+Ctrl+Tab to display the AltTab window.
 - [x] Save settings to application directory instead of local AppData directory.
+- [x] Make the AltTab window high DPI aware.
+- [x] Reload settings when the settings file is modified manually.
+- [ ] Add support for multiple monitors.
 - [ ] Option to disable tray icon in .ini file.
 - [ ] Option to specify the rounded corners in AltTab settings UI.
-- [x] Make the AltTab window DPI aware.
 
 
 ## Bug Fixes

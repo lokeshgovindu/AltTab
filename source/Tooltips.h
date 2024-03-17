@@ -56,3 +56,9 @@ const wchar_t* TT_APPLY_SETTINGS               = LR"(Save the modified settings 
 const wchar_t* TT_OK_SETTINGS                  = LR"(Save the modified settings to INI file and close the dialog.)";
 
 const wchar_t* TT_CANCEL_SETTINGS              = LR"(Don't save the modified settings to INI file and close dialog.)";
+
+const wchar_t* TT_RELOAD_SETTINGS              = LR"(Reload settings from AltTabSettings.ini file.
+
+Use this button if you have modified the settings in the INI file
+manually and want to reload it without restarting the application.
+)";

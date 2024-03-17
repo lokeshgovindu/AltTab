@@ -7,9 +7,6 @@ Known Limitations
   AltTab hotkeys does not work when the elevated applications are in focus.
   This can be addressed by also running AltTab as an administrator.
 
-- Not handled Alt+Ctrl+Tab
-
-
 Known Issues
 ------------
 - Available @ https://sourceforge.net/p/alttab/tickets/
@@ -18,8 +15,21 @@ Known Issues
 2024.3 new features and bug fixes
 ---------------------------------
 + Show process path and ID in tooltip on mouse hover on item in the list view.
-+ Removed Help.mht and added Help.chm instead.
++ Handled Alt+Ctrl+Tab.
++ Settings are stored in application directory instead of user profile Local 
+  AppData directory.
++ Added [SearchString] section in AltTabSettings.ini file to customize the
+  search string control font name, size, style, color and background color.
++ Saving the colors in 0xRRGGBB format in AltTabSettings.ini file.
++ AltTab window is high DPI aware.
++ Upgraded help file format from mht to chm.
++ Option to disable Search String in AltTab settings UI.
++ Reload settings from AltTabSettings.ini if any changes are made manually from
+  using tray context menu or from AltTab settings dialog.
 - Append "(Not Responding)" to title for the hung process.
+- Do not switch to Alt+Ctrl+Tab window if Alt+Tab window is already active.
+- Reset in Settings dialog resets the settings to the default values in UI but
+  not saving to file.
 
 
 2024.2 new features and bug fixes
