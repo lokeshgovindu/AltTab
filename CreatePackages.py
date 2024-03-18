@@ -106,14 +106,11 @@ if __name__ == "__main__":
     os.environ["Path"] = vc_env["path"]
 
     if True:
-        build_solution(r'AltTab.sln', 'Debug|x64', 'clean')
         build_solution(r'AltTab.sln', 'Release|x64', 'clean')
         build_solution(r'AltTab.sln', 'ReleaseNoLogger|x64', 'clean')
 
-        build_solution(r'AltTab.sln', 'Debug|x64', 'build')
         build_solution(r'AltTab.sln', 'Release|x64', 'build')
         build_solution(r'AltTab.sln', 'ReleaseNoLogger|x64', 'build')
 
-    create_package('Debug')
     create_package('Release')
     create_package('ReleaseNoLogger')

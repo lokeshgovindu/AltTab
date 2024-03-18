@@ -35,6 +35,8 @@ Known Issues
   not saving to file.
 - Close the AltTab window if the application is inactive (means AltTab window
   is not in focus. Ex: When mouse left button is clicked outside).
+- Fixed an issue in CheckForUpdates dialog.
+
 
 2024.2 new features and bug fixes
 ---------------------------------

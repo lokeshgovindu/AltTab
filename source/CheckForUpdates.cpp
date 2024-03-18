@@ -94,6 +94,7 @@ void CheckForUpdates(bool quiteMode) {
     std::string contents;
     while (InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
         contents.append(buffer);
+        memset(buffer, 0, sizeof(buffer));
     }
 
     // Close handles

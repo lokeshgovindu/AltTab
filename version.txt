@@ -14,32 +14,16 @@ AltTab_2024.3.0.0_x64.7z
 + Option to disable Search String in AltTab settings UI.
 + Reload settings from AltTabSettings.ini if any changes are made manually from
   using tray context menu or from AltTab settings dialog.
++ Show AltTab window on mouse left button double clicked on tray icon.
++ Activate the selected process window on mouse left button double clicked on
+  the item in the list view.
 - Append "(Not Responding)" to title for the hung process.
 - Do not switch to Alt+Ctrl+Tab window if Alt+Tab window is already active.
 - Reset in Settings dialog resets the settings to the default values in UI but
   not saving to file.
-
-
-2024.2.0.2
-AltTab_2024.2.0.2_x64.7z
-2024.2 new features and bug fixes
----------------------------------
-Initial release of AltTab.
-
-+ Alt+Tab, Alt+Shift+Tab, Alt+Backtick & Alt+Shift+Backtick
-+ AltTab Settings Dialog
-+ Used fuzzy string matching algorithm to search the search string in the
-  process name / title and gives the degree of similarity how similar search
-  string and process name/title.
-  Ex | 100 % means exact match
-     |  80 % would cause "files" to match "filas" and so on ...
-  Note: Set the fuzzy string matching percent in the settings dialog.
-+ Can specify group of similar applications to switch between these windows
-  using Alt+Backtick / Alt+Shift+Backtick.
-  Ex | Switch between notepad.exe/notepad++.exe processes using Alt+Backtick if
-     | notepad.exe and notepad++.exe are marked as similar processes.
-  Use settings dialog to define similar process groups.
-+ Exclude processes
+- Close the AltTab window if the application is inactive (means AltTab window
+  is not in focus. Ex: When mouse left button is clicked outside).
+- Fixed an issue in CheckForUpdates dialog.
 
 
 PS
