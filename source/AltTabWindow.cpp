@@ -122,7 +122,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     bool excluded = IsExcludedProcess(ToLower(item.ProcessName));
 
                     // If Alt+Tab is pressed, show all windows
-                    if (g_IsAltTab) {
+                    if (g_IsAltTab || g_IsAltCtrlTab) {
                         insert = excluded ? false : true;
                     }
                     // If Alt+Backtick is pressed, show the process of similar process groups
@@ -222,7 +222,7 @@ DWORD WINAPI AltTabThread(LPVOID pvParam) {
     AT_LOG_TRACE;
     int direction = *((int*)pvParam);
     CreateAltTabWindow();
-    //ShowAltTabWindow(g_hAltTabWnd, direction);
+    ShowAltTabWindow(g_hAltTabWnd, direction);
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -476,7 +476,7 @@ void AddListViewItem(HWND hListView, int index, const AltTabWindowData& windowDa
     lvItem.iSubItem  = 0;
     lvItem.iImage    = index;
 
-    int nIndex = ListView_InsertItem(hListView, &lvItem);
+    ListView_InsertItem(hListView, &lvItem);
     ListView_SetItem(hListView, &lvItem);
     ImageList_AddIcon(ListView_GetImageList(hListView, LVSIL_NORMAL), windowData.hIcon);
     ListView_SetItemText(hListView, index, 1, const_cast<wchar_t*>(windowData.Title.c_str()));
@@ -544,19 +544,6 @@ HFONT CreateFontEx(HDC hdc, const std::wstring& fontName, int fontSize, const st
     );
 }
 
-static void SetListViewCustomFont(HWND hListView, const std::wstring& fontName, int fontSize) {
-    LOGFONT lf;
-    GetObject(GetStockObject(DEFAULT_GUI_FONT), sizeof(LOGFONT), &lf);
-    wcscpy_s(lf.lfFaceName, LF_FACESIZE, fontName.c_str());
-
-    // Modify the font size
-    lf.lfHeight = -MulDiv(fontSize, GetDeviceCaps(GetDC(hListView), LOGPIXELSY), 72);
-
-    g_hLVFont = CreateFontIndirect(&lf);
-
-    SendMessage(hListView, WM_SETFONT, reinterpret_cast<WPARAM>(g_hLVFont), MAKELPARAM(TRUE, 0));
-}
-
 static void SetListViewCustomColors(HWND hListView, COLORREF backgroundColor, COLORREF textColor) {
     // Set the background color
     SendMessage(hListView, LVM_SETBKCOLOR,     0, (LPARAM)backgroundColor);
@@ -571,8 +558,8 @@ LRESULT CALLBACK ListViewSubclassProc(
     UINT       uMsg,
     WPARAM     wParam,
     LPARAM     lParam,
-    UINT_PTR   uIdSubclass,
-    DWORD_PTR  dwRefData)
+    UINT_PTR   /*uIdSubclass*/,
+    DWORD_PTR  /*dwRefData*/)
 {
     //AT_LOG_INFO(std::format("uMsg: {:4}, wParam: {}, lParam: {}", uMsg, wParam, lParam).c_str());
     auto vkCode = wParam;
@@ -628,7 +615,7 @@ LRESULT CALLBACK ListViewSubclassProc(
         // VK_DELETE
         // ----------------------------------------------------------------------------
         else if (vkCode == VK_DELETE) {
-            int  direction      = isShiftPressed ? -1 : 1;
+            //int  direction      = isShiftPressed ? -1 : 1;
 
             if (isShiftPressed) {
                 AT_LOG_INFO("Shift+Delete Pressed!");
@@ -752,18 +739,19 @@ LRESULT CALLBACK ListViewSubclassProc(
         //AT_LOG_INFO("Not handled: wParam: %0#4x, iswprint: %d", wParam, iswprint((wint_t)wParam));
         break;
 
-    case WM_NOTIFY: {
-        LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
-        if (nmhdr->code == LVN_ITEMCHANGED) {
-            LPNMLISTVIEW pnmListView = reinterpret_cast<LPNMLISTVIEW>(nmhdr);
+    //case WM_NOTIFY: {
+    //    AT_LOG_INFO("WM_NOTIFY");
+    //    LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
+    //    if (nmhdr->code == LVN_ITEMCHANGED) {
+    //        LPNMLISTVIEW pnmListView = reinterpret_cast<LPNMLISTVIEW>(nmhdr);
 
-            if ((pnmListView->uChanged & LVIF_STATE) && (pnmListView->uNewState & LVIS_SELECTED)) {
-                // The mouse has moved over the item
-                // You can show a message or perform any action here
-                MessageBox(hListView, L"Mouse moved over item!", L"ListView Notification", MB_OK | MB_ICONINFORMATION);
-            }
-        }
-    } break;
+    //        if ((pnmListView->uChanged & LVIF_STATE) && (pnmListView->uNewState & LVIS_SELECTED)) {
+    //            // The mouse has moved over the item
+    //            // You can show a message or perform any action here
+    //            MessageBox(hListView, L"Mouse moved over item!", L"ListView Notification", MB_OK | MB_ICONINFORMATION);
+    //        }
+    //    }
+    //} break;
 
     //case WM_KILLFOCUS:
     //    AT_LOG_INFO("WM_KILLFOCUS");
@@ -928,7 +916,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         // Set window transparency
         SetWindowLong(hWnd, GWL_EXSTYLE, GetWindowLong(hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-        SetLayeredWindowAttributes(hWnd, RGB(255, 255, 255), g_Settings.Transparency, LWA_ALPHA);
+        SetLayeredWindowAttributes(hWnd, RGB(255, 255, 255), (BYTE)g_Settings.Transparency, LWA_ALPHA);
 
         //std::vector<AltTabWindowData> altTabWindows;
         EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));
@@ -970,9 +958,9 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         } else {
             int scrollBarWidth   = GetSystemMetrics(SM_CXVSCROLL);
             int processNameWidth = GetColProcessNameWidth();
-            int colTitleWidth    = g_Settings.WindowWidth - (COL_ICON_WIDTH + GetColProcessNameWidth()) - scrollBarWidth - 1;
+            int colTitleWidth    = g_Settings.WindowWidth - (COL_ICON_WIDTH + processNameWidth) - scrollBarWidth - 1;
             int lvHeight         = (g_Settings.WindowHeight - itemHeight + 1) / itemHeight * itemHeight;
-            int requiredHeight   = lvHeight + headerHeight + staticTextHeight + 3;
+            requiredHeight       = lvHeight + headerHeight + staticTextHeight + 3;
 
             ListView_SetColumnWidth(hListView, 1, colTitleWidth);
 
@@ -998,7 +986,6 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
     case WM_CTLCOLORSTATIC: {
         HDC hdcStatic   = (HDC)wParam;
-        HWND hwndStatic = (HWND)lParam;
 
         // Set the text color and background color of the static text control
         SetTextColor(hdcStatic, g_Settings.SSFontColor      );
@@ -1075,6 +1062,12 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                     g_AltTabWindows[g_MouseHoverIndex].PID);
                 ShowCustomToolTip(info);
             }
+        } else if (nmhdr->code == NM_DBLCLK) {
+            // Check if the double-click event is from your ListView control
+            if (((LPNMHDR)lParam)->hwndFrom == g_hListView) {
+                AT_LOG_INFO("NM_DBLCLK from ListView");
+                DestoryAltTabWindow(true);
+            }
         }
     } break;
 
@@ -1097,6 +1090,15 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         }
 
     }
+    break;
+
+    case WM_ACTIVATEAPP:
+        // Check if the application is becoming inactive
+        if (wParam == FALSE) {
+            // The application is becoming inactive, close the window
+            AT_LOG_INFO("The application is becoming inactive, close the window");
+            DestoryAltTabWindow(false);
+        }
     break;
 
     case WM_DESTROY:
@@ -1253,7 +1255,7 @@ void BrowseToFile(const std::wstring& filepath) {
 // ----------------------------------------------------------------------------
 // AltTab window context menu handler
 // ----------------------------------------------------------------------------
-void ContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
+void ContextMenuItemHandler(HWND hWnd, HMENU /*hSubMenu*/, UINT menuItemId) {
     switch (menuItemId) {
     case ID_CONTEXTMENU_CLOSE_WINDOW: {
         // Send the SC_CLOSE command to the window
@@ -1392,7 +1394,7 @@ bool ATMapVirtualKey(UINT uCode, wchar_t& vkCode) {
     wchar_t ch = static_cast<wchar_t>(uCode);
     //AT_LOG_INFO("uCode: %c, ch: %c", uCode, ch);
 
-    if (!iswprint(uCode)) {
+    if (!iswprint((wint_t)uCode)) {
         vkCode = '\0';
         return false;
     }
@@ -1401,7 +1403,7 @@ bool ATMapVirtualKey(UINT uCode, wchar_t& vkCode) {
 
     // Check for alphabetic and digit keys
     if ((uCode >= 'A' && uCode <= 'Z') || (uCode >= '0' && uCode <= '9')) {
-        ch = MapVirtualKey(uCode, MAPVK_VK_TO_CHAR);
+        ch = (wchar_t)MapVirtualKey(uCode, MAPVK_VK_TO_CHAR);
 
         // Adjust the case based on the Shift key state for alphabets
         if (!isShiftPressed && ch >= L'A' && ch <= L'Z') {

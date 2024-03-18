@@ -19,6 +19,7 @@
 #include <filesystem>
 #include "CheckForUpdates.h"
 #include <thread>
+//#include <sysinfoapi.h>
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -70,7 +71,7 @@ int APIENTRY wWinMain(
     _In_        HINSTANCE   hInstance,
     _In_opt_    HINSTANCE   hPrevInstance,
     _In_        LPWSTR      lpCmdLine,
-    _In_        int         nCmdShow)
+    _In_        int         /*nCmdShow*/)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -219,10 +220,17 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
     case WM_USER_ALTTAB_TRAYICON:
         switch (LOWORD(lParam)) {
-            case WM_RBUTTONDOWN: {
+            case WM_RBUTTONUP: {
                 POINT pt;
                 GetCursorPos(&pt);
                 ShowTrayContextMenu(hWnd, pt);
+            }
+            break;
+
+            case WM_LBUTTONDBLCLK: {
+                // Set g_IsAltCtrlTab to true to add the windows to AltTab window, otherwise no windows will be added.
+                g_IsAltCtrlTab = true;
+                ShowAltTabWindow(g_hAltTabWnd, 0);
             }
             break;
         }
@@ -451,13 +459,13 @@ void DestoryAltTabWindow(bool activate) {
     }
     
     // CleanUp
-    g_hAltTabWnd    = nullptr;
-    g_IsAltTab      = false;
-    g_IsAltCtrlTab  = false;
-    g_IsAltBacktick = false;
-    g_SelectedIndex = -1;
+    g_hAltTabWnd         = nullptr;
+    g_IsAltTab           = false;
+    g_IsAltCtrlTab       = false;
+    g_IsAltBacktick      = false;
+    g_SelectedIndex      = -1;
     g_AltTabWindows.clear();
-    g_SearchString.clear();
+    g_SearchString .clear();
     g_AltBacktickWndInfo = {};
     AT_LOG_INFO("--------- DestoryAltTabWindow! ---------");
 }
@@ -494,6 +502,13 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     bool isAltPressed  = GetAsyncKeyState(VK_MENU   ) & 0x8000;
     bool isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
 
+    // When Alt is pressed down WM_SYSKEYDOWN is sent and when Alt is released WM_KEYUP is sent.
+    // But, GetAsyncKeyState return 0 when Alt is pressed down first time and returns 1 while holding down.
+    // So, we need to check vkCode also to make it work for the first time also.
+    isAltPressed = isAltPressed || vkCode == VK_LMENU || vkCode == VK_RMENU;
+
+    //AT_LOG_INFO("wParam: %#x, vkCode: %0#4x, isAltPressed: %d", wParam, vkCode, isAltPressed);
+
     // ----------------------------------------------------------------------------
     // Alt key is pressed
     // 20240316: Now we are handling Alt+Ctrl+Tab also. Alt is will be released
@@ -501,6 +516,8 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     // Hence, check for g_hAltTabWnd also whether the AltTab window is displayed.
     // ----------------------------------------------------------------------------
     if (isAltPressed && (!isCtrlPressed || g_Settings.AltCtrlTabEnabled) || g_hAltTabWnd != nullptr) {
+        //AT_LOG_INFO("Alt key pressed!, wParam: %#x", wParam);
+
         // Check if Shift key is pressed
         bool isShiftPressed = GetAsyncKeyState(VK_SHIFT) & 0x8000;
         int  direction      = isShiftPressed ? -1 : 1;
@@ -554,15 +571,18 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 // ----------------------------------------------------------------------------
                 // Check if Alt key is pressed twice within 500ms
                 // ----------------------------------------------------------------------------
-                //else if (vkCode == VK_MENU) {
+                //else if (vkCode == VK_LMENU || vkCode == VK_RMENU) {
                 //    DWORD currentTime = GetTickCount();
+                //    AT_LOG_INFO("currentTime: %u, g_LastAltKeyPressTime: %u", currentTime, g_LastAltKeyPressTime);
 
-                //    if (!g_IsAltKeyPressed || currentTime - g_LastAltKeyPressTime < 500) {
+                //    if (!g_IsAltKeyPressed || (currentTime - g_LastAltKeyPressTime) > 500) {
                 //        g_IsAltKeyPressed = true;
                 //        g_LastAltKeyPressTime = currentTime;
                 //    } else {
                 //        // Alt key pressed twice quickly!
                 //        AT_LOG_INFO("Alt key pressed twice within 500ms!");
+                //        g_IsAltKeyPressed = false;
+                //        g_LastAltKeyPressTime = 0;
                 //    }
                 //}
 
@@ -620,6 +640,11 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
                 //AT_LOG_WARN("Not Handled: wParam: %u, vkCode: %0#4x, isprint: %d", wParam, vkCode, iswprint(vkCode));
             }
+        //} else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+        //   if (vkCode == VK_LMENU || vkCode == VK_RMENU) {
+        //        g_IsAltKeyPressed = false;
+        //        g_LastAltKeyPressTime = 0;
+        //    }
         }
     } // if (isAltPressed || g_hAltTabWnd != nullptr)
 
@@ -628,7 +653,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 // Timer callback function
-void CALLBACK CheckForUpdatesTimerCB(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+void CALLBACK CheckForUpdatesTimerCB(HWND /*hWnd*/, UINT /*uMsg*/, UINT_PTR /*idEvent*/, DWORD /*dwTime*/) {
     AT_LOG_TRACE;
     std::wstring frequency  = g_Settings.CheckForUpdatesOpt;
     auto lastCheckTimestamp = ReadLastCheckForUpdatesTS();
@@ -648,7 +673,7 @@ void CALLBACK CheckForUpdatesTimerCB(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWO
     }
 }
 
-void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+void CALLBACK CheckAltKeyIsReleased(HWND /*hWnd*/, UINT /*uMsg*/, UINT_PTR /*idEvent*/, DWORD /*dwTime*/) {
     //AT_LOG_TRACE;
     bool isAltPressed = GetAsyncKeyState(VK_MENU) & 0x8000;
     if (g_hAltTabWnd && !isAltPressed) {
@@ -736,7 +761,7 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         //}
 
         wchar_t applicationPath[MAX_PATH];
-        DWORD length = GetModuleFileName(nullptr, applicationPath, MAX_PATH);
+        GetModuleFileName(nullptr, applicationPath, MAX_PATH);
 
         // Replace the existing process with a new instance of the same program
         _wexecl(applicationPath, applicationPath, nullptr);
@@ -1099,7 +1124,7 @@ void ShowCustomToolTip(const std::wstring& tooltipText, int duration /*= 3000*/)
 #endif // 0
 }
 
-void CALLBACK HideCustomToolTip(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+void CALLBACK HideCustomToolTip(HWND /*hWnd*/, UINT /*uMsg*/, UINT_PTR /*idEvent*/, DWORD /*dwTime*/) {
     AT_LOG_TRACE;
     KillTimer(nullptr, g_TooltipTimerId);
     SendMessage(g_hCustomToolTip, TTM_TRACKACTIVATE, false, (LPARAM)(LPTOOLINFO)&g_ToolInfo);

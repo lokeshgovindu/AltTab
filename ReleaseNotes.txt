@@ -26,11 +26,15 @@ Known Issues
 + Option to disable Search String in AltTab settings UI.
 + Reload settings from AltTabSettings.ini if any changes are made manually from
   using tray context menu or from AltTab settings dialog.
++ Show AltTab window on mouse left button double clicked on tray icon.
++ Activate the selected process window on mouse left button double clicked on
+  the item in the list view.
 - Append "(Not Responding)" to title for the hung process.
 - Do not switch to Alt+Ctrl+Tab window if Alt+Tab window is already active.
 - Reset in Settings dialog resets the settings to the default values in UI but
   not saving to file.
-
+- Close the AltTab window if the application is inactive (means AltTab window
+  is not in focus. Ex: When mouse left button is clicked outside).
 
 2024.2 new features and bug fixes
 ---------------------------------
