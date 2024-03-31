@@ -1,7 +1,7 @@
 ![GitHub Downloads][gh-downloads]
 
 # AltTab
-AltTabAlternative is a small application created in C++, Win32, is an alternative for windows native task switcher (Alt+Tab / Alt+Shift+Tab). 
+AltTab is a small application created in C++, Win32, is an alternative for windows native task switcher (Alt+Tab / Alt+Shift+Tab). 
 
 # Features
 * Find the right window faster (filter windows using search string), uses fuzzy string matching algorithm (no need to type the exact search string).
