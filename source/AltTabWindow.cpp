@@ -1046,7 +1046,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
     case WM_NOTIFY: {
         LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
-        if (nmhdr->code == LVN_HOTTRACK) {
+        if (g_Settings.ShowProcessInfoTooltip && nmhdr->code == LVN_HOTTRACK) {
             LPNMLISTVIEW pnmListView = reinterpret_cast<LPNMLISTVIEW>(nmhdr);
 
             // Check if the mouse is hovering over an item
@@ -1080,6 +1080,10 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     //    HideCustomToolTip();
     //    break;
 
+    case WM_LBUTTONDOWN: {
+        AT_LOG_INFO("WM_LBUTTONDOWN");
+    } break;
+
     case WM_TIMER: {
         //AT_LOG_INFO("WM_TIMER");
         std::vector<AltTabWindowData> altTabWindows;
@@ -1092,6 +1096,9 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
     }
     break;
 
+    // NOTE:
+    // Since the application is getting WM_KILLFOCUS frequently, this is causing the AltTab to close.
+    // So, I think it's better to close the AltTab window when the user clicks outside the window.
     case WM_ACTIVATEAPP:
         // Check if the application is becoming inactive
         if (wParam == FALSE) {

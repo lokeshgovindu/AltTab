@@ -15,6 +15,8 @@
 #include <regex>
 
 #define WM_SETTEXTCOLOR (WM_USER + 1)
+#define BOOL_TO_CSTR(b) ((b) ? "true" : "false")
+
 
 AltTabSettings    g_Settings;
 AltTabWindowData  g_AltBacktickWndInfo;
@@ -64,6 +66,9 @@ AltTabSettings::AltTabSettings() {
  * \brief Reset settings to default values.
  */
 void AltTabSettings::Reset() {
+    HKAltTabEnabled          = DEFAULT_ALT_TAB_ENABLED;
+    HKAltBacktickEnabled     = DEFAULT_ALT_BACKTICK_ENABLED;
+    HKAltCtrlTabEnabled      = DEFAULT_ALT_CTRL_TAB_ENABLED;
     SSFontName               = DEFAULT_SS_FONT_NAME;
     SSFontSize               = DEFAULT_SS_FONT_SIZE;
     SSFontStyle              = DEFAULT_SS_FONT_STYLE;
@@ -85,7 +90,7 @@ void AltTabSettings::Reset() {
     ShowSearchString         = DEFAULT_SHOW_SEARCH_STRING;
     ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
     ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
-    AltCtrlTabEnabled        = DEFAULT_ALT_CTRL_TAB_ENABLED;
+    ShowProcessInfoTooltip   = DEFAULT_SHOW_PROCESSINFO_TOOLTIP;
     ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
     ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
 
@@ -163,25 +168,29 @@ void AddTooltips(HWND hDlg) {
     // TODO: Not working
     SendMessage(g_hToolTip, TTM_SETTIPBKCOLOR, RGB(255, 255, 0), 0);
 
-    ADD_TOOLTIP(IDC_EDIT_SETTINGS_FILEPATH       , TT_SETTINGS_FILEPATH       );
-    ADD_TOOLTIP(IDC_EDIT_SIMILAR_PROCESS_GROUPS  , TT_SIMILAR_PROCESS_GROUPS  );
-    ADD_TOOLTIP(IDC_EDIT_FUZZY_MATCH_PERCENT     , TT_FUZZY_MATCH_PERCENT     );
-    ADD_TOOLTIP(IDC_STATIC_FUZZY_MATCH_PERCENT   , TT_FUZZY_MATCH_PERCENT     ); // TODO: Not working for static controls
-    ADD_TOOLTIP(IDC_EDIT_WINDOW_TRANSPARENCY     , TT_WINDOW_TRANSPARENCY     );
-    ADD_TOOLTIP(IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , TT_WINDOW_WIDTH_PERCENT    );
-    ADD_TOOLTIP(IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, TT_WINDOW_HEIGHT_PERCENT   );
-    ADD_TOOLTIP(IDC_CHECK_PROMPT_TERMINATE_ALL   , TT_PROMPT_TERMINATE_ALL    );
-    ADD_TOOLTIP(IDC_CHECK_SHOW_SEARCH_STRING     , TT_SHOW_SEARCH_STRING      );
-    ADD_TOOLTIP(IDC_CHECK_SHOW_COL_HEADER        , TT_SHOW_COLUMN_HEADER      );
-    ADD_TOOLTIP(IDC_CHECK_SHOW_COL_PROCESSNAME   , TT_SHOW_COLUMN_PROCESS_NAME);
-    ADD_TOOLTIP(IDC_CHECK_FOR_UPDATES            , TT_CHECK_FOR_UPDATES       );
-    ADD_TOOLTIP(IDC_CHECK_PROCESS_EXCLUSIONS     , TT_CHECK_PROCESS_EXCLUSIONS);
-    ADD_TOOLTIP(IDC_EDIT_PROCESS_EXCLUSIONS      , TT_EDIT_PROCESS_EXCLUSIONS );
-    ADD_TOOLTIP(IDC_BUTTON_APPLY                 , TT_APPLY_SETTINGS          );
-    ADD_TOOLTIP(IDOK                             , TT_OK_SETTINGS             );
-    ADD_TOOLTIP(IDCANCEL                         , TT_CANCEL_SETTINGS         );
-    ADD_TOOLTIP(IDC_BUTTON_RESET                 , TT_RESET_SETTINGS          );
-    ADD_TOOLTIP(IDC_BUTTON_RELOAD                , TT_RELOAD_SETTINGS         );
+    ADD_TOOLTIP(IDC_CHECK_ALT_TAB                 , TT_HOTKEY_ALT_TAB            );
+    ADD_TOOLTIP(IDC_CHECK_ALT_BACKTICK            , TT_HOTKEY_ALT_BACKTICK       );
+    ADD_TOOLTIP(IDC_CHECK_ALT_CTRL_TAB            , TT_HOTKEY_ALT_CTRL_TAB       );
+    ADD_TOOLTIP(IDC_EDIT_SETTINGS_FILEPATH        , TT_SETTINGS_FILEPATH         );
+    ADD_TOOLTIP(IDC_EDIT_SIMILAR_PROCESS_GROUPS   , TT_SIMILAR_PROCESS_GROUPS    );
+    ADD_TOOLTIP(IDC_EDIT_FUZZY_MATCH_PERCENT      , TT_FUZZY_MATCH_PERCENT       );
+    ADD_TOOLTIP(IDC_STATIC_FUZZY_MATCH_PERCENT    , TT_FUZZY_MATCH_PERCENT       ); // TODO: Not working for static controls
+    ADD_TOOLTIP(IDC_EDIT_WINDOW_TRANSPARENCY      , TT_WINDOW_TRANSPARENCY       );
+    ADD_TOOLTIP(IDC_EDIT_WINDOW_WIDTH_PERCENTAGE  , TT_WINDOW_WIDTH_PERCENT      );
+    ADD_TOOLTIP(IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE , TT_WINDOW_HEIGHT_PERCENT     );
+    ADD_TOOLTIP(IDC_CHECK_PROMPT_TERMINATE_ALL    , TT_PROMPT_TERMINATE_ALL      );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_SEARCH_STRING      , TT_SHOW_SEARCH_STRING        );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_COL_HEADER         , TT_SHOW_COLUMN_HEADER        );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_COL_PROCESSNAME    , TT_SHOW_COLUMN_PROCESS_NAME  );
+    ADD_TOOLTIP(IDC_CHECK_SHOW_PROCESSINFO_TOOLTIP, TT_SHOW_PROCESSINFO_TOOLTIP  );
+    ADD_TOOLTIP(IDC_CHECK_FOR_UPDATES             , TT_CHECK_FOR_UPDATES         );
+    ADD_TOOLTIP(IDC_CHECK_PROCESS_EXCLUSIONS      , TT_CHECK_PROCESS_EXCLUSIONS  );
+    ADD_TOOLTIP(IDC_EDIT_PROCESS_EXCLUSIONS       , TT_EDIT_PROCESS_EXCLUSIONS   );
+    ADD_TOOLTIP(IDC_BUTTON_APPLY                  , TT_APPLY_SETTINGS            );
+    ADD_TOOLTIP(IDOK                              , TT_OK_SETTINGS               );
+    ADD_TOOLTIP(IDCANCEL                          , TT_CANCEL_SETTINGS           );
+    ADD_TOOLTIP(IDC_BUTTON_RESET                  , TT_RESET_SETTINGS            );
+    ADD_TOOLTIP(IDC_BUTTON_RELOAD                 , TT_RELOAD_SETTINGS           );
 }
 
 // ----------------------------------------------------------------------------
@@ -467,6 +476,9 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     std::wstring LVFontColor       = ColorRefToRGBString(g_Settings.LVFontColor      );
     std::wstring LVBackgroundColor = ColorRefToRGBString(g_Settings.LVBackgroundColor);
 
+    WriteSetting(iniFile, L"Hotkeys"          , L"AltTabEnabled"         , g_Settings.HKAltTabEnabled         );
+    WriteSetting(iniFile, L"Hotkeys"          , L"AltBacktickEnabled"    , g_Settings.HKAltBacktickEnabled    );
+    WriteSetting(iniFile, L"Hotkeys"          , L"AltCtrlTabEnabled"     , g_Settings.HKAltCtrlTabEnabled     );
     WriteSetting(iniFile, L"SearchString"     , L"FontName"              , g_Settings.SSFontName              );
     WriteSetting(iniFile, L"SearchString"     , L"FontSize"              , g_Settings.SSFontSize              );
     WriteSetting(iniFile, L"SearchString"     , L"FontStyle"             , g_Settings.SSFontStyle             );
@@ -485,7 +497,7 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"General"          , L"ShowSearchString"      , g_Settings.ShowSearchString        );
     WriteSetting(iniFile, L"General"          , L"ShowColHeader"         , g_Settings.ShowColHeader           );
     WriteSetting(iniFile, L"General"          , L"ShowColProcessName"    , g_Settings.ShowColProcessName      );
-    WriteSetting(iniFile, L"General"          , L"AltCtrlTabEnabled"     , g_Settings.AltCtrlTabEnabled       );
+    WriteSetting(iniFile, L"General"          , L"ShowProcessInfoTooltip", g_Settings.ShowProcessInfoTooltip  );
     WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdatesOpt      );
     WriteSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups    );
     WriteSetting(iniFile, L"ProcessExclusions", L"Enabled"               , g_Settings.ProcessExclusionsEnabled);
@@ -504,6 +516,9 @@ void ATLoadSettings() {
     DWORD LVFontColor       = 0;
     DWORD LVBackgroundColor = 0;
 
+    ReadSetting(iniFile, L"Hotkeys"          , L"AltTabEnabled"         , DEFAULT_ALT_TAB_ENABLED           , g_Settings.HKAltTabEnabled         );
+    ReadSetting(iniFile, L"Hotkeys"          , L"AltBacktickEnabled"    , DEFAULT_ALT_BACKTICK_ENABLED      , g_Settings.HKAltBacktickEnabled    );
+    ReadSetting(iniFile, L"Hotkeys"          , L"AltCtrlTabEnabled"     , DEFAULT_ALT_CTRL_TAB_ENABLED      , g_Settings.HKAltCtrlTabEnabled     );
     ReadSetting(iniFile, L"SearchString"     , L"FontName"              , DEFAULT_SS_FONT_NAME              , g_Settings.SSFontName              );
     ReadSetting(iniFile, L"SearchString"     , L"FontSize"              , DEFAULT_SS_FONT_SIZE              , g_Settings.SSFontSize              );
     ReadSetting(iniFile, L"SearchString"     , L"FontStyle"             , DEFAULT_SS_FONT_STYLE             , g_Settings.SSFontStyle             );
@@ -523,7 +538,7 @@ void ATLoadSettings() {
     ReadSetting(iniFile, L"General"          , L"ShowSearchString"      , DEFAULT_SHOW_SEARCH_STRING        , g_Settings.ShowSearchString        );
     ReadSetting(iniFile, L"General"          , L"ShowColHeader"         , DEFAULT_SHOW_COL_HEADER           , g_Settings.ShowColHeader           );
     ReadSetting(iniFile, L"General"          , L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME      , g_Settings.ShowColProcessName      );
-    ReadSetting(iniFile, L"General"          , L"AltCtrlTabEnabled"     , DEFAULT_ALT_CTRL_TAB_ENABLED      , g_Settings.AltCtrlTabEnabled       );
+    ReadSetting(iniFile, L"General"          , L"ShowProcessInfoTooltip", DEFAULT_SHOW_PROCESSINFO_TOOLTIP  , g_Settings.ShowProcessInfoTooltip  );
     ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdatesOpt      );
     ReadSetting(iniFile, L"ProcessExclusions", L"Enabled"               , DEFAULT_PROCESS_EXCLUSIONS_ENABLED, g_Settings.ProcessExclusionsEnabled);
     ReadSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , DEFAULT_PROCESS_EXCLUSIONS        , g_Settings.ProcessExclusions       );
@@ -633,13 +648,16 @@ void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
     settings.Transparency              = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , nullptr, FALSE);
     settings.WidthPercentage           = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , nullptr, FALSE);
     settings.HeightPercentage          = GetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, nullptr, FALSE);
-    settings.PromptTerminateAll        = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL ) == BST_CHECKED;
-    settings.ShowSearchString          = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_SEARCH_STRING   ) == BST_CHECKED;
-    settings.ShowColHeader             = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER      ) == BST_CHECKED;
-    settings.ShowColProcessName        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME ) == BST_CHECKED;
-    settings.AltCtrlTabEnabled         = IsDlgButtonChecked(hDlg, IDC_CHECK_ALT_CTRL_TAB         ) == BST_CHECKED;
-    settings.ProcessExclusionsEnabled  = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS   ) == BST_CHECKED;
-    settings.ProcessExclusions         = GetDlgItemTextEx  (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS    );
+    settings.PromptTerminateAll        = IsDlgButtonChecked(hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL    ) == BST_CHECKED;
+    settings.ShowSearchString          = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_SEARCH_STRING      ) == BST_CHECKED;
+    settings.ShowColHeader             = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_HEADER         ) == BST_CHECKED;
+    settings.ShowColProcessName        = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME    ) == BST_CHECKED;
+    settings.ShowProcessInfoTooltip    = IsDlgButtonChecked(hDlg, IDC_CHECK_SHOW_PROCESSINFO_TOOLTIP) == BST_CHECKED;
+    settings.HKAltTabEnabled           = IsDlgButtonChecked(hDlg, IDC_CHECK_ALT_TAB                 ) == BST_CHECKED;
+    settings.HKAltBacktickEnabled      = IsDlgButtonChecked(hDlg, IDC_CHECK_ALT_BACKTICK            ) == BST_CHECKED;
+    settings.HKAltCtrlTabEnabled       = IsDlgButtonChecked(hDlg, IDC_CHECK_ALT_CTRL_TAB            ) == BST_CHECKED;
+    settings.ProcessExclusionsEnabled  = IsDlgButtonChecked(hDlg, IDC_CHECK_PROCESS_EXCLUSIONS      ) == BST_CHECKED;
+    settings.ProcessExclusions         = GetDlgItemTextEx  (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS       );
     int selectedIndex                  = ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES));
     settings.CheckForUpdatesOpt        = AltTabSettings::CheckForUpdatesOptions[max(selectedIndex, 0)];
 }
@@ -652,6 +670,10 @@ void ATReadSettingsFromUI(HWND hDlg, AltTabSettings& settings) {
 void ATLogSettings(const AltTabSettings& settings) {
     AT_LOG_TRACE;
     AT_LOG_DEBUG("=== AltTab Settings Begin ===");
+    AT_LOG_DEBUG("[Hotkeys]");
+    AT_LOG_DEBUG("  HKAltTabEnabled         : [%s]", BOOL_TO_CSTR(settings.HKAltTabEnabled));
+    AT_LOG_DEBUG("  HKAltBacktickEnabled    : [%s]", BOOL_TO_CSTR(settings.HKAltBacktickEnabled));
+    AT_LOG_DEBUG("  HKAltCtrlTabEnabled     : [%s]", BOOL_TO_CSTR(settings.HKAltCtrlTabEnabled));
     AT_LOG_DEBUG("[SearchString]");
     AT_LOG_DEBUG("  SSFontName              : [%s]", WStrToUTF8(settings.SSFontName).c_str());
     AT_LOG_DEBUG("  SSFontSize              : [%d]", settings.SSFontSize);
@@ -670,15 +692,15 @@ void ATLogSettings(const AltTabSettings& settings) {
     AT_LOG_DEBUG("  WidthPercentage         : [%d]", settings.WidthPercentage);
     AT_LOG_DEBUG("  HeightPercentage        : [%d]", settings.HeightPercentage);
     AT_LOG_DEBUG("  CheckForUpdatesOpt      : [%s]", WStrToUTF8(settings.CheckForUpdatesOpt).c_str());
-    AT_LOG_DEBUG("  PromptTerminateAll      : [%d]", settings.PromptTerminateAll);
-    AT_LOG_DEBUG("  ShowSearchString        : [%d]", settings.ShowSearchString);
-    AT_LOG_DEBUG("  ShowColHeader           : [%d]", settings.ShowColHeader);
-    AT_LOG_DEBUG("  ShowColProcessName      : [%d]", settings.ShowColProcessName);
-    AT_LOG_DEBUG("  AltCtrlTabEnabled       : [%d]", settings.AltCtrlTabEnabled);
+    AT_LOG_DEBUG("  PromptTerminateAll      : [%s]", BOOL_TO_CSTR(settings.PromptTerminateAll));
+    AT_LOG_DEBUG("  ShowSearchString        : [%s]", BOOL_TO_CSTR(settings.ShowSearchString));
+    AT_LOG_DEBUG("  ShowColHeader           : [%s]", BOOL_TO_CSTR(settings.ShowColHeader));
+    AT_LOG_DEBUG("  ShowColProcessName      : [%s]", BOOL_TO_CSTR(settings.ShowColProcessName));
+    AT_LOG_DEBUG("  ShowProcessInfoTooltip  : [%s]", BOOL_TO_CSTR(settings.ShowProcessInfoTooltip));
     AT_LOG_DEBUG("[Backtick]");
     AT_LOG_DEBUG("  SimilarProcessGroups    : [%s]", WStrToUTF8(settings.SimilarProcessGroups).c_str());
     AT_LOG_DEBUG("[ProcessExclusions]");
-    AT_LOG_DEBUG("  ProcessExclusionsEnabled: [%d]", settings.ProcessExclusionsEnabled);
+    AT_LOG_DEBUG("  ProcessExclusionsEnabled: [%s]", BOOL_TO_CSTR(settings.ProcessExclusionsEnabled));
     AT_LOG_DEBUG("  ProcessExclusions       : [%s]", WStrToUTF8(settings.ProcessExclusions).c_str());
     AT_LOG_DEBUG("=== AltTab Settings End ===");
 }
@@ -706,7 +728,10 @@ bool AreSettingsModified(HWND hDlg) {
         settings.ShowSearchString         != g_Settings.ShowSearchString         ||
         settings.ShowColHeader            != g_Settings.ShowColHeader            ||
         settings.ShowColProcessName       != g_Settings.ShowColProcessName       ||
-        settings.AltCtrlTabEnabled        != g_Settings.AltCtrlTabEnabled        ||
+        settings.ShowProcessInfoTooltip   != g_Settings.ShowProcessInfoTooltip   ||
+        settings.HKAltTabEnabled          != g_Settings.HKAltTabEnabled          ||
+        settings.HKAltBacktickEnabled     != g_Settings.HKAltBacktickEnabled     ||
+        settings.HKAltCtrlTabEnabled      != g_Settings.HKAltCtrlTabEnabled      ||
         settings.ProcessExclusionsEnabled != g_Settings.ProcessExclusionsEnabled ||
         settings.ProcessExclusions        != g_Settings.ProcessExclusions        ||
         settings.SimilarProcessGroups     != g_Settings.SimilarProcessGroups     ||
@@ -783,32 +808,35 @@ void ATSettingsInitDialog(HWND hDlg, const AltTabSettings& settings) {
     SendMessage(hEditBox1, WM_SETFONT     , (WPARAM)hFont    , TRUE);
     SendMessage(hEditBox2, WM_SETFONT     , (WPARAM)hFont    , TRUE);
  
-    CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL   , settings.PromptTerminateAll       ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_SEARCH_STRING     , settings.ShowSearchString         ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER        , settings.ShowColHeader            ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME   , settings.ShowColProcessName       ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_ALT_CTRL_TAB           , settings.AltCtrlTabEnabled        ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS     , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_ALT_TAB                 , settings.HKAltTabEnabled          ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_ALT_BACKTICK            , settings.HKAltBacktickEnabled     ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_ALT_CTRL_TAB            , settings.HKAltCtrlTabEnabled      ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_PROMPT_TERMINATE_ALL    , settings.PromptTerminateAll       ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_SEARCH_STRING      , settings.ShowSearchString         ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_HEADER         , settings.ShowColHeader            ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_COL_PROCESSNAME    , settings.ShowColProcessName       ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_SHOW_PROCESSINFO_TOOLTIP, settings.ShowProcessInfoTooltip   ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton    (hDlg, IDC_CHECK_PROCESS_EXCLUSIONS      , settings.ProcessExclusionsEnabled ? BST_CHECKED : BST_UNCHECKED);
 
     EnableWindow      (GetDlgItem(hDlg, IDC_EDIT_PROCESS_EXCLUSIONS), settings.ProcessExclusionsEnabled);
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT     , settings.FuzzyMatchPercent  , FALSE);
-    SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
-    SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT     , UDM_SETPOS                  , 0, MAKELPARAM(settings.FuzzyMatchPercent, 0));
+    SetDlgItemInt     (hDlg, IDC_EDIT_FUZZY_MATCH_PERCENT      , settings.FuzzyMatchPercent  , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT      , UDM_SETRANGE                , 0, MAKELPARAM(100, 0));
+    SendDlgItemMessage(hDlg, IDC_SPIN_FUZZY_MATCH_PERCENT      , UDM_SETPOS                  , 0, MAKELPARAM(settings.FuzzyMatchPercent, 0));
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY     , settings.Transparency       , FALSE);
-    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
-    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY     , UDM_SETPOS                  , 0, MAKELPARAM(settings.Transparency, 0));
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_TRANSPARENCY      , settings.Transparency       , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY      , UDM_SETRANGE                , 0, MAKELPARAM(255, 0));
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_TRANSPARENCY      , UDM_SETPOS                  , 0, MAKELPARAM(settings.Transparency, 0));
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE , settings.WidthPercentage    , FALSE);
-    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
-    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE , UDM_SETPOS                  , 0, MAKELPARAM(settings.WidthPercentage, 0));
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_WIDTH_PERCENTAGE  , settings.WidthPercentage    , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE  , UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_WIDTH_PERCENTAGE  , UDM_SETPOS                  , 0, MAKELPARAM(settings.WidthPercentage, 0));
  
-    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE, settings.HeightPercentage   , FALSE);
-    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
-    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE, UDM_SETPOS                  , 0, MAKELPARAM(settings.HeightPercentage, 0));
+    SetDlgItemInt     (hDlg, IDC_EDIT_WINDOW_HEIGHT_PERCENTAGE , settings.HeightPercentage   , FALSE);
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE , UDM_SETRANGE                , 0, MAKELPARAM(90, 10));
+    SendDlgItemMessage(hDlg, IDC_SPIN_WINDOW_HEIGHT_PERCENTAGE , UDM_SETPOS                  , 0, MAKELPARAM(settings.HeightPercentage, 0));
  
-    SetDlgItemText    (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS      , settings.ProcessExclusions.c_str());
+    SetDlgItemText    (hDlg, IDC_EDIT_PROCESS_EXCLUSIONS       , settings.ProcessExclusions.c_str());
  
     HWND hComboBox = GetDlgItem(hDlg, IDC_CHECK_FOR_UPDATES);
     for (auto& opt : AltTabSettings::CheckForUpdatesOptions) {

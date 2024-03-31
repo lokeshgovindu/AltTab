@@ -1,7 +1,7 @@
 #pragma once
 
 #define AT_VERSION_MAJOR         2024
-#define AT_VERSION_MINOR         3
+#define AT_VERSION_MINOR         4
 #define AT_VERSION_PATCH         0
 #define AT_VERSION_BUILD         0
 

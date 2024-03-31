@@ -44,3 +44,9 @@ double GetPartialRatioW(const std::wstring& s1, const std::wstring& s2);
 int ScaleValueForDPI(int value, int dpi = 96);
 
 int GetDPIForWindow(HWND hWnd);
+
+bool is_auto_start_task_active_for_this_user();
+bool create_auto_start_task_for_this_user(bool runElevated);
+bool delete_auto_start_task_for_this_user();
+
+bool IsProcessElevated(const bool use_cached_value = true);

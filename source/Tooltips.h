@@ -1,5 +1,11 @@
 #pragma once
 
+const wchar_t* TT_HOTKEY_ALT_TAB               = L"Enable/disable Alt+Tab hotkey";
+
+const wchar_t* TT_HOTKEY_ALT_BACKTICK          = L"Enable/disable Alt+Backtick hotkey";
+
+const wchar_t* TT_HOTKEY_ALT_CTRL_TAB          = L"Enable/disable Alt+Ctrl+Tab hotkey";
+
 const wchar_t* TT_SETTINGS_FILEPATH            = L"AltTab Settings file path";
 
 const wchar_t* TT_SIMILAR_PROCESS_GROUPS       = LR"(Similar Process Groups:
@@ -41,6 +47,8 @@ const wchar_t* TT_SHOW_SEARCH_STRING           = LR"(Show/hide search string con
 const wchar_t* TT_SHOW_COLUMN_HEADER           = LR"(Show/hide column header of AltTab window listview)";
 
 const wchar_t* TT_SHOW_COLUMN_PROCESS_NAME     = LR"(Show/hide process name column in AltTab window listview)";
+
+const wchar_t* TT_SHOW_PROCESSINFO_TOOLTIP     = LR"(Show process information (Path & PID) tooltip in AltTab window listview)";
 
 const wchar_t* TT_CHECK_PROCESS_EXCLUSIONS     = LR"(Enable/disable process exclusions)";
 

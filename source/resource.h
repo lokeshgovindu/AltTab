@@ -44,8 +44,11 @@
 #define IDC_STATIC_CFU_CURRENT_VERSION  1029
 #define IDC_BUTTON_RELOAD               1029
 #define IDC_STATIC_CFU_UPDATE_VERSION   1030
+#define IDC_CHECK_ALT_BACKTICK          1030
 #define IDC_STATIC_1                    1031
+#define IDC_CHECK_ALT_TAB               1031
 #define IDC_STATIC_2                    1032
+#define IDC_CHECK_SHOW_PROCESSINFO_TOOLTIP 1032
 #define IDC_STATIC_3                    1033
 #define IDC_GROUPBOX_STORAGE            1034
 #define ID_TRAYCONTEXTMENU_ABOUTALTTAB  32771

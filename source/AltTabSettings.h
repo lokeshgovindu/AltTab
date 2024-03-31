@@ -19,6 +19,9 @@ using StringList           = std::vector<std::wstring>;
 //   SS - Search String
 //   LV - List View
 // ----------------------------------------------------------------------------
+#define DEFAULT_ALT_TAB_ENABLED              true
+#define DEFAULT_ALT_BACKTICK_ENABLED         true
+#define DEFAULT_ALT_CTRL_TAB_ENABLED         true
 #define DEFAULT_SS_FONT_NAME                 L"Lucida Handwriting"
 #define DEFAULT_SS_FONT_SIZE                 11
 #define DEFAULT_SS_FONT_STYLE                L"normal"               // normal, italic, bold and bold italic
@@ -39,7 +42,7 @@ using StringList           = std::vector<std::wstring>;
 #define DEFAULT_SHOW_SEARCH_STRING           true
 #define DEFAULT_SHOW_COL_HEADER              false
 #define DEFAULT_SHOW_COL_PROCESSNAME         false
-#define DEFAULT_ALT_CTRL_TAB_ENABLED         true
+#define DEFAULT_SHOW_PROCESSINFO_TOOLTIP     false
 #define DEFAULT_PROCESS_EXCLUSIONS_ENABLED   false
 #define DEFAULT_PROCESS_EXCLUSIONS           L""
 
@@ -57,16 +60,31 @@ using StringList           = std::vector<std::wstring>;
  *    "outlook.exe/teams.exe"
  */
 struct AltTabSettings {
+    // ----------------------------------------------------------------------------
+    // Hotkeys
+    // ----------------------------------------------------------------------------
+    bool                   HKAltTabEnabled;           // Alt+Tab enabled
+    bool                   HKAltBacktickEnabled;      // Alt+Backtick enabled
+    bool                   HKAltCtrlTabEnabled;       // Alt+Ctrl+Tab enabled
+    // ----------------------------------------------------------------------------
+    // SearchString Font Name, Size, Style, Color and Background Color
+    // ----------------------------------------------------------------------------
     std::wstring           SSFontName;                // Search String Font Name
     int                    SSFontSize;                // Search String Font Size
     std::wstring           SSFontStyle;               // Search String Font Style
     COLORREF               SSFontColor;               // Search String Font color
     COLORREF               SSBackgroundColor;         // Search String Background color
+    // ----------------------------------------------------------------------------
+    // ListView Font Name, Size, Style, Color and Background Color
+    // ----------------------------------------------------------------------------
     std::wstring           LVFontName;                // ListView Font Name
     int                    LVFontSize;                // ListView Font Size
     std::wstring           LVFontStyle;               // ListView Font Style
     COLORREF               LVFontColor;               // ListView Font color
     COLORREF               LVBackgroundColor;         // ListView Background color
+    // ----------------------------------------------------------------------------
+    // General Settings
+    // ----------------------------------------------------------------------------
     int                    WidthPercentage;           // Window width in percentage of the actual screen width
     int                    HeightPercentage;          // Window height in percentage of the actual screen height
     int                    WindowWidth;               // Window width, will be calculated at runtime
@@ -77,14 +95,20 @@ struct AltTabSettings {
     ProcessGroupsList      ProcessGroupsList;         // Process groups, will be constructed at runtime from SimilarProcessGroups
     std::wstring           CheckForUpdatesOpt;        // Check for updates
     bool                   PromptTerminateAll;        // Ask before terminating all processes
-    bool                   DisableAltTab;             // Disable AltTab hotkeys
     bool                   ShowSearchString;          // Show search string
     bool                   ShowColHeader;             // Show column header
     bool                   ShowColProcessName;        // Show column - Process Name
-    bool                   AltCtrlTabEnabled;         // Alt+Ctrl+Tab enabled
+    bool                   ShowProcessInfoTooltip;    // Show process info tooltip
+    // ----------------------------------------------------------------------------
+    // Backtick Settings
+    // ----------------------------------------------------------------------------
     bool                   ProcessExclusionsEnabled;  // Process exclusions enabled
     std::wstring           ProcessExclusions;         // Process exclusions string which are separated by /
     ProcessExclusionList   ProcessExclusionList;      // Process exclusions list, will be constructed at runtime from ProcessExclusions
+    // ----------------------------------------------------------------------------
+    // Other Settings
+    // ----------------------------------------------------------------------------
+    bool                   DisableAltTab;             // Disable AltTab hotkeys
 
     AltTabSettings();
 
@@ -155,4 +179,3 @@ void ATApplySettings(HWND hDlg);
  * \returns true if settings are modified otherwise false.
  */
 bool AreSettingsModified(HWND hDlg);
-

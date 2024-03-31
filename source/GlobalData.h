@@ -44,8 +44,8 @@ extern std::vector<AltTabWindowData>        g_AltTabWindows;
 extern AltTabWindowData                     g_AltBacktickWndInfo; // TODO
 
 extern bool                                 g_IsAltTab;
-extern bool                                 g_IsAltCtrlTab;
 extern bool                                 g_IsAltBacktick;
+extern bool                                 g_IsAltCtrlTab;
 extern int                                  g_SelectedIndex;
 extern int                                  g_MouseHoverIndex;
 extern DWORD                                g_MainThreadID;
