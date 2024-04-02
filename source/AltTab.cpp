@@ -122,6 +122,14 @@ int APIENTRY wWinMain(
     RunAtStartup(true);
 #endif // _DEBUG
 
+    // Register AltTab window class
+    if (!RegisterAltTabWindow()) {
+        std::wstring info = L"Failed to register AltTab window class.";
+        AT_LOG_ERROR("Failed to register AltTab window class.");
+        MessageBox(nullptr, info.c_str(), AT_PRODUCT_NAMEW, MB_OK | MB_ICONERROR);
+        return 1;
+    }
+
     // System tray
     // Create a hidden window for tray icon handling
     g_hMainWnd = CreateMainWindow(hInstance);
@@ -133,7 +141,10 @@ int APIENTRY wWinMain(
 
     // Add the tray icon
     if (!AddNotificationIcon(g_hMainWnd)) {
+        std::wstring info = L"Failed to add AltTab tray icon.";
         AT_LOG_ERROR("Failed to add AltTab tray icon.");
+        MessageBox(nullptr, info.c_str(), AT_PRODUCT_NAMEW, MB_OK | MB_ICONERROR);
+        return 1;
     }
 
     g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, hInstance, NULL);

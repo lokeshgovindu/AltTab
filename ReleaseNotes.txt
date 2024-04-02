@@ -12,6 +12,15 @@ Known Issues
 - Available @ https://sourceforge.net/p/alttab/tickets/
 
 
+2024.4 new features and bug fixes
+---------------------------------
++ Added Alt+Tab, Alt+Backtick, Alt+Ctrl+Tab hotkeys in the settings dialog.
++ Added option to show/hide process info tooltip in the settings dialog.
+- Removed the functionality to close the AltTab window when the application goes
+  inactive. This was causing the AltTab window to close frequently when the user
+  is trying to switch between the windows.
+
+
 2024.3 new features and bug fixes
 ---------------------------------
 + Show process path and ID in tooltip on mouse hover on item in the list view.

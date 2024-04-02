@@ -282,6 +282,7 @@ HWND ShowAltTabWindow(HWND& hAltTabWnd, int direction) {
     // Move to next / previous item based on the direction
     int selectedInd = (int)SendMessageW(g_hListView, LVM_GETNEXTITEM, (WPARAM)-1, LVNI_SELECTED);
     if (selectedInd == -1) return hAltTabWnd;
+
     int N           = (int)g_AltTabWindows.size();
     int nextInd     = (selectedInd + N + direction) % N;
 
@@ -422,18 +423,25 @@ void ATWListViewPageDown() {
     //SendMessage(g_hListView, LVN_KEYDOWN, (WPARAM)VK_NEXT, (LPARAM)&lvItem);
 }
 
-HWND CreateAltTabWindow() {
+bool RegisterAltTabWindow() {
     AT_LOG_TRACE;
-    // Register the window class
-    const wchar_t CLASS_NAME[]  = L"__AltTab_WndCls__";
-    const wchar_t WINDOW_NAME[] = L"AltTab Window";
 
+    // Register the window class
     WNDCLASS wc      = {};
     wc.lpfnWndProc   = AltTabWindowProc;
     wc.lpszClassName = CLASS_NAME;
     wc.hInstance     = g_hInstance;
 
-    RegisterClass(&wc);
+    if (!RegisterClass(&wc)) {
+        AT_LOG_ERROR("Failed to register AltTab Window class!");
+        LogLastErrorInfo();
+        return false;
+    }
+    return true;
+}
+
+HWND CreateAltTabWindow() {
+    AT_LOG_TRACE;
 
     DWORD exStyle = WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
     DWORD style   = WS_POPUP | WS_BORDER;
@@ -920,6 +928,7 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 
         //std::vector<AltTabWindowData> altTabWindows;
         EnumWindows(EnumWindowsProc, (LPARAM)(&g_AltTabWindows));
+        AT_LOG_INFO("g_AltTabWindows.size() : %d", g_AltTabWindows.size());
 
         // Create ImageList and add icons
         HIMAGELIST hImageList =
@@ -1092,21 +1101,20 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
         if (altTabWindows.size() != g_AltTabWindows.size()) {
             RefreshAltTabWindow();
         }
-
     }
     break;
 
     // NOTE:
     // Since the application is getting WM_KILLFOCUS frequently, this is causing the AltTab to close.
     // So, I think it's better to close the AltTab window when the user clicks outside the window.
-    case WM_ACTIVATEAPP:
-        // Check if the application is becoming inactive
-        if (wParam == FALSE) {
-            // The application is becoming inactive, close the window
-            AT_LOG_INFO("The application is becoming inactive, close the window");
-            DestoryAltTabWindow(false);
-        }
-    break;
+    //case WM_ACTIVATEAPP:
+    //    // Check if the application is becoming inactive
+    //    if (wParam == FALSE) {
+    //        // The application is becoming inactive, close the window
+    //        AT_LOG_INFO("The application is becoming inactive, close the window");
+    //        DestoryAltTabWindow(false);
+    //    }
+    //break;
 
     case WM_DESTROY:
         AT_LOG_INFO("WM_DESTROY");

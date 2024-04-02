@@ -1,29 +1,12 @@
-2024.3.0.0
-AltTab_2024.3.0.0_x64.7z
-2024.3 new features and bug fixes
+2024.4.0.0
+AltTab_2024.4.0.0_x64.7z
+2024.4 new features and bug fixes
 ---------------------------------
-+ Show process path and ID in tooltip on mouse hover on item in the list view.
-+ Handled Alt+Ctrl+Tab.
-+ Settings are stored in application directory instead of user profile Local 
-  AppData directory.
-+ Added [SearchString] section in AltTabSettings.ini file to customize the
-  search string control font name, size, style, color and background color.
-+ Saving the colors in 0xRRGGBB format in AltTabSettings.ini file.
-+ AltTab window is high DPI aware.
-+ Upgraded help file format from mht to chm.
-+ Option to disable Search String in AltTab settings UI.
-+ Reload settings from AltTabSettings.ini if any changes are made manually from
-  using tray context menu or from AltTab settings dialog.
-+ Show AltTab window on mouse left button double clicked on tray icon.
-+ Activate the selected process window on mouse left button double clicked on
-  the item in the list view.
-- Append "(Not Responding)" to title for the hung process.
-- Do not switch to Alt+Ctrl+Tab window if Alt+Tab window is already active.
-- Reset in Settings dialog resets the settings to the default values in UI but
-  not saving to file.
-- Close the AltTab window if the application is inactive (means AltTab window
-  is not in focus. Ex: When mouse left button is clicked outside).
-- Fixed an issue in CheckForUpdates dialog.
++ Added Alt+Tab, Alt+Backtick, Alt+Ctrl+Tab hotkeys in the settings dialog.
++ Added option to show/hide process info tooltip in the settings dialog.
+- Removed the functionality to close the AltTab window when the application goes
+  inactive. This was causing the AltTab window to close frequently when the user
+  is trying to switch between the windows.
 
 
 PS

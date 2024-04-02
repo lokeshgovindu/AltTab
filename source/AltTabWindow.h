@@ -5,6 +5,9 @@
 #include <wtypes.h>
 #include <unordered_set>
 
+#define CLASS_NAME   L"__AltTab_WndCls__"
+#define WINDOW_NAME  L"AltTab Window"
+
 struct AltTabWindowData {
     HWND          hWnd;
     HWND          hOwner;
@@ -14,6 +17,13 @@ struct AltTabWindowData {
     std::wstring  FullPath;
     DWORD         PID;
 };
+
+/*!
+ * \brief Register AltTab window class
+ * 
+ * \return Return true if the class is registered successfully otherwise false.
+ */
+bool RegisterAltTabWindow();
 
 /*!
  * \brief Create AltTab main window
