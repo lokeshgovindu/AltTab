@@ -43,6 +43,7 @@ using StringList           = std::vector<std::wstring>;
 #define DEFAULT_SHOW_COL_HEADER              false
 #define DEFAULT_SHOW_COL_PROCESSNAME         false
 #define DEFAULT_SHOW_PROCESSINFO_TOOLTIP     false
+#define DEFAULT_SYSTEM_TRAY_ICON_ENABLED     true
 #define DEFAULT_PROCESS_EXCLUSIONS_ENABLED   false
 #define DEFAULT_PROCESS_EXCLUSIONS           L""
 
@@ -99,6 +100,7 @@ struct AltTabSettings {
     bool                   ShowColHeader;             // Show column header
     bool                   ShowColProcessName;        // Show column - Process Name
     bool                   ShowProcessInfoTooltip;    // Show process info tooltip
+    bool                   SystemTrayIconEnabled;     // Create system tray icon if enabled is true
     // ----------------------------------------------------------------------------
     // Backtick Settings
     // ----------------------------------------------------------------------------

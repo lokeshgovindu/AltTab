@@ -140,11 +140,10 @@ int APIENTRY wWinMain(
     }
 
     // Add the tray icon
-    if (!AddNotificationIcon(g_hMainWnd)) {
+    if (g_Settings.SystemTrayIconEnabled && !AddNotificationIcon(g_hMainWnd)) {
         std::wstring info = L"Failed to add AltTab tray icon.";
         AT_LOG_ERROR("Failed to add AltTab tray icon.");
-        MessageBox(nullptr, info.c_str(), AT_PRODUCT_NAMEW, MB_OK | MB_ICONERROR);
-        return 1;
+        ShowCustomToolTip(info, 3000);
     }
 
     g_KeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LLKeyboardProc, hInstance, NULL);

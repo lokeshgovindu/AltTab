@@ -91,6 +91,7 @@ void AltTabSettings::Reset() {
     ShowColHeader            = DEFAULT_SHOW_COL_HEADER;
     ShowColProcessName       = DEFAULT_SHOW_COL_PROCESSNAME;
     ShowProcessInfoTooltip   = DEFAULT_SHOW_PROCESSINFO_TOOLTIP;
+    SystemTrayIconEnabled    = DEFAULT_SYSTEM_TRAY_ICON_ENABLED;
     ProcessExclusionsEnabled = DEFAULT_PROCESS_EXCLUSIONS_ENABLED;
     ProcessExclusions        = DEFAULT_PROCESS_EXCLUSIONS;
 
@@ -499,6 +500,7 @@ void ATSettingsToFile(const std::wstring& iniFile) {
     WriteSetting(iniFile, L"General"          , L"ShowColProcessName"    , g_Settings.ShowColProcessName      );
     WriteSetting(iniFile, L"General"          , L"ShowProcessInfoTooltip", g_Settings.ShowProcessInfoTooltip  );
     WriteSetting(iniFile, L"General"          , L"CheckForUpdates"       , g_Settings.CheckForUpdatesOpt      );
+    WriteSetting(iniFile, L"General"          , L"SystemTrayIconEnabled" , g_Settings.SystemTrayIconEnabled   );
     WriteSetting(iniFile, L"Backtick"         , L"SimilarProcessGroups"  , g_Settings.SimilarProcessGroups    );
     WriteSetting(iniFile, L"ProcessExclusions", L"Enabled"               , g_Settings.ProcessExclusionsEnabled);
     WriteSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , g_Settings.ProcessExclusions       );
@@ -540,6 +542,7 @@ void ATLoadSettings() {
     ReadSetting(iniFile, L"General"          , L"ShowColProcessName"    , DEFAULT_SHOW_COL_PROCESSNAME      , g_Settings.ShowColProcessName      );
     ReadSetting(iniFile, L"General"          , L"ShowProcessInfoTooltip", DEFAULT_SHOW_PROCESSINFO_TOOLTIP  , g_Settings.ShowProcessInfoTooltip  );
     ReadSetting(iniFile, L"General"          , L"CheckForUpdates"       , DEFAULT_CHECKFORUPDATES           , g_Settings.CheckForUpdatesOpt      );
+    ReadSetting(iniFile, L"General"          , L"SystemTrayIconEnabled" , DEFAULT_SYSTEM_TRAY_ICON_ENABLED  , g_Settings.SystemTrayIconEnabled   );
     ReadSetting(iniFile, L"ProcessExclusions", L"Enabled"               , DEFAULT_PROCESS_EXCLUSIONS_ENABLED, g_Settings.ProcessExclusionsEnabled);
     ReadSetting(iniFile, L"ProcessExclusions", L"ProcessList"           , DEFAULT_PROCESS_EXCLUSIONS        , g_Settings.ProcessExclusions       );
 
@@ -614,7 +617,9 @@ void ATApplySettings(HWND hDlg) {
     // copied to the AltTabSettings.ini file.
     AltTabSettings settings(g_Settings);
     ATReadSettingsFromUI(hDlg, settings);
+#ifdef _DEBUG
     ATLogSettings(settings);
+#endif // _DEBUG
 
     // Check if the settings are valid
     bool isValid = false;

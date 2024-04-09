@@ -11,6 +11,10 @@ Known Issues
 ------------
 - Available @ https://sourceforge.net/p/alttab/tickets/
 
+2024.X new features and bug fixes
+---------------------------------
++ Added new setting "General/SystemTrayIconEnabled" in .ini to create or disable
+  system tray notification icon for AltTab.
 
 2024.4 new features and bug fixes
 ---------------------------------
