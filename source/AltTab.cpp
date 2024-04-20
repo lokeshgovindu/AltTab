@@ -527,7 +527,7 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
     // ----------------------------------------------------------------------------
     // Alt key is pressed
-    // 20240316: Now we are handling Alt+Ctrl+Tab also. Alt is will be released
+    // 20240316: Now we are handling Alt+Ctrl+Tab also. Alt key will be released
     // when user wants Alt+Ctrl+Tab window. So, isAltPressed is not always true.
     // Hence, check for g_hAltTabWnd also whether the AltTab window is displayed.
     // ----------------------------------------------------------------------------
@@ -546,9 +546,12 @@ LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
                 //AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
 
                 // ----------------------------------------------------------------------------
-                // Alt + Tab
+                // Alt + Tab / Alt + Ctrl + Tab
                 // ----------------------------------------------------------------------------
-                if (g_Settings.HKAltTabEnabled && vkCode == VK_TAB) {
+                bool showAltTabWindow =
+                   (g_Settings.HKAltTabEnabled     && !isCtrlPressed) ||
+                   (g_Settings.HKAltCtrlTabEnabled &&  isCtrlPressed);
+                if (showAltTabWindow && vkCode == VK_TAB) {
                     if (isNativeATWDisplayed) {
                         //AT_LOG_INFO("isNativeATWDisplayed: %d", isNativeATWDisplayed);
                         return CallNextHookEx(g_KeyboardHook, nCode, wParam, lParam);

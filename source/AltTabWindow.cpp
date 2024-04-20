@@ -469,7 +469,7 @@ HWND CreateAltTabWindow() {
 
     // Show the window and bring to the top
     SetForegroundWindow(hWnd);
-    SetWindowPos       (hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    SetWindowPos       (hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
     ShowWindow         (hWnd, SW_SHOWNORMAL);
     UpdateWindow       (hWnd);
     BringWindowToTop   (hWnd);
@@ -1071,10 +1071,10 @@ INT_PTR CALLBACK AltTabWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                     g_AltTabWindows[g_MouseHoverIndex].PID);
                 ShowCustomToolTip(info);
             }
-        } else if (nmhdr->code == NM_DBLCLK) {
-            // Check if the double-click event is from your ListView control
+        } else if (nmhdr->code == NM_CLICK) {
+            // Check if the single-click event is from your ListView control
             if (((LPNMHDR)lParam)->hwndFrom == g_hListView) {
-                AT_LOG_INFO("NM_DBLCLK from ListView");
+                AT_LOG_INFO("NM_CLICK from ListView");
                 DestoryAltTabWindow(true);
             }
         }

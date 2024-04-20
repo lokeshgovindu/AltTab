@@ -15,6 +15,10 @@ Known Issues
 ---------------------------------
 + Added new setting "General/SystemTrayIconEnabled" in .ini to create or disable
   system tray notification icon for AltTab.
++ Activate the selected process window on mouse single click instead of double
+  click in the list view.
+- Fixed: Alt+Ctrl+Tab was not working when Alt+Tab is unchecked in settings.
+
 
 2024.4 new features and bug fixes
 ---------------------------------
