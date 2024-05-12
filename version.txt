@@ -1,12 +1,12 @@
-2024.4.0.0
-AltTab_2024.4.0.0_x64.7z
-2024.4 new features and bug fixes
----------------------------------
-+ Added Alt+Tab, Alt+Backtick, Alt+Ctrl+Tab hotkeys in the settings dialog.
-+ Added option to show/hide process info tooltip in the settings dialog.
-- Removed the functionality to close the AltTab window when the application goes
-  inactive. This was causing the AltTab window to close frequently when the user
-  is trying to switch between the windows.
+2024.4.0.2
+AltTab_2024.4.0.2_x64.7z
+2024.4.0.2 new features and bug fixes
+-------------------------------------
++ Added new setting "General/SystemTrayIconEnabled" in .ini to create or disable
+  system tray notification icon for AltTab.
++ Activate the selected process window on mouse single click instead of double
+  click in the list view.
+- Fixed: Alt+Ctrl+Tab was not working when Alt+Tab is unchecked in settings.
 
 
 PS
