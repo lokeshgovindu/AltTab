@@ -98,7 +98,7 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                 wchar_t szProcessPath[MAX_PATH];
                 if (GetModuleFileNameEx(hProcess, nullptr, szProcessPath, MAX_PATH)) {
                     std::filesystem::path filePath = szProcessPath;
-
+             
                     // Always get the title of owner window, otherwise popup window title will be displayed.
                     const int bufferSize = 256;
                     wchar_t windowTitle[bufferSize];
@@ -127,11 +127,15 @@ BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam) {
                     }
                     // If Alt+Backtick is pressed, show the process of similar process groups
                     else if (g_IsAltBacktick) {
-                        if (g_AltBacktickWndInfo.hWnd == nullptr) {
-                            g_AltBacktickWndInfo = item;
-                            AT_LOG_INFO("g_AltBacktickWndInfo: %s", WStrToUTF8(g_AltBacktickWndInfo.ProcessName).c_str());
+                        if (g_AltBacktickWndInfo.hWnd == nullptr) {            
+                            if (!(GetWindowLong(item.hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)) {
+                               g_AltBacktickWndInfo = item;
+                               AT_LOG_INFO("g_AltBacktickWndInfo: %s", WStrToUTF8(g_AltBacktickWndInfo.ProcessName).c_str());
+                            } 
                         }
-                        insert = IsSimilarProcess(g_AltBacktickWndInfo.ProcessName, item.ProcessName);
+                        if (g_AltBacktickWndInfo.hWnd != nullptr) {
+                            insert = IsSimilarProcess(g_AltBacktickWndInfo.ProcessName, item.ProcessName);
+                        }
                     }
 
                     // If the window is to be inserted, now apply the search string
