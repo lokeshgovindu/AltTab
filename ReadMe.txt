@@ -55,9 +55,10 @@ AltTab is an alternative application for native windows switcher.
   │ Settings                  │
   │ Disable AltTab            │
   │ Check for Updates         │
-  │ Rut At Startup            │
+  │ Rut at Startup            │
+  │ Rut as Administrator      │
   ├───────────────────────────┤
-  │ Reload AltTabSettinsg.ini │
+  │ Reload AltTabSettings.ini │
   │ Restart                   │
   │ Exit                      │
   └───────────────────────────┘
@@ -97,5 +98,7 @@ Known Issues
 
 Credits:
 --------
-
-First thanks to God & and Everyone :-)
+- First thanks to God
+- https://github.com/kerryland : Contributions to AltTab
+- https://www.helpndoc.com/    : Used for creating CHM help document.
+- Everyone :-)
