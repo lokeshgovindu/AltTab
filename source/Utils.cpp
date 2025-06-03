@@ -12,6 +12,7 @@
 
 #include "fuzzywuzzy.h"
 #include <shellapi.h>
+#include "Logger.h"
 
 #pragma comment(lib, "taskschd.lib")
 #pragma comment(lib, "comsupp.lib")
@@ -256,7 +257,8 @@ const DWORD USERNAME_DOMAIN_LEN = DNLEN + UNLEN + 2; // Domain Name + '\' + User
 const DWORD USERNAME_LEN = UNLEN + 1;                // User Name + '\0'
 
 // These task related stuff is copied from https://github.com/microsoft/AltTab
-bool create_auto_start_task_for_this_user(bool runElevated) {
+bool CreateAutoStartTask(bool runElevated) {
+    AT_LOG_INFO("Creating auto start task for this user. Elevated: %d", runElevated);
     HRESULT hr = S_OK;
 
     WCHAR username_domain[USERNAME_DOMAIN_LEN];
@@ -471,7 +473,8 @@ LExit:
     return (SUCCEEDED(hr));
 }
 
-bool delete_auto_start_task_for_this_user() {
+bool DeleteAutoStartTask() {
+    AT_LOG_INFO("Deleting auto start task for this user.");
     HRESULT hr = S_OK;
 
     WCHAR username[USERNAME_LEN];
@@ -535,7 +538,8 @@ std::wstring GetApplicationPath() {
     return std::wstring(applicationPath);
 }
 
-bool is_auto_start_task_active_for_this_user() {
+bool IsAutoStartTaskActive() {
+    AT_LOG_INFO("Checking if auto start task is active for this user.");
     HRESULT hr = S_OK;
 
     WCHAR username[USERNAME_LEN];
@@ -659,15 +663,20 @@ bool RunAsAdmin(const std::wstring& command, const std::wstring& args) {
     return true;
 }
 
-void RelaunchAsAdminAndExit(const bool withElvatedArg) {
+void RelaunchAsAdminAndExit(const bool elevated, const bool withElvatedArg) {
+    // Log
+    AT_LOG_INFO("elevated: %d, withElvatedArg: %d", elevated, withElvatedArg);
+
     wchar_t exePath[MAX_PATH] = { 0 };
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
 
     SHELLEXECUTEINFOW sei = { 0 };
     sei.cbSize = sizeof(sei);
     sei.fMask = SEE_MASK_NOCLOSEPROCESS; // Optional: to wait or check the new process
-    sei.lpVerb = L"runas";               // Triggers UAC elevation
-    sei.lpFile = exePath;                // Path to this executable
+    if (elevated) {
+        sei.lpVerb = L"runas"; // Triggers UAC elevation
+    }
+    sei.lpFile = exePath; // Path to this executable
     if (withElvatedArg) {
         sei.lpParameters = L"--elevated"; // Optional: to pass a flag
     } else {

@@ -71,8 +71,8 @@ int  GetCurrentYear();
 namespace {
     GeneralSettings GetGeneralSettings() {
         GeneralSettings settings;
-        settings.IsElevated = IsProcessElevated();
-        settings.IsRunElevated = IsTaskRunWithHighestPrivileges();
+        settings.IsProcessElevated = IsProcessElevated();
+        settings.IsTaskElevated = IsTaskRunWithHighestPrivileges();
         settings.IsRunAtStartup = IsRunAtStartup();
         return settings;
     }
@@ -118,17 +118,18 @@ int APIENTRY wWinMain(
     // Log application module path
     const std::wstring applicationPath = GetApplicationPath();
     AT_LOG_INFO("Application Info");
-    AT_LOG_INFO("  - Path    : %ls", applicationPath.c_str());
-    AT_LOG_INFO("  - Version : %s", AT_FULL_VERSIONA);
+    AT_LOG_INFO("  - Path      : %ls", applicationPath.c_str());
+    AT_LOG_INFO("  - Version   : %s", AT_FULL_VERSIONA);
+    AT_LOG_INFO("  - ProcessID : %d", GetCurrentProcessId());
 
     InitializeCOM();
 
     // Load GeneralSettings
     g_GeneralSettings = GetGeneralSettings();
     AT_LOG_INFO(
-        "GeneralSettings: IsElevated = %d, IsRunElevated = %d, IsRunAtStartup = %d",
-        g_GeneralSettings.IsElevated,
-        g_GeneralSettings.IsRunElevated,
+        "GeneralSettings: IsProcessElevated = %d, IsTaskElevated = %d, IsRunAtStartup = %d",
+        g_GeneralSettings.IsProcessElevated,
+        g_GeneralSettings.IsTaskElevated,
         g_GeneralSettings.IsRunAtStartup);
 
     g_hInstance = hInstance; // Store instance handle in our global variable
@@ -144,9 +145,9 @@ int APIENTRY wWinMain(
     ATLoadSettings();
 
     // If we're relaunching for elevation, allow it
-    if (g_GeneralSettings.IsElevated && !g_GeneralSettings.IsRunElevated && wcsstr(GetCommandLineW(), L"--elevated")) {
+    if (g_GeneralSettings.IsProcessElevated && !g_GeneralSettings.IsTaskElevated && wcsstr(GetCommandLineW(), L"--elevated")) {
         AT_LOG_INFO("Relaunching with elevated privileges (--elevated argument).");
-        g_GeneralSettings.IsRunElevated = true;
+        g_GeneralSettings.IsTaskElevated = true;
         if (g_GeneralSettings.IsRunAtStartup) {
             RunAtStartup(true, true);
         }
@@ -794,7 +795,7 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
         UINT checkState = GetCheckState(hSubMenu, menuItemId);
         const bool checked    = (checkState == MF_CHECKED);
-        RunAtStartup(!checked, g_GeneralSettings.IsElevated);
+        RunAtStartup(!checked, g_GeneralSettings.IsProcessElevated);
         ToggleCheckState(hSubMenu, menuItemId);
     }
     break;
@@ -804,12 +805,29 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         const UINT checkState = GetCheckState(hSubMenu, menuItemId);
         const bool checked = (checkState == MF_CHECKED);
         AT_LOG_INFO("Run as admin: %d", checked);
+
+        // Check if the current process is elevated
+        // If the current process is elevated, then we don't need to relaunch AltTab with administrator privileges.
+        //if (checked && g_GeneralSettings.IsProcessElevated) {
+        //    AT_LOG_INFO("AltTab is already running with administrator privileges.");
+        //    ShowCustomToolTip(L"AltTab is already running with administrator privileges.", 3000);
+        //    return;
+        //}
+
         const bool isRunAtStartup = IsRunAtStartup();
         AT_LOG_INFO("IsChecked: %d, Run at startup: %d", checked, isRunAtStartup);
-        if (!checked) {
+        if (!checked ) {
             // Also check if `Run at Startup` is enabled. Then, we need to create a task in `Task Scheduler` to run
             // AltTab at windows log on to run `AltTab` with highest privileges.
             if (isRunAtStartup) {
+                // If the process is already elevated, no need to relaunch as administrator privileges.
+                if (g_GeneralSettings.IsProcessElevated) {
+                    AT_LOG_INFO("AltTab is already running with administrator privileges.");
+                    DeleteAutoStartTask();
+                    CreateAutoStartTask(true);
+                    return;
+                }
+                
                 // Ask user for confirmation to always run as administrator since `Run at Startup` is enabled.
                 const int result = MessageBoxW(
                     nullptr,
@@ -820,19 +838,22 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
                     MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1);
                   AT_LOG_INFO("Relaunching AltTab as admin, elevated: %d", result);
                 if (result == IDYES) {
-                    RelaunchAsAdminAndExit(true);
+                    RelaunchAsAdminAndExit(true, true);
                 } else {
-                    RelaunchAsAdminAndExit(false);
+                    //RelaunchAsAdminAndExit(false, false);
+                    // Do NOTHING
                 }
             } else {
-                RelaunchAsAdminAndExit(false);
+                RelaunchAsAdminAndExit(true, false);
             }
         } else {
             if (isRunAtStartup) {
                 AT_LOG_INFO("Delete task for Run as admin...");
-                delete_auto_start_task_for_this_user();
+                DeleteAutoStartTask();
                 AT_LOG_INFO("Creating task for without admin...");
-                create_auto_start_task_for_this_user(false);
+                CreateAutoStartTask(false);
+            } else {
+                RelaunchAsAdminAndExit(false, false);
             }
         }
         ToggleCheckState(hSubMenu, menuItemId);
@@ -866,9 +887,9 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
         //}
 #endif // _DEBUG
 
-        if (g_GeneralSettings.IsElevated) {
-            // Relaunch AltTab with admin privileges
-            RelaunchAsAdminAndExit(true);
+        if (g_GeneralSettings.IsProcessElevated) {
+            // Relaunch AltTab with administrator privileges
+            RelaunchAsAdminAndExit(true, false);
         } else {
             RestartApplication();
         }
@@ -897,26 +918,57 @@ void ShowTrayContextMenu(HWND hWnd, POINT pt) {
     // Update general settings
     // Note: The current process is elevated but `RunAtStartup` is not enabled then IsRunElevated will be false.
     g_GeneralSettings = GetGeneralSettings();
+    AT_LOG_INFO(
+        "GeneralSettings: IsProcessElevated = %d, IsTaskElevated = %d, IsRunAtStartup = %d",
+        g_GeneralSettings.IsProcessElevated,
+        g_GeneralSettings.IsTaskElevated,
+        g_GeneralSettings.IsRunAtStartup);
+
     HMENU hMenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDC_TRAY_CONTEXTMENU));
     if (hMenu) {
         HMENU hSubMenu = GetSubMenu(hMenu, 0);
         if (hSubMenu) {
-            // our window must be foreground before calling TrackPopupMenu or
+            // Our window must be foreground before calling TrackPopupMenu or
             // the menu will not disappear when the user clicks away
             SetForegroundWindow(hWnd);
-
-            if (IsRunAtStartup()) {
+            const bool isRunAtStartup = IsRunAtStartup();
+            if (isRunAtStartup) {
                 AT_LOG_INFO("Run at startup is enabled.");
                 SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNATSTARTUP, MF_CHECKED);
             }
 
-            if (g_GeneralSettings.IsRunElevated) {
-                SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_CHECKED);
+            // Change the `Run as Administrator` menu item text to `Always run as Administrator` if AltTab is running at
+            // startup.
+            if (isRunAtStartup) {
+                MENUITEMINFOW mii = { sizeof(mii) };
+                mii.fMask = MIIM_STRING;
+                mii.dwTypeData = (LPWSTR)L"Always run as Administrator";
+                SetMenuItemInfoW(hMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, FALSE, &mii);
+            } else {
+                MENUITEMINFOW mii = { sizeof(mii) };
+                mii.fMask = MIIM_STRING;
+                mii.dwTypeData = (LPWSTR)L"Run as Administrator";
+                SetMenuItemInfoW(hMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, FALSE, &mii);
+            }
 
-                // If the current process is not elevated, then we need to disable Run as Admin option in the context
-                // menu.
-                if (!g_GeneralSettings.IsElevated) {
-                    EnableMenuItem(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_GRAYED);
+            if (g_GeneralSettings.IsProcessElevated) {
+                if (isRunAtStartup) {
+                    if (IsTaskRunWithHighestPrivileges()) {
+                        SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_CHECKED);
+                    }
+                    else {
+                        SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_UNCHECKED);
+                    }
+                } else {
+                    SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_CHECKED);
+                }
+
+                // If the current process is elevated and RunAtStartup is NOT checked then disable
+                // `Run as Administrator`, because we can't run a non-elevated process from the elevated process.
+                if (!isRunAtStartup) {
+                    EnableMenuItem(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+                } else {
+                    EnableMenuItem(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_BYCOMMAND | MF_ENABLED);
                 }
             }
 
@@ -924,7 +976,7 @@ void ShowTrayContextMenu(HWND hWnd, POINT pt) {
                 SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_DISABLEALTTAB, MF_CHECKED);
             }
 
-            // respect menu drop alignment
+            // Respect menu drop alignment
             UINT uFlags = TPM_RIGHTBUTTON;
             if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
                 uFlags |= TPM_RIGHTALIGN;
@@ -981,7 +1033,7 @@ void SetCheckState(HMENU hMenu, UINT menuItemID, UINT fState) {
 }
 
 bool RunAtStartup(const bool runAtStartup, const bool withHighestPrivileges) {
-    const bool isElevated = g_GeneralSettings.IsElevated;
+    const bool isElevated = g_GeneralSettings.IsProcessElevated;
     AT_LOG_INFO("runAtStartup: %d, IsProcessElevated: %d", runAtStartup, isElevated);
 
     HKEY hKey;
@@ -1001,16 +1053,16 @@ bool RunAtStartup(const bool runAtStartup, const bool withHighestPrivileges) {
 
     bool succeeded = false;
     if (runAtStartup) {
-        delete_auto_start_task_for_this_user();
+        DeleteAutoStartTask();
         if (isElevated && withHighestPrivileges) {
-            succeeded = create_auto_start_task_for_this_user(true);
+            succeeded = CreateAutoStartTask(true);
             if (succeeded) {
                 AT_LOG_INFO("Run at startup enabled with highest privileges.");
             } else {
                 AT_LOG_INFO("Failed to create task for Run at startup with highest privileges.");
             }
         } else {
-            succeeded = create_auto_start_task_for_this_user(false);
+            succeeded = CreateAutoStartTask(false);
             if (succeeded) {
                 AT_LOG_INFO("Run at startup enabled without highest privileges.");
             } else {
@@ -1019,8 +1071,8 @@ bool RunAtStartup(const bool runAtStartup, const bool withHighestPrivileges) {
         }
     } else {
         // If runAtStartup is false, delete the task in Task Scheduler if it exists.
-        if (is_auto_start_task_active_for_this_user()) {
-            succeeded = delete_auto_start_task_for_this_user();
+        if (IsAutoStartTaskActive()) {
+            succeeded = DeleteAutoStartTask();
         } else {
             AT_LOG_INFO("No task found in Task Scheduler for Run at startup.");
             succeeded = true; // No task to delete, so return true.
@@ -1032,7 +1084,7 @@ bool RunAtStartup(const bool runAtStartup, const bool withHighestPrivileges) {
 
 bool IsRunAtStartup() {
     // First check if there is an task in Task Scheduler
-    if (is_auto_start_task_active_for_this_user()) {
+    if (IsAutoStartTaskActive()) {
         AT_LOG_INFO("Auto start task exists for this user.");
         return true;
     }
@@ -1071,15 +1123,15 @@ bool IsRunAtStartup() {
             AT_LOG_INFO("Run at startup is enabled in registry.");
 
             // This is old mechanism, so going to delete the registry entry and create a task in Task Scheduler
-            if (g_GeneralSettings.IsElevated) {
+            if (g_GeneralSettings.IsProcessElevated) {
                 // Create a task in Task Scheduler to run AltTab with highest privileges
-                if (create_auto_start_task_for_this_user(true)) {
+                if (CreateAutoStartTask(true)) {
                     AT_LOG_INFO("Run at startup enabled with highest privileges.");
                 } else {
                     AT_LOG_ERROR("Failed to create task for Run at startup with highest privileges.");
                 }
             } else {
-                if (create_auto_start_task_for_this_user(false)) {
+                if (CreateAutoStartTask(false)) {
                     AT_LOG_INFO("Run at startup enabled without highest privileges.");
                 } else {
                     AT_LOG_ERROR("Failed to create task for Run at startup without highest privileges.");

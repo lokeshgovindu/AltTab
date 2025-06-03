@@ -13,9 +13,9 @@ struct ToolTipInfo {
  * When the application starts, it checks the current user privileges.
  */
 struct GeneralSettings {
-    bool IsElevated;     // Is the application running with elevated privileges
-    bool IsRunElevated;  // Is the application set to run elevated (Run with highest privileges in the task options)
-    bool IsRunAtStartup; // Is the application set to run at startup
+    bool IsProcessElevated; // Is the application running with elevated privileges
+    bool IsTaskElevated;    // Is the application set to run elevated (Run with highest privileges in the task options)
+    bool IsRunAtStartup;    // Is the application set to run at startup
 };
 
 LRESULT CALLBACK LLKeyboardProc(int nCode, WPARAM wp, LPARAM lp);
