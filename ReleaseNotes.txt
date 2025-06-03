@@ -11,6 +11,10 @@ Known Issues
 ------------
 - Available @ https://sourceforge.net/p/alttab/tickets/
 
+2025.1.0.0 new features and bug fixes
+-------------------------------------
++ Implemented 'Run as Administrator' and added in tray context menu.
+
 2024.4.0.2 new features and bug fixes
 -------------------------------------
 + Added new setting "General/SystemTrayIconEnabled" in .ini to create or disable

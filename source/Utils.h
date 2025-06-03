@@ -45,8 +45,24 @@ int ScaleValueForDPI(int value, int dpi = 96);
 
 int GetDPIForWindow(HWND hWnd);
 
-bool is_auto_start_task_active_for_this_user();
-bool create_auto_start_task_for_this_user(bool runElevated);
-bool delete_auto_start_task_for_this_user();
+bool IsAutoStartTaskActive();
+bool CreateAutoStartTask(bool runElevated);
+bool DeleteAutoStartTask();
+
+std::wstring GetApplicationPath();
 
 bool IsProcessElevated(const bool use_cached_value = true);
+
+bool RestartApplication();
+
+bool RunAsAdmin(const std::wstring& command, const std::wstring& args = L"");
+
+void RelaunchAsAdminAndExit(const bool elevated, const bool withElvatedArg);
+
+bool IsTaskRunWithHighestPrivileges();
+
+bool CheckSingleInstance(const std::wstring& mutexName);
+
+bool InitializeCOM();
+
+void UninitializeCOM();

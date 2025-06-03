@@ -139,8 +139,8 @@ void CheckForUpdates(bool quiteMode) {
         g_UpdatesInfo.Changes        = latestChanges;
         DialogBoxW(g_hInstance, MAKEINTRESOURCE(IDD_CHECK_FOR_UPDATES), nullptr, ATCheckForUpdatesDlgProc);
     } else {
-        std::string info = std::format(
-            "You are using the latest version of {}.\n\nCurrentVersion:\t{}\nUpdateVersion:\t{}",
+        const std::string info = std::format(
+            "You are using the latest version of {}.\n\t- CurrentVersion:\t{}\n\t- UpdateVersion:\t{}",
             AT_PRODUCT_NAMEA,
             currentVersion,
             updateVersion);

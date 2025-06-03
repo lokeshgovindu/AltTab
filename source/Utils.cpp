@@ -5,13 +5,17 @@
 #include <fcntl.h>
 #include <io.h>
 #include <iostream>
-#include <stdio.h>
 #include <string>
 #include <taskschd.h>
 #include <Windows.h>
 #include <lmcons.h>
 
 #include "fuzzywuzzy.h"
+#include <shellapi.h>
+#include "Logger.h"
+
+#pragma comment(lib, "taskschd.lib")
+#pragma comment(lib, "comsupp.lib")
 
 bool EnableConsoleWindow() {
     if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
@@ -37,7 +41,6 @@ std::string Trim(const std::string& str, const std::string& seps)
     size_t q = str.find_last_not_of(seps);
     return str.substr(p, q - p + 1);
 }
-
 
 std::vector<std::string> Split(const std::string& s, const std::string& seps) {
     std::vector<std::string> ret;
@@ -253,7 +256,9 @@ int GetDPIForWindow(HWND hWnd) {
 const DWORD USERNAME_DOMAIN_LEN = DNLEN + UNLEN + 2; // Domain Name + '\' + User Name + '\0'
 const DWORD USERNAME_LEN = UNLEN + 1;                // User Name + '\0'
 
-bool create_auto_start_task_for_this_user(bool runElevated) {
+// These task related stuff is copied from https://github.com/microsoft/AltTab
+bool CreateAutoStartTask(bool runElevated) {
+    AT_LOG_INFO("Creating auto start task for this user. Elevated: %d", runElevated);
     HRESULT hr = S_OK;
 
     WCHAR username_domain[USERNAME_DOMAIN_LEN];
@@ -468,7 +473,8 @@ LExit:
     return (SUCCEEDED(hr));
 }
 
-bool delete_auto_start_task_for_this_user() {
+bool DeleteAutoStartTask() {
+    AT_LOG_INFO("Deleting auto start task for this user.");
     HRESULT hr = S_OK;
 
     WCHAR username[USERNAME_LEN];
@@ -526,7 +532,14 @@ LExit:
     return (SUCCEEDED(hr));
 }
 
-bool is_auto_start_task_active_for_this_user() {
+std::wstring GetApplicationPath() {
+    wchar_t applicationPath[MAX_PATH] = { 0 };
+    GetModuleFileName(nullptr, applicationPath, MAX_PATH);
+    return std::wstring(applicationPath);
+}
+
+bool IsAutoStartTaskActive() {
+    AT_LOG_INFO("Checking if auto start task is active for this user.");
     HRESULT hr = S_OK;
 
     WCHAR username[USERNAME_LEN];
@@ -609,4 +622,207 @@ bool IsProcessElevated(const bool use_cached_value) {
     };
     static const bool cached_value = detection_func();
     return use_cached_value ? cached_value : detection_func();
+}
+
+bool RestartApplication() {
+    std::wstring applicationPath = GetApplicationPath();
+
+    // Replace the existing process with a new instance of the same program
+    intptr_t ret = _wexecl(applicationPath.c_str(), applicationPath.c_str(), nullptr);
+
+    // If _wexecl returns, it means the new process failed to start
+    if (ret == -1) {
+        // Handle error
+        DWORD error = GetLastError();
+        std::wcerr << L"Failed to restart application. Error code: " << std::hex << error << std::endl;
+        return false;
+    }
+    // If we reach here, the new process was started successfully
+    // The current process will exit, and the new process will take over
+    ExitProcess(0); // Ensure the current process exits
+}
+
+bool RunAsAdmin(const std::wstring& command, const std::wstring& args) {
+    SHELLEXECUTEINFOW sei = { sizeof(sei) };
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+    sei.hwnd = nullptr;
+    sei.lpVerb = L"runas"; // Run as administrator
+    sei.lpFile = command.c_str();
+    sei.lpParameters = args.c_str();
+    sei.nShow = SW_SHOWNORMAL;
+    if (!ShellExecuteExW(&sei)) {
+        DWORD error = GetLastError();
+        if (error == ERROR_CANCELLED) {
+            // User cancelled the elevation prompt
+            return false;
+        }
+        return false; // Other errors
+    }
+    WaitForSingleObject(sei.hProcess, INFINITE);
+    CloseHandle(sei.hProcess);
+    return true;
+}
+
+void RelaunchAsAdminAndExit(const bool elevated, const bool withElvatedArg) {
+    // Log
+    AT_LOG_INFO("elevated: %d, withElvatedArg: %d", elevated, withElvatedArg);
+
+    wchar_t exePath[MAX_PATH] = { 0 };
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+
+    SHELLEXECUTEINFOW sei = { 0 };
+    sei.cbSize = sizeof(sei);
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS; // Optional: to wait or check the new process
+    if (elevated) {
+        sei.lpVerb = L"runas"; // Triggers UAC elevation
+    }
+    sei.lpFile = exePath; // Path to this executable
+    if (withElvatedArg) {
+        sei.lpParameters = L"--elevated"; // Optional: to pass a flag
+    } else {
+        sei.lpParameters = L""; // No additional parameters
+    }
+    sei.nShow = SW_SHOWNORMAL;
+
+    if (ShellExecuteExW(&sei)) {
+        // Optional: wait for new elevated process to start up
+        // WaitForInputIdle(sei.hProcess, 1000);
+        // CloseHandle(sei.hProcess);
+
+        // Exit current process immediately
+        ExitProcess(0);
+    } else {
+        DWORD err = GetLastError();
+        if (err == ERROR_CANCELLED) {
+            MessageBoxW(nullptr, L"User declined UAC prompt.", L"Info", MB_OK | MB_ICONINFORMATION);
+        } else {
+            MessageBoxW(nullptr, L"Failed to launch elevated process.", L"Error", MB_OK | MB_ICONERROR);
+        }
+    }
+}
+
+bool IsTaskRunWithHighestPrivileges() {
+    HRESULT hr = S_OK;
+
+    WCHAR username[USERNAME_LEN];
+    std::wstring wstrTaskName;
+
+    bool result = false;
+    ITaskService* pService = nullptr;
+    ITaskFolder* pTaskFolder = nullptr;
+    ITaskFolder* pRootFolder = nullptr;
+    IRegisteredTask* pTask = nullptr;
+    ITaskDefinition* pDef = nullptr;
+    IPrincipal* pPrincipal = nullptr;
+
+    // ------------------------------------------------------
+    // Get the Username for the task.
+    if (!GetEnvironmentVariable(L"USERNAME", username, USERNAME_LEN)) {
+        ExitWithLastError(hr, "Getting username failed: %x", hr);
+    }
+
+    // Task Name.
+    wstrTaskName = L"Autorun for ";
+    wstrTaskName += username;
+
+    // Get the executable path passed to the custom action.
+    WCHAR wszExecutablePath[MAX_PATH];
+    GetModuleFileName(NULL, wszExecutablePath, MAX_PATH);
+
+    // ------------------------------------------------------
+    // Create an instance of the Task Service.
+    hr = CoCreateInstance(
+        CLSID_TaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskService, reinterpret_cast<void**>(&pService));
+    ExitOnFailure(hr, "Failed to create an instance of ITaskService: %x", hr);
+
+    // Connect to the task service.
+    hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
+    ExitOnFailure(hr, "ITaskService::Connect failed: %x", hr);
+
+    // ------------------------------------------------------
+    // Get the AltTab task folder. Creates it if it doesn't exist.
+    hr = pService->GetFolder(_bstr_t(L"\\AltTab"), &pTaskFolder);
+    if (FAILED(hr)) {
+        // Folder doesn't exist. Get the Root folder and create the AltTab subfolder.
+        hr = pService->GetFolder(_bstr_t(L"\\"), &pRootFolder);
+        ExitOnFailure(hr, "Cannot get Root Folder pointer: %x", hr);
+        hr = pRootFolder->CreateFolder(_bstr_t(L"\\AltTab"), _variant_t(L""), &pTaskFolder);
+        if (FAILED(hr)) {
+            pRootFolder->Release();
+            ExitOnFailure(hr, "Cannot create AltTab task folder: %x", hr);
+        }
+    }
+
+    hr = pTaskFolder->GetTask(_bstr_t(wstrTaskName.c_str()), &pTask);
+    if (SUCCEEDED(hr)) {
+        // Task exists, check if it runs with highest privileges.
+        hr = pTask->get_Definition(&pDef);
+        if (SUCCEEDED(hr)) {
+            hr = pDef->get_Principal(&pPrincipal);
+            if (SUCCEEDED(hr)) {
+                _TASK_RUNLEVEL runLevel;
+                hr = pPrincipal->get_RunLevel(&runLevel);
+                if (SUCCEEDED(hr) && runLevel == TASK_RUNLEVEL_HIGHEST) {
+                    result = true;
+                }
+            }
+        }
+    }
+
+LExit:
+    if (pPrincipal)
+        pPrincipal->Release();
+    if (pDef)
+        pDef->Release();
+    if (pTask)
+        pTask->Release();
+    if (pRootFolder)
+        pRootFolder->Release();
+    if (pService)
+        pService->Release();
+    return result;
+}
+
+bool CheckSingleInstance(const std::wstring& mutexName) {
+    HANDLE hMutex = CreateMutexW(nullptr, TRUE, mutexName.c_str());
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        // Another instance is running
+        CloseHandle(hMutex);
+        return false;
+    }
+    // No other instance is running
+    return true;
+}
+
+bool InitializeCOM() {
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    if (FAILED(hr)) {
+        // Handle the error
+        std::wcerr << L"Failed to initialize COM library. Error code: " << std::hex << hr << std::endl;
+        return false;
+    }
+
+    // Set COM security levels
+    hr = CoInitializeSecurity(
+        nullptr,
+        -1,
+        nullptr,
+        nullptr,
+        RPC_C_AUTHN_LEVEL_DEFAULT,
+        RPC_C_IMP_LEVEL_IMPERSONATE,
+        nullptr,
+        EOAC_NONE,
+        nullptr);
+
+    if (FAILED(hr)) {
+        std::wcerr << L"Failed to initialize COM security. Error code: " << std::hex << hr << std::endl;
+        CoUninitialize();
+        return false;
+    }
+
+    return true;
+}
+
+void UninitializeCOM() {
+    CoUninitialize();
 }

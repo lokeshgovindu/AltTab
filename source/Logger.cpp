@@ -46,6 +46,8 @@ void CreateLogger() {
 
     // Set priority for root logger
     g_Logger->setPriority(log4cpp::Priority::DEBUG);
+
+    AT_LOG_INFO("Logger created successfully.");
 }
 
 #endif // _AT_LOGGER

@@ -71,10 +71,10 @@
 #define ID_CONTEXTMENU_KILL_PROCESS     32789
 #define ID_CONTEXTMENU_CLOSE_WINDOW     32790
 #define ID_CONTEXTMENU_ABOUTALTTAB      32791
-#define ID_Menu                         32793
 #define ID_CONTEXTMENU_OPEN_PATH        32794
 #define ID_CONTEXTMENU_COPY_PATH        32795
 #define ID_TRAYCONTEXTMENU_RELOADALTTABSETTINGS 32796
+#define ID_TRAYCONTEXTMENU_RUNASADMIN   32798
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -83,7 +83,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        134
-#define _APS_NEXT_COMMAND_VALUE         32798
+#define _APS_NEXT_COMMAND_VALUE         32799
 #define _APS_NEXT_CONTROL_VALUE         1035
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

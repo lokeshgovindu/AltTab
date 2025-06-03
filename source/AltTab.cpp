@@ -38,34 +38,45 @@
 // ----------------------------------------------------------------------------
 // Global Variables:
 // ----------------------------------------------------------------------------
-HINSTANCE   g_hInstance;                                   // Current instance
-HHOOK       g_KeyboardHook;                                // Keyboard Hook
-HWND        g_hAltTabWnd           = nullptr;              // AltTab window handle
-bool        g_hAltTabIsbeingClosed = false;                // Is AltTab window being closed
-HWND        g_hFGWnd               = nullptr;              // Foreground window handle
-HWND        g_hMainWnd             = nullptr;              // AltTab main window handle
-HWND        g_hSetingsWnd          = nullptr;              // AltTab settings window handle
-HWND        g_hCustomToolTip       = nullptr;              // Custom tool tip
-UINT_PTR    g_TooltipTimerId;
-bool        g_TooltipVisible       = false;                // Is tooltip visible or not
-TOOLINFO    g_ToolInfo             = {};                   // Custom tool tip
-bool        g_IsAltKeyPressed      = false;                // Is Alt key pressed
-DWORD       g_LastAltKeyPressTime  = 0;                    // Last Alt key press time
-bool        g_IsAltTab             = false;                // Is Alt+Tab pressed
-bool        g_IsAltCtrlTab         = false;                // Is Alt+Ctrl+Tab pressed
-bool        g_IsAltBacktick        = false;                // Is Alt+Backtick pressed
-DWORD       g_MainThreadID         = GetCurrentThreadId(); // Main thread ID
-DWORD       g_idThreadAttachTo     = 0;
+HINSTANCE       g_hInstance;                                   // Current instance
+HHOOK           g_KeyboardHook;                                // Keyboard Hook
+HWND            g_hAltTabWnd           = nullptr;              // AltTab window handle
+bool            g_hAltTabIsbeingClosed = false;                // Is AltTab window being closed
+HWND            g_hFGWnd               = nullptr;              // Foreground window handle
+HWND            g_hMainWnd             = nullptr;              // AltTab main window handle
+HWND            g_hSetingsWnd          = nullptr;              // AltTab settings window handle
+HWND            g_hCustomToolTip       = nullptr;              // Custom tool tip
+UINT_PTR        g_TooltipTimerId;
+bool            g_TooltipVisible       = false;                // Is tooltip visible or not
+TOOLINFO        g_ToolInfo             = {};                   // Custom tool tip
+bool            g_IsAltKeyPressed      = false;                // Is Alt key pressed
+DWORD           g_LastAltKeyPressTime  = 0;                    // Last Alt key press time
+bool            g_IsAltTab             = false;                // Is Alt+Tab pressed
+bool            g_IsAltCtrlTab         = false;                // Is Alt+Ctrl+Tab pressed
+bool            g_IsAltBacktick        = false;                // Is Alt+Backtick pressed
+DWORD           g_MainThreadID         = GetCurrentThreadId(); // Main thread ID
+DWORD           g_idThreadAttachTo     = 0;
+GeneralSettings g_GeneralSettings; // General settings
 
 IsHungAppWindowFunc g_pfnIsHungAppWindow = nullptr;
 
-UINT const  WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
+UINT const WM_USER_ALTTAB_TRAYICON = WM_APP + 1;
 
 HWND CreateMainWindow(HINSTANCE hInstance);
 BOOL AddNotificationIcon(HWND hWndTrayIcon);
 void CALLBACK CheckAltKeyIsReleased(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 void CALLBACK CheckForUpdatesTimerCB(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 int  GetCurrentYear();
+
+namespace {
+    GeneralSettings GetGeneralSettings() {
+        GeneralSettings settings;
+        settings.IsProcessElevated = IsProcessElevated();
+        settings.IsTaskElevated = IsTaskRunWithHighestPrivileges();
+        settings.IsRunAtStartup = IsRunAtStartup();
+        return settings;
+    }
+}
 
 // ----------------------------------------------------------------------------
 // Main
@@ -98,12 +109,28 @@ int APIENTRY wWinMain(
         return 1;
     }
 
-
 #ifdef _AT_LOGGER
     CreateLogger();
     AT_LOG_INFO("-------------------------------------------------------------------------------");
     AT_LOG_INFO("CreateLogger done.");
 #endif // _AT_LOGGER
+
+    // Log application module path
+    const std::wstring applicationPath = GetApplicationPath();
+    AT_LOG_INFO("Application Info");
+    AT_LOG_INFO("  - Path      : %ls", applicationPath.c_str());
+    AT_LOG_INFO("  - Version   : %s", AT_FULL_VERSIONA);
+    AT_LOG_INFO("  - ProcessID : %d", GetCurrentProcessId());
+
+    InitializeCOM();
+
+    // Load GeneralSettings
+    g_GeneralSettings = GetGeneralSettings();
+    AT_LOG_INFO(
+        "GeneralSettings: IsProcessElevated = %d, IsTaskElevated = %d, IsRunAtStartup = %d",
+        g_GeneralSettings.IsProcessElevated,
+        g_GeneralSettings.IsTaskElevated,
+        g_GeneralSettings.IsRunAtStartup);
 
     g_hInstance = hInstance; // Store instance handle in our global variable
 
@@ -117,9 +144,20 @@ int APIENTRY wWinMain(
     // Load settings from AltTabSettings.ini file
     ATLoadSettings();
 
-#ifndef _DEBUG
+    // If we're relaunching for elevation, allow it
+    if (g_GeneralSettings.IsProcessElevated && !g_GeneralSettings.IsTaskElevated && wcsstr(GetCommandLineW(), L"--elevated")) {
+        AT_LOG_INFO("Relaunching with elevated privileges (--elevated argument).");
+        g_GeneralSettings.IsTaskElevated = true;
+        if (g_GeneralSettings.IsRunAtStartup) {
+            RunAtStartup(true, true);
+        }
+    }
+
+#if 0
     // Run At Startup
-    RunAtStartup(true);
+    if (!g_GeneralSettings.IsRunAtStartup) {
+        RunAtStartup(true, g_GeneralSettings.IsElevated);
+    }
 #endif // _DEBUG
 
     // Register AltTab window class
@@ -756,11 +794,70 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
     case ID_TRAYCONTEXTMENU_RUNATSTARTUP: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNATSTARTUP");
         UINT checkState = GetCheckState(hSubMenu, menuItemId);
-        bool checked    = (checkState == MF_CHECKED);
-        RunAtStartup(!checked);
+        const bool checked    = (checkState == MF_CHECKED);
+        RunAtStartup(!checked, g_GeneralSettings.IsProcessElevated);
         ToggleCheckState(hSubMenu, menuItemId);
     }
     break;
+
+    case ID_TRAYCONTEXTMENU_RUNASADMIN: {
+        AT_LOG_INFO("ID_TRAYCONTEXTMENU_RUNASADMIN");
+        const UINT checkState = GetCheckState(hSubMenu, menuItemId);
+        const bool checked = (checkState == MF_CHECKED);
+        AT_LOG_INFO("Run as admin: %d", checked);
+
+        // Check if the current process is elevated
+        // If the current process is elevated, then we don't need to relaunch AltTab with administrator privileges.
+        //if (checked && g_GeneralSettings.IsProcessElevated) {
+        //    AT_LOG_INFO("AltTab is already running with administrator privileges.");
+        //    ShowCustomToolTip(L"AltTab is already running with administrator privileges.", 3000);
+        //    return;
+        //}
+
+        const bool isRunAtStartup = IsRunAtStartup();
+        AT_LOG_INFO("IsChecked: %d, Run at startup: %d", checked, isRunAtStartup);
+        if (!checked ) {
+            // Also check if `Run at Startup` is enabled. Then, we need to create a task in `Task Scheduler` to run
+            // AltTab at windows log on to run `AltTab` with highest privileges.
+            if (isRunAtStartup) {
+                // If the process is already elevated, no need to relaunch as administrator privileges.
+                if (g_GeneralSettings.IsProcessElevated) {
+                    AT_LOG_INFO("AltTab is already running with administrator privileges.");
+                    DeleteAutoStartTask();
+                    CreateAutoStartTask(true);
+                    return;
+                }
+                
+                // Ask user for confirmation to always run as administrator since `Run at Startup` is enabled.
+                const int result = MessageBoxW(
+                    nullptr,
+                    L"Do you want to always run AltTab as Administrator since 'Run at Startup' is enabled?\n\n"
+                    L"This will change the AltTab startup task to 'Run with highest privileges' option in Task Scheduler.\n"
+                    L"Going to relaunch AltTab with admin privileges...",
+                    AT_PRODUCT_NAMEW,
+                    MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1);
+                  AT_LOG_INFO("Relaunching AltTab as admin, elevated: %d", result);
+                if (result == IDYES) {
+                    RelaunchAsAdminAndExit(true, true);
+                } else {
+                    //RelaunchAsAdminAndExit(false, false);
+                    // Do NOTHING
+                }
+            } else {
+                RelaunchAsAdminAndExit(true, false);
+            }
+        } else {
+            if (isRunAtStartup) {
+                AT_LOG_INFO("Delete task for Run as admin...");
+                DeleteAutoStartTask();
+                AT_LOG_INFO("Creating task for without admin...");
+                CreateAutoStartTask(false);
+            } else {
+                RelaunchAsAdminAndExit(false, false);
+            }
+        }
+        ToggleCheckState(hSubMenu, menuItemId);
+    } break;
 
     case ID_TRAYCONTEXTMENU_RELOADALTTABSETTINGS: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RELOADALTTABSETTINGS");
@@ -771,19 +868,31 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
     case ID_TRAYCONTEXTMENU_RESTART: {
         AT_LOG_INFO("ID_TRAYCONTEXTMENU_RESTART");
 
-        // Close the console window of the old process
+        // FIXME: Still this is not working :-(
+#ifdef _DEBUG
+        // Close/detach the console window of the current process
+        // This is not needed in release build, as we are not using console window.
+        // If you want to keep the console window in debug mode, comment the below lines.
+        // If you want to keep the console window in debug mode, comment the below lines.
+        FreeConsole(); // Detach the console window from the current process
+
         //bool result = FreeConsole();
+        //if (!result) {
+        //    AT_LOG_ERROR("Failed to free console!");
+        //}
         // Attach to an existing console (if any)
         //if (AttachConsole(ATTACH_PARENT_PROCESS) || AttachConsole(GetCurrentProcessId())) {
         //    // Close the console window
         //    FreeConsole();
         //}
+#endif // _DEBUG
 
-        wchar_t applicationPath[MAX_PATH];
-        GetModuleFileName(nullptr, applicationPath, MAX_PATH);
-
-        // Replace the existing process with a new instance of the same program
-        _wexecl(applicationPath, applicationPath, nullptr);
+        if (g_GeneralSettings.IsProcessElevated) {
+            // Relaunch AltTab with administrator privileges
+            RelaunchAsAdminAndExit(true, false);
+        } else {
+            RestartApplication();
+        }
     }
     break;
 
@@ -806,23 +915,68 @@ void TrayContextMenuItemHandler(HWND hWnd, HMENU hSubMenu, UINT menuItemId) {
 // Show AltTab system tray context menu
 // ----------------------------------------------------------------------------
 void ShowTrayContextMenu(HWND hWnd, POINT pt) {
+    // Update general settings
+    // Note: The current process is elevated but `RunAtStartup` is not enabled then IsRunElevated will be false.
+    g_GeneralSettings = GetGeneralSettings();
+    AT_LOG_INFO(
+        "GeneralSettings: IsProcessElevated = %d, IsTaskElevated = %d, IsRunAtStartup = %d",
+        g_GeneralSettings.IsProcessElevated,
+        g_GeneralSettings.IsTaskElevated,
+        g_GeneralSettings.IsRunAtStartup);
+
     HMENU hMenu = LoadMenu(g_hInstance, MAKEINTRESOURCE(IDC_TRAY_CONTEXTMENU));
     if (hMenu) {
         HMENU hSubMenu = GetSubMenu(hMenu, 0);
         if (hSubMenu) {
-            // our window must be foreground before calling TrackPopupMenu or
+            // Our window must be foreground before calling TrackPopupMenu or
             // the menu will not disappear when the user clicks away
             SetForegroundWindow(hWnd);
-
-            if (IsRunAtStartup()) {
+            const bool isRunAtStartup = IsRunAtStartup();
+            if (isRunAtStartup) {
+                AT_LOG_INFO("Run at startup is enabled.");
                 SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNATSTARTUP, MF_CHECKED);
+            }
+
+            // Change the `Run as Administrator` menu item text to `Always run as Administrator` if AltTab is running at
+            // startup.
+            if (isRunAtStartup) {
+                MENUITEMINFOW mii = { sizeof(mii) };
+                mii.fMask = MIIM_STRING;
+                mii.dwTypeData = (LPWSTR)L"Always run as Administrator";
+                SetMenuItemInfoW(hMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, FALSE, &mii);
+            } else {
+                MENUITEMINFOW mii = { sizeof(mii) };
+                mii.fMask = MIIM_STRING;
+                mii.dwTypeData = (LPWSTR)L"Run as Administrator";
+                SetMenuItemInfoW(hMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, FALSE, &mii);
+            }
+
+            if (g_GeneralSettings.IsProcessElevated) {
+                if (isRunAtStartup) {
+                    if (IsTaskRunWithHighestPrivileges()) {
+                        SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_CHECKED);
+                    }
+                    else {
+                        SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_UNCHECKED);
+                    }
+                } else {
+                    SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_CHECKED);
+                }
+
+                // If the current process is elevated and RunAtStartup is NOT checked then disable
+                // `Run as Administrator`, because we can't run a non-elevated process from the elevated process.
+                if (!isRunAtStartup) {
+                    EnableMenuItem(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+                } else {
+                    EnableMenuItem(hSubMenu, ID_TRAYCONTEXTMENU_RUNASADMIN, MF_BYCOMMAND | MF_ENABLED);
+                }
             }
 
             if (g_Settings.DisableAltTab) {
                 SetCheckState(hSubMenu, ID_TRAYCONTEXTMENU_DISABLEALTTAB, MF_CHECKED);
             }
 
-            // respect menu drop alignment
+            // Respect menu drop alignment
             UINT uFlags = TPM_RIGHTBUTTON;
             if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
                 uFlags |= TPM_RIGHTALIGN;
@@ -878,20 +1032,9 @@ void SetCheckState(HMENU hMenu, UINT menuItemID, UINT fState) {
     SetMenuItemInfo(hMenu, menuItemID, FALSE, &menuItemInfo);
 }
 
-bool RunAtStartup(bool flag) {
-    //bool processElevated = IsProcessElevated();
-    //AT_LOG_INFO("IsProcessElevated: %d", processElevated);
-
-    //create_auto_start_task_for_this_user(processElevated);
-    //return true;
-
-    wchar_t applicationPath[MAX_PATH];
-    DWORD length = GetModuleFileName(nullptr, applicationPath, MAX_PATH);
-
-    if (length == 0) {
-        AT_LOG_ERROR("Failed to retrieve the path of the currently running process.");
-        return false;
-    }
+bool RunAtStartup(const bool runAtStartup, const bool withHighestPrivileges) {
+    const bool isElevated = g_GeneralSettings.IsProcessElevated;
+    AT_LOG_INFO("runAtStartup: %d, IsProcessElevated: %d", runAtStartup, isElevated);
 
     HKEY hKey;
     LONG result = RegOpenKeyEx(
@@ -901,28 +1044,51 @@ bool RunAtStartup(bool flag) {
         KEY_SET_VALUE,
         &hKey);
 
+    // First, always delete the registry entry if it exists. And, we are going to use Task Scheduler to run AltTab at
+    // startup.
     if (result == ERROR_SUCCESS) {
-        if (flag) {
-            result = RegSetValueExW(
-                hKey,
-                AT_PRODUCT_NAMEW,
-                0,
-                REG_SZ,
-                (const BYTE*)applicationPath,
-                (DWORD)(wcslen(applicationPath) + 1) * sizeof(wchar_t));
-            RegCloseKey(hKey);
-            return (result == ERROR_SUCCESS);
+         result = RegDeleteValue(hKey, AT_PRODUCT_NAMEW);
+         RegCloseKey(hKey);
+    }
+
+    bool succeeded = false;
+    if (runAtStartup) {
+        DeleteAutoStartTask();
+        if (isElevated && withHighestPrivileges) {
+            succeeded = CreateAutoStartTask(true);
+            if (succeeded) {
+                AT_LOG_INFO("Run at startup enabled with highest privileges.");
+            } else {
+                AT_LOG_INFO("Failed to create task for Run at startup with highest privileges.");
+            }
         } else {
-            result = RegDeleteValue(hKey, AT_PRODUCT_NAMEW);
-            RegCloseKey(hKey);
-            return (result == ERROR_SUCCESS);
+            succeeded = CreateAutoStartTask(false);
+            if (succeeded) {
+                AT_LOG_INFO("Run at startup enabled without highest privileges.");
+            } else {
+                AT_LOG_INFO("Failed to create task for Run at startup without highest privileges.");
+            }
+        }
+    } else {
+        // If runAtStartup is false, delete the task in Task Scheduler if it exists.
+        if (IsAutoStartTaskActive()) {
+            succeeded = DeleteAutoStartTask();
+        } else {
+            AT_LOG_INFO("No task found in Task Scheduler for Run at startup.");
+            succeeded = true; // No task to delete, so return true.
         }
     }
 
-    return false;
+    return succeeded;
 }
 
 bool IsRunAtStartup() {
+    // First check if there is an task in Task Scheduler
+    if (IsAutoStartTaskActive()) {
+        AT_LOG_INFO("Auto start task exists for this user.");
+        return true;
+    }
+
     HKEY hKey;
     LONG result = RegOpenKeyEx(
         HKEY_CURRENT_USER,
@@ -932,12 +1098,55 @@ bool IsRunAtStartup() {
         &hKey);
 
     if (result == ERROR_SUCCESS) {
+       // Get AltTab value from the registry
+        AT_LOG_INFO("Checking registry for Run at startup...");
+
         // Check if the registry entry exists
+
+        DWORD dataType = 0;
         DWORD dataSize = 0;
-        result = RegQueryValueExW(hKey, AT_PRODUCT_NAMEW, nullptr, nullptr, nullptr, &dataSize);
+
+        // First call to get the required buffer size
+        result = RegQueryValueExW(hKey, AT_PRODUCT_NAMEW, nullptr, &dataType, nullptr, &dataSize);
+        if (result != ERROR_SUCCESS || dataType != REG_SZ) {
+            RegCloseKey(hKey);
+            return false;
+        }
+
+        std::wstring value(dataSize / sizeof(wchar_t), L'\0');
+        result =
+            RegQueryValueExW(hKey, AT_PRODUCT_NAMEW, nullptr, nullptr, reinterpret_cast<LPBYTE>(&value[0]), &dataSize);
         RegCloseKey(hKey);
 
-        return (result == ERROR_SUCCESS);
+        if (result == ERROR_SUCCESS && dataSize > 0) {
+            // The registry entry exists, so AltTab is set to run at startup
+            AT_LOG_INFO("Run at startup is enabled in registry.");
+
+            // This is old mechanism, so going to delete the registry entry and create a task in Task Scheduler
+            if (g_GeneralSettings.IsProcessElevated) {
+                // Create a task in Task Scheduler to run AltTab with highest privileges
+                if (CreateAutoStartTask(true)) {
+                    AT_LOG_INFO("Run at startup enabled with highest privileges.");
+                } else {
+                    AT_LOG_ERROR("Failed to create task for Run at startup with highest privileges.");
+                }
+            } else {
+                if (CreateAutoStartTask(false)) {
+                    AT_LOG_INFO("Run at startup enabled without highest privileges.");
+                } else {
+                    AT_LOG_ERROR("Failed to create task for Run at startup without highest privileges.");
+                }
+            }
+
+            return true;
+        }
+
+        if (result == ERROR_FILE_NOT_FOUND) {
+            // The registry entry does not exist, so AltTab is not set to run at startup
+            AT_LOG_INFO("Run at startup is NOT enabled.");
+        } else {
+            AT_LOG_ERROR("Failed to query the registry value for Run at startup.");
+        }
     }
     return false;
 }
