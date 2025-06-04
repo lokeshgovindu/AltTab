@@ -76,6 +76,17 @@ namespace {
         settings.IsRunAtStartup = IsRunAtStartup();
         return settings;
     }
+
+    void RemoveStartupFromRegistry() {
+        HKEY hKey;
+        LONG result = RegOpenKeyEx(
+            HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
+
+        if (result == ERROR_SUCCESS) {
+            result = RegDeleteValue(hKey, AT_PRODUCT_NAMEW);
+        }
+        RegCloseKey(hKey);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -152,6 +163,11 @@ int APIENTRY wWinMain(
             RunAtStartup(true, true);
         }
     }
+
+    // From 2025.1.0.0, we are not going to create a registry key for RunAtStartup.
+    // We always create a task in task scheduler to run AltTab at startup. So, we can simply remove the registry key if
+    // it exists.
+    RemoveStartupFromRegistry();
 
 #if 0
     // Run At Startup
