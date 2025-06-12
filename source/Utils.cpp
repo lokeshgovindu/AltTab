@@ -748,7 +748,6 @@ bool IsTaskRunWithHighestPrivileges() {
         ExitOnFailure(hr, "Cannot get Root Folder pointer: %x", hr);
         hr = pRootFolder->CreateFolder(_bstr_t(L"\\AltTab"), _variant_t(L""), &pTaskFolder);
         if (FAILED(hr)) {
-            pRootFolder->Release();
             ExitOnFailure(hr, "Cannot create AltTab task folder: %x", hr);
         }
     }
@@ -778,6 +777,8 @@ LExit:
         pTask->Release();
     if (pRootFolder)
         pRootFolder->Release();
+    if (pTaskFolder)
+        pTaskFolder->Release();
     if (pService)
         pService->Release();
     return result;
